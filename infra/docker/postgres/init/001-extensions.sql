@@ -1,5 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE EXTENSION IF NOT EXISTS vector;
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Prisma's initial migration owns the extensions required by the Oryon schema.
+-- Keep this bootstrap script limited to extensions that are not represented there.
 CREATE EXTENSION IF NOT EXISTS pg_partman;
