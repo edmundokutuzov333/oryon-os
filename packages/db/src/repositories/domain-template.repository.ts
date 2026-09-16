@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "../generated/client.js";
-import { getDomainTemplate, type DomainTemplateManifest } from "@oryon/contracts/domain-template-data";
+import { getDomainTemplate } from "@oryon/contracts/domain-template-data";
+import type { DomainTemplateManifest } from "@oryon/contracts/domain-templates";
 import type { DomainTemplateSummary, DomainTemplateInstallResponse } from "@oryon/contracts/domain-templates";
 import { appendDomainEvent } from "../outbox.js";
 import { withOrgContext } from "../tenant.js";

@@ -94,7 +94,7 @@ export class WorkObjectRepository {
 			if (!current) throw new Error("NOT_FOUND");
 			const typeDef = typeDefContract(current.typeDef);
 			const mergedCustomFields = input.customFields ? { ...(current.customFields as Record<string, unknown>), ...input.customFields } : undefined;
-			const validationInput = mergedCustomFields ? { ...input, customFields: JSON.parse(JSON.stringify(mergedCustomFields)) as Prisma.InputJsonValue } : input;
+			const validationInput = mergedCustomFields ? { ...input, customFields: mergedCustomFields } : input;
 			validateWorkObjectUpdate(validationInput, typeDef, current.status);
 			validateWorkObjectDates(input.startAt ?? current.startAt?.toISOString(), input.dueAt ?? current.dueAt?.toISOString());
 			const moneyAmount = input.moneyAmount !== undefined ? input.moneyAmount : current.moneyAmount?.toString() ?? null;
@@ -136,7 +136,7 @@ export class WorkObjectRepository {
 			if (input.severity !== undefined) data.severity = input.severity;
 			if (input.classification !== undefined) data.classification = input.classification;
 			if (input.tags !== undefined) data.tags = input.tags;
-			if (mergedCustomFields !== undefined) data.customFields = mergedCustomFields;
+			if (mergedCustomFields !== undefined) data.customFields = JSON.parse(JSON.stringify(mergedCustomFields)) as Prisma.InputJsonValue;
 			const updated = await tx.workObject.update({ where: { id }, data, include: { assignments: true, placements: true, typeDef: true } });
 			if (input.workspaceId !== undefined && input.workspaceId !== current.workspaceId) {
 				await tx.objectPlacement.updateMany({ where: { orgId, objectId: id, containerType: "WORKSPACE" }, data: { isPrimary: false } });

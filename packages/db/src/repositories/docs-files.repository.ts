@@ -29,7 +29,7 @@ export class DocsFilesRepository {
         if (!owner) throw new Error("OWNER_NOT_FOUND");
       }
       const position = await tx.page.count({ where: { orgId, parentPageId: input.parentPageId ?? null, deletedAt: null } });
-      const page = await tx.page.create({ data: { orgId, workspaceId: input.workspaceId ?? null, parentPageId: input.parentPageId ?? null, title: input.title, kind: input.kind === "CANVAS" ? "DOC" : input.kind ?? "DOC", ownerId: input.ownerId ?? actorId, classification: input.classification ?? null, position, contentJson: { type: "doc", content: [{ type: "paragraph" }] }, contentText: "", indexable: false, createdBy: actorId } });
+      const page = await tx.page.create({ data: { orgId, workspaceId: input.workspaceId ?? null, parentPageId: input.parentPageId ?? null, title: input.title, kind: input.kind === "CANVAS" || input.kind === "DATABASE_VIEW" ? "DOC" : input.kind ?? "DOC", ownerId: input.ownerId ?? actorId, classification: input.classification ?? null, position, contentJson: { type: "doc", content: [{ type: "paragraph" }] }, contentText: "", indexable: false, createdBy: actorId } });
       await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "Page", subjectId: page.id, name: "page.created", payload: { title: page.title, kind: page.kind } });
       return page;
     });
