@@ -83,6 +83,15 @@ jobs:
       POSTGRES_DB: oryon
       DATABASE_URL: postgresql://oryon:oryon_local@127.0.0.1:5432/oryon
       DATABASE_DIRECT_URL: postgresql://oryon:oryon_local@127.0.0.1:5432/oryon
+      REDIS_URL: redis://127.0.0.1:6379
+      ORYON_AUTH_JWT_SECRET: ci-phase3-identity-secret-0123456789abcdef
+      ORYON_AUTH_SESSION_TTL_SECONDS: 2592000
+      ORYON_AUTH_ACCESS_TTL_SECONDS: 900
+      ORYON_AUTH_MAGIC_LINK_TTL_SECONDS: 600
+      ORYON_AUTH_DEV_MODE: true
+      ORYON_AUTH_COOKIE_NAME: oryon_session
+      ORYON_API_URL: http://127.0.0.1:4000
+      ORYON_WEB_URL: http://127.0.0.1:3000
       S3_BUCKET: oryon-local
       MINIO_ROOT_USER: oryon
       MINIO_ROOT_PASSWORD: oryon_local_password
@@ -122,12 +131,60 @@ jobs:
         run: pnpm db:seed
       - name: Verify RLS tenant isolation
         run: pnpm db:rls:verify
+      - name: Start API for phase 3 smoke test
+        run: |
+          pnpm --filter @oryon/api exec tsx src/server.ts >/tmp/oryon-api.log 2>&1 &
+          echo $! >/tmp/oryon-api.pid
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4000/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/oryon-api.log
+          exit 1
+      - name: Exercise magic link and authenticated session
+        run: |
+          response=$(curl --fail --silent --request POST http://127.0.0.1:4000/v1/auth/request-link \
+            --header 'Content-Type: application/json' \
+            --header 'X-Oryon-Org: org_demo_0001' \
+            --header 'Idempotency-Key: ci-request-link-1' \
+            --data '{"email":"admin@oryon.local"}')
+          token=$(printf '%s' "$response" | jq -r '.data.debugToken')
+          test -n "$token"
+          verify=$(curl --fail --silent --request POST http://127.0.0.1:4000/v1/auth/verify-link \
+            --header 'Content-Type: application/json' \
+            --header 'X-Oryon-Org: org_demo_0001' \
+            --header 'Idempotency-Key: ci-verify-link-1' \
+            --cookie-jar /tmp/oryon-cookies.txt \
+            --data "{\"token\":\"$token\"}")
+          printf '%s' "$verify" | jq -e '.data.accessToken and .data.expiresAt' >/dev/null
+          curl --fail --silent http://127.0.0.1:4000/v1/auth/session \
+            --header 'X-Oryon-Org: org_demo_0001' \
+            --cookie /tmp/oryon-cookies.txt \
+            | jq -e '.data.user.email == "admin@oryon.local" and .data.organization.id == "org_demo_0001" and (.data.workspaces | length) >= 1 and (.data.teams | length) >= 1' >/dev/null
+      - name: Exercise cross-organization session rejection
+        run: |
+          curl --silent --show-error --request POST http://127.0.0.1:4000/v1/auth/session \
+            --header 'X-Oryon-Org: org_demo_0002' \
+            --cookie /tmp/oryon-cookies.txt \
+            --data '{}' || true
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:4000/v1/auth/session \
+            --header 'X-Oryon-Org: org_demo_0002' \
+            --cookie /tmp/oryon-cookies.txt)
+          test "$status" = "401"
+      - name: Stop API
+        if: always()
+        run: |
+          if test -f /tmp/oryon-api.pid; then kill "$(cat /tmp/oryon-api.pid)" || true; fi
       - name: Show service status
         if: always()
         run: pnpm infra:status
       - name: Show service logs
         if: failure()
-        run: docker compose -f infra/docker/docker-compose.yml logs --no-color
+        run: |
+          docker compose -f infra/docker/docker-compose.yml logs --no-color
+          cat /tmp/oryon-api.log 2>/dev/null || true
       - name: Stop local infrastructure
         if: always()
         run: pnpm infra:down
