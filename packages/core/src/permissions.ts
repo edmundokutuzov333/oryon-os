@@ -12,6 +12,7 @@ import type {
 } from "@oryon/contracts/permissions";
 
 export type PermissionPolicyContext = {
+	orgId: string;
 	subject: PermissionSubject;
 	roles: PermissionRoleBinding[];
 	grants: PermissionGrant[];
@@ -44,11 +45,7 @@ function notExpired(expiresAt: string | null, now: Date): boolean {
 	return expiresAt === null || new Date(expiresAt).getTime() > now.getTime();
 }
 
-function scopeMatches(
-	binding: PermissionRoleBinding,
-	resource: PermissionResource,
-	subject: PermissionSubject,
-): boolean {
+function scopeMatches(binding: PermissionRoleBinding, resource: PermissionResource, subject: PermissionSubject): boolean {
 	switch (binding.scopeType) {
 		case "ORG":
 			return binding.scopeId === resource.orgId || binding.scopeId === null;
@@ -68,9 +65,7 @@ function scopeMatches(
 function permissionStringMatches(permission: string, resourceType: string, action: PermissionAction): boolean {
 	if (permission === "*") return true;
 	const normalized = permission.toLowerCase();
-	if (normalized === action) return true;
-	if (normalized === `${resourceType.toLowerCase()}:*`) return true;
-	return normalized === `${resourceType.toLowerCase()}:${action}`;
+	return normalized === action || normalized === `${resourceType.toLowerCase()}:*` || normalized === `${resourceType.toLowerCase()}:${action}`;
 }
 
 function roleAllows(
@@ -96,29 +91,27 @@ function grantAllows(
 	action: PermissionAction,
 	now: Date,
 ): { allowed: boolean; matchedBy: string | null } {
-	const grantsForResource = grants.filter(
-		(grant) =>
-			grant.resourceType === resource.type &&
-			grant.resourceId === resource.id &&
-			grant.revokedAt === null &&
-			notExpired(grant.expiresAt, now),
-	);
-	for (const grant of grantsForResource) {
+	for (const grant of grants) {
+		if (
+			grant.resourceType !== resource.type ||
+			grant.resourceId !== resource.id ||
+			grant.revokedAt !== null ||
+			!notExpired(grant.expiresAt, now)
+		) continue;
 		const targetsSubject = grant.principalId === subject.id;
 		const targetsTeam = grant.teamId !== null && subject.teamIds.includes(grant.teamId);
 		const targetsExternal = grant.externalEmail !== null && grant.externalEmail === subject.email;
-		if (!targetsSubject && !targetsTeam && !targetsExternal) continue;
-		if (LEVEL_ACTIONS[grant.level].includes(action)) return { allowed: true, matchedBy: `grant:${grant.level.toLowerCase()}` };
+		if ((targetsSubject || targetsTeam || targetsExternal) && LEVEL_ACTIONS[grant.level].includes(action)) {
+			return { allowed: true, matchedBy: `grant:${grant.level.toLowerCase()}` };
+		}
 	}
 	return { allowed: false, matchedBy: null };
 }
 
-function baseDecision(
-	context: PermissionPolicyContext,
-	resource: PermissionResource,
-	action: PermissionAction,
-	now: Date,
-): PermissionDecision {
+function baseDecision(context: PermissionPolicyContext, resource: PermissionResource, action: PermissionAction, now: Date): PermissionDecision {
+	if (resource.orgId !== context.orgId || context.subject.id.length === 0) {
+		return { allowed: false, effect: "deny", action, reason: "org_mismatch", matchedBy: null };
+	}
 	if (context.classification?.blocksExternal && action === "use_external") {
 		return { allowed: false, effect: "deny", action, reason: "classification_blocks_external", matchedBy: `classification:${context.classification.key}` };
 	}
@@ -130,12 +123,9 @@ function baseDecision(
 	}
 	if (action === "use_external" || action === "use_ai") {
 		const grant = grantAllows(context.grants, resource, context.subject, action, now);
-		if (grant.allowed) return { allowed: true, effect: "allow", action, reason: "explicit_grant", matchedBy: grant.matchedBy };
-		return { allowed: false, effect: "deny", action, reason: "exposure_not_granted", matchedBy: null };
-	}
-
-	if (resource.orgId !== resource.orgId || context.subject.id.length === 0) {
-		return { allowed: false, effect: "deny", action, reason: "invalid_policy_context", matchedBy: null };
+		return grant.allowed
+			? { allowed: true, effect: "allow", action, reason: "explicit_grant", matchedBy: grant.matchedBy }
+			: { allowed: false, effect: "deny", action, reason: "exposure_not_granted", matchedBy: null };
 	}
 	if (resource.ownerId === context.subject.id && ["read", "comment", "update", "delete", "manage", "share", "export"].includes(action)) {
 		return { allowed: true, effect: "allow", action, reason: "resource_owner", matchedBy: "owner" };
@@ -153,15 +143,14 @@ function baseDecision(
 function fieldAccess(fields: string[], grants: PermissionGrant[], subject: PermissionSubject, resource: PermissionResource, now: Date) {
 	const result: Record<string, "visible" | "masked" | "hidden"> = {};
 	for (const field of fields) result[field] = "visible";
-	const matching = grants.filter(
-		(grant) =>
-			grant.resourceType === resource.type &&
-			grant.resourceId === resource.id &&
-			(grant.principalId === subject.id || (grant.teamId !== null && subject.teamIds.includes(grant.teamId))) &&
-			grant.revokedAt === null &&
-			notExpired(grant.expiresAt, now),
-	);
-	for (const grant of matching) {
+	for (const grant of grants) {
+		if (
+			grant.resourceType !== resource.type ||
+			grant.resourceId !== resource.id ||
+			grant.revokedAt !== null ||
+			!notExpired(grant.expiresAt, now) ||
+			!(grant.principalId === subject.id || (grant.teamId !== null && subject.teamIds.includes(grant.teamId)))
+		) continue;
 		for (const field of grant.fieldMask) {
 			if (field in result) result[field] = grant.level === "VIEW" ? "masked" : "visible";
 		}
@@ -169,31 +158,19 @@ function fieldAccess(fields: string[], grants: PermissionGrant[], subject: Permi
 	return result;
 }
 
-export function can(
-	context: PermissionPolicyContext,
-	resource: PermissionResource,
-	action: PermissionAction,
-	now = new Date(),
-): PermissionDecision {
+export function can(context: PermissionPolicyContext, resource: PermissionResource, action: PermissionAction, now = new Date()): PermissionDecision {
 	return baseDecision(context, resource, action, now);
 }
 
-export function evaluatePermissions(
-	context: PermissionPolicyContext,
-	input: PermissionEvaluateInput,
-	now = new Date(),
-): PermissionEvaluation {
-	const normalizedResource = input.resource;
-	const decisions = ACTIONS.map((action) => baseDecision(context, normalizedResource, action, now));
-	const permissions = Object.fromEntries(
-		decisions.map((decision) => [decision.action, decision.allowed]),
-	) as Record<PermissionAction, boolean>;
-	const external = can(context, normalizedResource, "use_external", now);
-	const ai = can(context, normalizedResource, "use_ai", now);
-	const exportDecision = can(context, normalizedResource, "export", now);
-	const fields = fieldAccess(input.fields, context.grants, context.subject, normalizedResource, now);
+export function evaluatePermissions(context: PermissionPolicyContext, input: PermissionEvaluateInput, now = new Date()): PermissionEvaluation {
+	const resource = input.resource;
+	const decisions = ACTIONS.map((action) => baseDecision(context, resource, action, now));
+	const permissions = Object.fromEntries(decisions.map((decision) => [decision.action, decision.allowed])) as Record<PermissionAction, boolean>;
+	const external = can(context, resource, "use_external", now);
+	const ai = can(context, resource, "use_ai", now);
+	const exportDecision = can(context, resource, "export", now);
 	return {
-		resource: normalizedResource,
+		resource,
 		permissions: {
 			read: permissions.read,
 			create: permissions.create,
@@ -209,24 +186,21 @@ export function evaluatePermissions(
 		},
 		decisions,
 		exposure: {
-			external: { allowed: external.allowed && input.external, reason: input.external ? external.reason : "not_requested" },
-			ai: { allowed: ai.allowed && input.ai, reason: input.ai ? ai.reason : "not_requested" },
+			external: { allowed: input.external && external.allowed, reason: input.external ? external.reason : "not_requested" },
+			ai: { allowed: input.ai && ai.allowed, reason: input.ai ? ai.reason : "not_requested" },
 			export: { allowed: exportDecision.allowed, reason: exportDecision.reason },
 			watermark: context.classification?.watermark ?? false,
-			fieldAccess: fields,
+			fieldAccess: fieldAccess(input.fields, context.grants, context.subject, resource, now),
 		},
 		principal: context.subject,
 	};
 }
 
-export function maskFields<T extends Record<string, unknown>>(
-	value: T,
-	fieldAccess: Record<string, "visible" | "masked" | "hidden">,
-): Partial<T> {
+export function maskFields<T extends Record<string, unknown>>(value: T, fieldAccess: Record<string, "visible" | "masked" | "hidden">): Partial<T> {
 	const output: Partial<T> = {};
 	for (const [key, state] of Object.entries(fieldAccess)) {
 		if (!(key in value) || state === "hidden") continue;
-		output[key as keyof T] = state === "masked" ? "••••••" as T[keyof T] : value[key] as T[keyof T];
+		output[key as keyof T] = state === "masked" ? ("••••••" as T[keyof T]) : value[key] as T[keyof T];
 	}
 	return output;
 }
