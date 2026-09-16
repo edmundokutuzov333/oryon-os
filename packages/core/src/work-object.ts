@@ -2,7 +2,6 @@ import {
 	ObjectStatusModelSchema,
 	type ObjectFieldDef,
 	type ObjectTypeDefContract,
-	type ObjectTypeSchemaConfig,
 	type WorkObjectCreateInput,
 	type WorkObjectStatusInput,
 	type WorkObjectUpdateInput,
@@ -46,7 +45,7 @@ function validFieldValue(definition: ObjectFieldDef, value: unknown): boolean {
 	throw new WorkObjectDomainError("INVALID_CUSTOM_FIELDS", `Unsupported custom field type: ${definition.type}`);
 }
 
-export function validateCustomFields(config: ObjectTypeSchemaConfig, customFields: Record<string, unknown>): Record<string, unknown> {
+export function validateCustomFields(config: ObjectTypeDefContract["schema"], customFields: Record<string, unknown>): Record<string, unknown> {
 	const definitionKeys = new Set<string>();
 	for (const field of config.fields) {
 		if (definitionKeys.has(field.key)) throw new WorkObjectDomainError("INVALID_CUSTOM_FIELDS", `Duplicate custom field: ${field.key}`);
