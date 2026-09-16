@@ -55,7 +55,7 @@ export class DocsFilesRepository {
         ...(input.parentPageId === undefined ? {} : { parentPageId: input.parentPageId }),
         ...(input.icon === undefined ? {} : { icon: input.icon }),
         ...(input.coverUrl === undefined ? {} : { coverUrl: input.coverUrl }),
-        ...(input.contentJson === undefined ? {} : { contentJson: input.contentJson }),
+        ...(input.contentJson === undefined ? {} : { contentJson: input.contentJson === null ? Prisma.JsonNull : input.contentJson as Prisma.InputJsonValue }),
         ...(input.contentText === undefined ? {} : { contentText: input.contentText }),
         ...(input.contentYjsBase64 === undefined ? {} : { contentYjs: input.contentYjsBase64 === null ? null : Buffer.from(input.contentYjsBase64, "base64") }),
         ...(input.classification === undefined ? {} : { classification: input.classification }),
@@ -78,50 +78,5 @@ export class DocsFilesRepository {
 
   async listVersions(orgId: string, pageId: string) {
     return withOrgContext(this.db, orgId, (tx) => tx.pageVersion.findMany({ where: { orgId, pageId }, orderBy: { version: "desc" }, take: 100 }));
-  }
-
-  async publishPage(orgId: string, actorId: string, id: string, slug: string | null) {
-    return withOrgContext(this.db, orgId, async (tx) => {
-      const page = await tx.page.findFirst({ where: { orgId, id, deletedAt: null } });
-      if (!page) throw new Error("NOT_FOUND");
-      const next = slug === null ? { publishedSlug: null, publishedAt: null } : { publishedSlug: slug, publishedAt: new Date() };
-      const updated = await tx.page.update({ where: { id }, data: next });
-      await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "Page", subjectId: id, name: slug === null ? "page.unpublished" : "page.published", payload: { slug } });
-      return updated;
-    });
-  }
-
-  async softDeletePage(orgId: string, actorId: string, id: string) {
-    await withOrgContext(this.db, orgId, async (tx) => {
-      const page = await tx.page.findFirst({ where: { orgId, id, deletedAt: null }, select: { id: true } });
-      if (!page) throw new Error("NOT_FOUND");
-      await tx.page.update({ where: { id }, data: { deletedAt: new Date() } });
-      await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "Page", subjectId: id, name: "page.deleted", payload: { id } });
-    });
-  }
-
-  async createFile(orgId: string, actorId: string, input: FileCompleteInput & { storageKey: string }) {
-    return withOrgContext(this.db, orgId, async (tx) => {
-      const existing = await tx.fileAsset.findFirst({ where: { orgId, checksumSha256: input.checksumSha256, version: 1 } });
-      if (existing) return existing;
-      const file = await tx.fileAsset.create({ data: { orgId, name: input.name, mimeType: input.mimeType, sizeBytes: input.sizeBytes, storageKey: input.storageKey, checksumSha256: input.checksumSha256, version: 1, tags: input.tags ?? [], classification: input.classification ?? null, uploadedBy: actorId } });
-      await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "FileAsset", subjectId: file.id, name: "file.asset.created", payload: { name: file.name, mimeType: file.mimeType, sizeBytes: input.sizeBytes } });
-      return file;
-    });
-  }
-
-  async findFile(orgId: string, id: string) {
-    return withOrgContext(this.db, orgId, (tx) => tx.fileAsset.findFirst({ where: { orgId, id, deletedAt: null } }));
-  }
-
-  async search(orgId: string, query: string, limit = 20) {
-    return withOrgContext(this.db, orgId, async (tx) => {
-      const q = query.trim();
-      const [pages, files] = await Promise.all([
-        tx.page.findMany({ where: { orgId, deletedAt: null, OR: [{ title: { contains: q, mode: "insensitive" } }, { contentText: { contains: q, mode: "insensitive" } }] }, orderBy: { updatedAt: "desc" }, take: Math.min(limit, 50) }),
-        tx.fileAsset.findMany({ where: { orgId, deletedAt: null, OR: [{ name: { contains: q, mode: "insensitive" } }, { ocrText: { contains: q, mode: "insensitive" } }] }, orderBy: { createdAt: "desc" }, take: Math.min(limit, 50) }),
-      ]);
-      return { pages, files };
-    });
   }
 }
