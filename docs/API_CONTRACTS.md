@@ -55,9 +55,25 @@ Operações administrativas exigem `manage` sobre o recurso organizacional. Nenh
 
 ## Work Objects
 
-`POST /v1/work-objects`, `PATCH /v1/work-objects/{id}`, `GET /v1/work-objects`, `POST /v1/work-objects/bulk` e `POST /v1/work-objects/{id}/convert`.
+O WorkObject é o tipo universal de trabalho. O `ObjectTypeDef` define nome, prefixo, schema de custom fields, estados, transições e defaults. Tipos nativos e tipos criados pelo utilizador usam a mesma entidade `WorkObject`.
 
-Toda resposta de WorkObject inclui `permissions`. Transições inválidas respeitam o `statusModel` do `ObjectTypeDef`.
+`GET /v1/object-types` devolve os tipos disponíveis para a organização.
+`POST /v1/object-types` cria um novo tipo de trabalho e requer `manage` sobre o âmbito organizacional.
+
+`GET /v1/work-objects` lista objectos respeitando workspace, type, status e owner. O resultado é filtrado por permissão antes de ser exposto.
+`POST /v1/work-objects` cria um objecto universal. O `typeKey` resolve o `ObjectTypeDef`; o status omitido usa `statusModel.initial`; `customFields` é validado contra o schema do tipo.
+`GET /v1/work-objects/{id}` obtém um objecto visível.
+`PATCH /v1/work-objects/{id}` actualiza campos universais ou custom fields. Mudanças de status têm de respeitar as transições declaradas.
+`DELETE /v1/work-objects/{id}` executa soft delete.
+
+`POST /v1/work-objects/{id}/status` aplica uma transição de status e persiste `StatusTransition` com actor, estado anterior, novo estado e comentário.
+`POST /v1/work-objects/{id}/assignments` atribui o trabalho a `User` ou `Agent` com papel e allocation.
+`DELETE /v1/work-objects/{id}/assignments/{assignmentId}` remove uma atribuição.
+`POST /v1/work-objects/{id}/placements` cria ou actualiza a localização do objecto em um container e suporta múltiplas localizações, com uma primary por objecto.
+
+Campos universais incluem prioridade, owner, parent/child, datas, progresso, classificação, severity, probability, referências externas e valores monetários. `humanId` é estável e derivado do prefixo do `ObjectTypeDef` e do ID do objecto.
+
+Toda resposta de WorkObject inclui `permissions`. Recursos invisíveis são tratados como `NOT_FOUND`. Toda mutação escreve `DomainEvent` na mesma transacção.
 
 ## Work Graph
 
