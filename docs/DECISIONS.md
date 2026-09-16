@@ -76,3 +76,28 @@ A V1 define `WorkObject` como o motor universal de trabalho. O schema canónico 
 ### Consequências
 
 O WorkObject Engine pode alimentar CRM, Support, Product/Engineering e tipos empresariais personalizados sem criar um segundo modelo de trabalho. A mesma identidade de objecto passa pelas futuras fases de Graph, Docs, Comunicação, IA e Agents.
+
+## ADR-0004: Work Graph da Fase 6
+
+- Estado: aceite para implementação da Fase 6
+- Data: 2026-09-16
+
+### Contexto
+
+O schema canónico define `Edge` como a representação única das relações entre tipos de trabalho e proíbe FKs ad-hoc entre tipos de trabalho. O contrato público fixa `POST /v1/edges` e `GET /v1/graph/traverse`, com ciclos protegidos em `BLOCKS` e `PARENT_OF` e traversal filtrado por permissão.
+
+### Decisão
+
+1. `Edge` é a única fonte de verdade para relações entre WorkObjects. Não são criadas tabelas de relações por domínio.
+2. `POST /v1/edges` aceita relações tipadas entre WorkObjects existentes. A criação exige leitura nos dois endpoints e `update` no objecto de origem.
+3. `BLOCKS` e `PARENT_OF` são relações protegidas contra ciclos. A verificação percorre o grafo existente a partir do destino antes de persistir a nova aresta.
+4. Self-edge e duplicado activo são rejeitados com erro determinístico. `CONVERTED_TO` representa conversão como relação entre objectos existentes, sem copiar o conteúdo de origem.
+5. `GET /v1/graph/traverse` usa profundidade limitada, direcção e filtro de relação; a traversal pára em nodes já visitados para evitar loops durante leitura.
+6. A autorização acontece antes da resposta: o root e cada WorkObject candidato passam pelo mesmo `can()` da Fase 4. Edges que contenham um endpoint invisível são removidos da resposta.
+7. A timeline do grafo é derivada dos `DomainEvent` e `StatusTransition` dos nodes visíveis, sem criar uma segunda tabela de histórico.
+8. Customer 360 é uma composição da traversal bidireccional sobre o mesmo Graph, com maior profundidade, sem replicar dados do cliente noutra estrutura.
+9. A UI deve usar a mesma primitive de traversal para rede, navegação contextual, timeline e Customer 360.
+
+### Consequências
+
+O Work Graph passa a ser a camada de relação transversal da V1. As futuras fases podem ligar comunicação, documentos, reuniões e artefactos ao mesmo grafo quando esses nodes forem suportados, sem mudar o modelo de relações.
