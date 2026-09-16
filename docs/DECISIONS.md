@@ -25,3 +25,29 @@ A OryonOS usa uma separação explícita entre identidade, sessão e autorizaç�
 ### Consequências
 
 Esta decisão evita introduzir um segundo modelo de identidade, mantém o schema de negócio focado, usa a infraestrutura já existente e permite revogação imediata de sessões. A API pode continuar a obedecer ao contrato Bearer JWT, enquanto a aplicação web recebe uma sessão HttpOnly sem expor credenciais persistentes ao JavaScript.
+
+## ADR-0002: Motor de permissões da Fase 4
+
+- Estado: aceite para implementação da Fase 4
+- Data: 2026-09-16
+
+### Contexto
+
+A V1 exige um único motor de autorização para UI, API, agentes e integrações. O schema canónico já fornece `Role`, `RoleBinding`, `AccessGrant` e `ClassificationLabel`, além de scopes organizacionais, de workspace, equipa, projecto e objecto.
+
+### Decisão
+
+1. `can()` vive em `packages/core` e é puro, determinístico e sem I/O.
+2. `packages/db` carrega o snapshot tenant-aware de principal, roles, grants e classification sob RLS.
+3. A API combina o snapshot com o recurso e chama o mesmo `can()` que os testes de domínio cobrem.
+4. RBAC é representado por permissões de Role e `RoleBinding`; ABAC combina identidade, equipas, owner, recurso, scope e expiração.
+5. `AccessGrant.externalEmail` representa exposição externa explícita. `fieldMask` representa campos que devem ser mascarados no consumidor.
+6. `ClassificationLabel` tem precedência sobre exposição externa, IA e exportação quando os respectivos bloqueios estão activos.
+7. A UI nunca deduz permissões a partir do nome da role. Recebe `PermissionEvaluation`, incluindo o conjunto explícito de acções, decisões e `fieldAccess`.
+8. “Ver como” é uma simulação somente leitura que resolve exactamente o mesmo engine para outro `User`; não altera a sessão real.
+9. Alterações de role, binding e grant são mutações administrativas protegidas por `manage` sobre o âmbito organizacional e emitem DomainEvent na mesma transacção.
+10. Relatórios de exposição mostram grants externos activos e existência de masking, sem revelar recursos invisíveis a quem não tem `manage`.
+
+### Consequências
+
+A autorização deixa de ser lógica duplicada entre frontend, rotas e integrações. O backend torna-se a fonte única da verdade, a UI pode renderizar estados exactos e futuras fases, incluindo Work Objects, Graph, AI e Agents, podem reutilizar o mesmo engine sem criar sistemas de permissão paralelos.
