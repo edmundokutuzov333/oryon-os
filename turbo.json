@@ -1,5 +1,6 @@
 {
   "$schema": "https://turborepo.com/schema.json",
+  "globalPassThroughEnv": ["S3_BUCKET"],
   "tasks": {
     "dev": {
       "cache": false,
