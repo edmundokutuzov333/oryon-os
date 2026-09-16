@@ -9,48 +9,11 @@ permissions:
   contents: read
 
 jobs:
-  materialize-migration:
-    name: materialize database migration
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.15.0
-          run_install: false
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - name: Install dependencies and synchronize lockfile
-        run: pnpm install --no-frozen-lockfile
-      - name: Normalize canonical Prisma enum syntax
-        run: node scripts/normalize-prisma-enums.mjs
-      - name: Generate initial migration when absent
-        run: node scripts/generate-phase2-migration.mjs
-      - name: Commit synchronized database foundation
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          if git diff --quiet -- packages/db/prisma/migrations packages/db/prisma/schema.prisma pnpm-lock.yaml; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add packages/db/prisma/migrations packages/db/prisma/schema.prisma pnpm-lock.yaml
-          git commit -m "chore(db): materialize phase 2 database foundation [skip ci]"
-          git push origin HEAD:main
-
   verify:
     name: verify
-    needs: materialize-migration
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Sync latest main after materialization
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: git fetch origin main && git reset --hard origin/main
       - uses: pnpm/action-setup@v4
         with:
           version: 10.15.0
@@ -72,7 +35,6 @@ jobs:
 
   infra-and-db:
     name: infrastructure and database
-    needs: materialize-migration
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -87,9 +49,6 @@ jobs:
       TYPESENSE_API_KEY: oryon-typesense-local
     steps:
       - uses: actions/checkout@v5
-      - name: Sync latest main after materialization
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: git fetch origin main && git reset --hard origin/main
       - uses: pnpm/action-setup@v4
         with:
           version: 10.15.0
