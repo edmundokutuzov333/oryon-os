@@ -21,7 +21,7 @@ Contratos normativos da API. Schemas Zod vivem em `packages/contracts`; OpenAPI 
 { "data": {}, "meta": { "requestId": "req_...", "durationMs": 42 } }
 ```
 
-Erros usam `{ error: { code, httpStatus, message, requestId } }`. Códigos canónicos incluem `VALIDATION_FAILED`, `ORG_HEADER_MISSING`, `UNAUTHENTICATED`, `PERMISSION_DENIED`, `CLASSIFICATION_BLOCKED`, `NOT_FOUND`, `CONFLICT`, `CYCLE_DETECTED`, `IDEMPOTENCY_MISMATCH`, `RATE_LIMITED`, `AI_BUDGET_EXCEEDED`, `CHECKPOINT_REQUIRED` e `INTERNAL`.
+Erros usam `{ "error": { "code", "httpStatus", "message", "requestId" } }`. Códigos canónicos incluem `VALIDATION_FAILED`, `ORG_HEADER_MISSING`, `UNAUTHENTICATED`, `PERMISSION_DENIED`, `CLASSIFICATION_BLOCKED`, `NOT_FOUND`, `CONFLICT`, `CYCLE_DETECTED`, `IDEMPOTENCY_MISMATCH`, `RATE_LIMITED`, `AI_BUDGET_EXCEEDED`, `CHECKPOINT_REQUIRED` e `INTERNAL`.
 
 ## Identity e Auth
 
@@ -36,6 +36,22 @@ A identidade canónica é `User` dentro de `Organization`. `Workspace`, `Team` e
 `POST /v1/auth/logout` requer `X-Oryon-Org` e `Idempotency-Key`. Revoga a sessão web e limpa o cookie. O access token de curta duração deixa de resolver porque a sessão a que está ligado foi revogada.
 
 Identidade externa futura deve mapear para `User.externalId`, preservando um único principal por pessoa.
+
+## Permissions Engine
+
+A autorização é resolvida pelo `can()` no domínio puro. RBAC usa `Role` + `RoleBinding`; ABAC considera principal, equipa, owner, recurso, scope e expiração. `AccessGrant` acrescenta grants directos, de equipa e por email externo. `ClassificationLabel` pode bloquear exposição externa, IA ou exportação e activar watermark.
+
+`POST /v1/permissions/evaluate` avalia um recurso para o principal autenticado e devolve todas as acções, decisões, exposição e `fieldAccess`. A resposta é a fonte única de verdade da UI.
+
+`POST /v1/permissions/view-as` permite a um principal com `view_as` simular outro utilizador sem mudar a sessão. O simulador aplica as mesmas regras de RBAC, ABAC, grants, scopes e classification.
+
+`GET /v1/permissions/exposure` devolve o inventário de recursos com grants externos activos, número de destinatários e presença de field masking.
+
+`POST /v1/permissions/roles` cria uma Role personalizada.
+`POST /v1/permissions/role-bindings` atribui uma Role a um principal dentro de um scope.
+`POST /v1/permissions/grants` cria um AccessGrant com nível, destinatário, máscara e expiração.
+
+Operações administrativas exigem `manage` sobre o recurso organizacional. Nenhuma rota administrativa ignora o permission engine.
 
 ## Work Objects
 
