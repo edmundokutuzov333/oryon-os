@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { authCopy } from "../lib/auth-copy";
+import { authCopy } from "../../lib/auth-copy";
 
 export function LoginForm() {
 	const [organization, setOrganization] = useState("org_demo_0001");
