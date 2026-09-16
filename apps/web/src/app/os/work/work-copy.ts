@@ -36,6 +36,7 @@ export const workCopy = {
 	fieldType: "Tipo de campo",
 	addField: "Adicionar campo",
 	required: "Obrigatório",
+	requiredMark: " *",
 	createType: "Criar tipo",
 	creatingType: "A criar tipo...",
 	initial: "Estado inicial",
@@ -52,6 +53,7 @@ export const workCopy = {
 	classification: "Classificação",
 	progress: "Progresso",
 	unsaved: "Alterações por guardar",
+	loading: "A carregar...",
 };
 
 export const priorityOptions = ["LOWEST", "LOW", "NORMAL", "HIGH", "URGENT"] as const;
