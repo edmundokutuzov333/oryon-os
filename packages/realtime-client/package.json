@@ -10,8 +10,8 @@
 		"test": "vitest run --passWithNoTests"
 	},
 	"devDependencies": {
-		"typescript": "workspace:*",
+		"typescript": "^5.9.2",
 		"vitest": "^3.2.0",
-		"@biomejs/biome": "workspace:*"
+		"@biomejs/biome": "^2.2.0"
 	}
 }
