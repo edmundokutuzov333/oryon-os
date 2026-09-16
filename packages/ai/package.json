@@ -1,0 +1,23 @@
+{
+	"name": "@oryon/ai",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"exports": "./src/index.ts",
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"build": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@oryon/core": "workspace:*",
+		"@oryon/contracts": "workspace:*",
+		"@oryon/db": "workspace:*"
+	},
+	"devDependencies": {
+		"typescript": "workspace:*",
+		"vitest": "^3.2.0",
+		"@biomejs/biome": "workspace:*"
+	}
+}
