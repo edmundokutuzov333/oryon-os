@@ -1,5 +1,6 @@
 import type { PermissionClassification, PermissionGrant, PermissionRoleBinding, PermissionSubject } from "@oryon/contracts/permissions";
 import { getPrisma } from "../index.js";
+import { appendDomainEvent } from "../outbox.js";
 import { withOrgContext } from "../tenant.js";
 
 export type PermissionSnapshot = { subject: PermissionSubject; roles: PermissionRoleBinding[]; grants: PermissionGrant[]; classification: PermissionClassification | null };
@@ -22,9 +23,41 @@ export class PermissionRepository {
 			return [...grouped.values()];
 		});
 	}
-	async createRole(orgId: string, input: { key: string; name: string; description?: string; permissions: string[] }): Promise<{ id: string }> { return withOrgContext(this.db, orgId, async (tx) => { const role = await tx.role.create({ data: { orgId, key: input.key, name: input.name, ...(input.description === undefined ? {} : { description: input.description }), permissions: input.permissions, isSystem: false } }); return { id: role.id }; }); }
-	async bindRole(orgId: string, actorId: string, input: { roleId: string; principalId: string; scopeType: "ORG" | "WORKSPACE" | "TEAM" | "PROJECT" | "OBJECT"; scopeId?: string | null; expiresAt?: string | null }): Promise<{ id: string }> { return withOrgContext(this.db, orgId, async (tx) => { const binding = await tx.roleBinding.create({ data: { orgId, roleId: input.roleId, principalId: input.principalId, scopeType: input.scopeType, scopeId: input.scopeId ?? null, grantedBy: actorId, expiresAt: input.expiresAt ? new Date(input.expiresAt) : null } }); return { id: binding.id }; }); }
-	async revokeRoleBinding(orgId: string, actorId: string, id: string): Promise<{ id: string }> { return withOrgContext(this.db, orgId, async (tx) => { const binding = await tx.roleBinding.findFirst({ where: { id, orgId } }); if (!binding) throw new Error("NOT_FOUND"); await tx.roleBinding.delete({ where: { id } }); return { id }; }); }
-	async createGrant(orgId: string, actorId: string, input: { resourceType: string; resourceId: string; principalId?: string | null; teamId?: string | null; externalEmail?: string | null; level: "VIEW" | "COMMENT" | "EDIT" | "MANAGE" | "OWNER"; fieldMask: string[]; reason?: string; expiresAt?: string | null }): Promise<{ id: string }> { return withOrgContext(this.db, orgId, async (tx) => { const grant = await tx.accessGrant.create({ data: { orgId, resourceType: input.resourceType, resourceId: input.resourceId, principalId: input.principalId ?? null, teamId: input.teamId ?? null, externalEmail: input.externalEmail ?? null, level: input.level, fieldMask: input.fieldMask, grantedBy: actorId, ...(input.reason === undefined ? {} : { reason: input.reason }), expiresAt: input.expiresAt ? new Date(input.expiresAt) : null } }); return { id: grant.id }; }); }
-	async revokeGrant(orgId: string, actorId: string, id: string): Promise<{ id: string }> { return withOrgContext(this.db, orgId, async (tx) => { const grant = await tx.accessGrant.findFirst({ where: { id, orgId, revokedAt: null } }); if (!grant) throw new Error("NOT_FOUND"); await tx.accessGrant.update({ where: { id }, data: { revokedAt: new Date() } }); return { id }; }); }
+	async createRole(orgId: string, actorId: string, input: { key: string; name: string; description?: string; permissions: string[] }): Promise<{ id: string }> {
+		return withOrgContext(this.db, orgId, async (tx) => {
+			const role = await tx.role.create({ data: { orgId, key: input.key, name: input.name, ...(input.description === undefined ? {} : { description: input.description }), permissions: input.permissions, isSystem: false } });
+			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "Role", subjectId: role.id, name: "permission.role.created", payload: { key: input.key, name: input.name } });
+			return { id: role.id };
+		});
+	}
+	async bindRole(orgId: string, actorId: string, input: { roleId: string; principalId: string; scopeType: "ORG" | "WORKSPACE" | "TEAM" | "PROJECT" | "OBJECT"; scopeId?: string | null; expiresAt?: string | null }): Promise<{ id: string }> {
+		return withOrgContext(this.db, orgId, async (tx) => {
+			const binding = await tx.roleBinding.create({ data: { orgId, roleId: input.roleId, principalId: input.principalId, scopeType: input.scopeType, scopeId: input.scopeId ?? null, grantedBy: actorId, expiresAt: input.expiresAt ? new Date(input.expiresAt) : null } });
+			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "RoleBinding", subjectId: binding.id, name: "permission.role_binding.created", payload: { roleId: input.roleId, principalId: input.principalId, scopeType: input.scopeType, scopeId: input.scopeId ?? null } });
+			return { id: binding.id };
+		});
+	}
+	async revokeRoleBinding(orgId: string, actorId: string, id: string): Promise<{ id: string }> {
+		return withOrgContext(this.db, orgId, async (tx) => {
+			const binding = await tx.roleBinding.findFirst({ where: { id, orgId } }); if (!binding) throw new Error("NOT_FOUND");
+			await tx.roleBinding.delete({ where: { id } });
+			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "RoleBinding", subjectId: id, name: "permission.role_binding.revoked", payload: { roleId: binding.roleId, principalId: binding.principalId, scopeType: binding.scopeType, scopeId: binding.scopeId } });
+			return { id };
+		});
+	}
+	async createGrant(orgId: string, actorId: string, input: { resourceType: string; resourceId: string; principalId?: string | null; teamId?: string | null; externalEmail?: string | null; level: "VIEW" | "COMMENT" | "EDIT" | "MANAGE" | "OWNER"; fieldMask: string[]; reason?: string; expiresAt?: string | null }): Promise<{ id: string }> {
+		return withOrgContext(this.db, orgId, async (tx) => {
+			const grant = await tx.accessGrant.create({ data: { orgId, resourceType: input.resourceType, resourceId: input.resourceId, principalId: input.principalId ?? null, teamId: input.teamId ?? null, externalEmail: input.externalEmail ?? null, level: input.level, fieldMask: input.fieldMask, grantedBy: actorId, ...(input.reason === undefined ? {} : { reason: input.reason }), expiresAt: input.expiresAt ? new Date(input.expiresAt) : null } });
+			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "AccessGrant", subjectId: grant.id, name: "permission.access_grant.created", payload: { resourceType: input.resourceType, resourceId: input.resourceId, level: input.level } });
+			return { id: grant.id };
+		});
+	}
+	async revokeGrant(orgId: string, actorId: string, id: string): Promise<{ id: string }> {
+		return withOrgContext(this.db, orgId, async (tx) => {
+			const grant = await tx.accessGrant.findFirst({ where: { id, orgId, revokedAt: null } }); if (!grant) throw new Error("NOT_FOUND"); const revokedAt = new Date();
+			await tx.accessGrant.update({ where: { id }, data: { revokedAt } });
+			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "AccessGrant", subjectId: id, name: "permission.access_grant.revoked", payload: { resourceType: grant.resourceType, resourceId: grant.resourceId, revokedAt: revokedAt.toISOString() } });
+			return { id };
+		});
+	}
 }
