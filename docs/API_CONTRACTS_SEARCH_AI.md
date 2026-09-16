@@ -1,6 +1,6 @@
 # API Contracts: Search + AI V1
 
-This document extends the global invariants in `docs/API_CONTRACTS.md` for Phase 12. It does not replace the canonical global rules.
+Status: Phase 12 implementation branch. These contracts extend the global invariants in `docs/API_CONTRACTS.md` and are intended to remain versioned with the implementation.
 
 ## `GET /v1/search/hybrid`
 
