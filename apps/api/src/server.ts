@@ -8,6 +8,7 @@ import Fastify from "fastify";
 import { AUTH_COOKIE_NAME, authenticate, identityForSession, requestMagicLink, revokeSession, verifyMagicLink } from "./auth.js";
 import { registerDocsFilesRoutesV2 } from "./docs-files-v2.js";
 import { registerGraphRoutes } from "./graph.js";
+import { registerPageAttachmentRoutes } from "./page-attachments.js";
 import { registerPermissionRoutes } from "./permissions.js";
 import { registerWorkExperienceRoutes } from "./work-experience.js";
 import { registerWorkObjectRoutes } from "./work-objects.js";
@@ -32,6 +33,7 @@ await registerPermissionRoutes(app);
 await registerWorkObjectRoutes(app);
 await registerWorkExperienceRoutes(app);
 await registerDocsFilesRoutesV2(app);
+await registerPageAttachmentRoutes(app);
 await registerGraphRoutes(app);
 try { await getPrisma().$queryRawUnsafe("SELECT 1"); await app.listen({ port: 4000, host: "0.0.0.0" }); } catch (error) { app.log.error(error); await closePrisma(); process.exitCode = 1; }
 process.on("SIGTERM", async () => { await app.close(); await closePrisma(); });
