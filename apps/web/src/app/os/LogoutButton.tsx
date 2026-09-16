@@ -16,7 +16,7 @@ export function LogoutButton() {
 				window.location.assign("/login");
 			}}
 		>
-			{busy ? "A sair..." : authCopy.logout}
+			{busy ? authCopy.loggingOut : authCopy.logout}
 		</button>
 	);
 }
