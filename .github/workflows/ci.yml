@@ -58,7 +58,7 @@ jobs:
         run: pnpm infra:status
       - name: Show service logs
         if: failure()
-        run: pnpm infra:logs -- --no-color
+        run: docker compose -f infra/docker/docker-compose.yml logs --no-color
       - name: Stop local infrastructure
         if: always()
         run: pnpm infra:down
