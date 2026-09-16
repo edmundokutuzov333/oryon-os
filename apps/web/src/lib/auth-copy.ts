@@ -21,6 +21,7 @@ export const authCopy = {
 	teams: "Equipas",
 	member: "Membro",
 	role: "Função",
+	permissions: "Permissões",
 	notAvailable: "Sessão não disponível.",
 	backToLogin: "Voltar ao acesso",
 };
