@@ -8,6 +8,19 @@ export {
 } from "./permissions.js";
 
 export {
+	GraphDomainError,
+	GRAPH_RELATIONS,
+	PROTECTED_CYCLE_RELATIONS,
+	assertNoProtectedCycle,
+	cycleWouldExist,
+	graphNodeKey,
+	neighboursForDirection,
+	relationAllowedForCycleCheck,
+	validateGraphSelfEdge,
+	type GraphAdjacency,
+} from "./graph.js";
+
+export {
 	WorkObjectDomainError,
 	generateHumanId,
 	prepareWorkObjectCreate,
