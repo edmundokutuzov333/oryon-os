@@ -15,6 +15,7 @@ import {
 } from "./auth.js";
 import { registerGraphRoutes } from "./graph.js";
 import { registerPermissionRoutes } from "./permissions.js";
+import { registerWorkExperienceRoutes } from "./work-experience.js";
 import { registerWorkObjectRoutes } from "./work-objects.js";
 
 const app = Fastify({ logger: true });
@@ -28,9 +29,7 @@ function envelope<T>(request: { id: string }, data: T) {
 }
 
 function errorEnvelope(request: { id: string }, code: string, httpStatus: number, message: string) {
-	return {
-		error: { code, httpStatus, message, requestId: requestId(request) },
-	};
+	return { error: { code, httpStatus, message, requestId: requestId(request) } };
 }
 
 function getOrg(request: { headers: Record<string, string | string[] | undefined> }): string {
@@ -77,13 +76,7 @@ function clearSessionCookie(reply: { header: (name: string, value: string) => vo
 	reply.header("Set-Cookie", `${AUTH_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
 }
 
-const healthPayload = () =>
-	HealthResponseSchema.parse({
-		status: "ok",
-		service: "oryon-api",
-		version: "0.1.0",
-		timestamp: new Date().toISOString(),
-	});
+const healthPayload = () => HealthResponseSchema.parse({ status: "ok", service: "oryon-api", version: "0.1.0", timestamp: new Date().toISOString() });
 
 app.get("/health", async (_request, reply) => reply.send(healthPayload()));
 app.get("/v1/health", async (request, reply) => reply.send(envelope(request, healthPayload())));
@@ -149,6 +142,7 @@ app.post("/v1/auth/logout", async (request, reply) => {
 
 await registerPermissionRoutes(app);
 await registerWorkObjectRoutes(app);
+await registerWorkExperienceRoutes(app);
 await registerGraphRoutes(app);
 
 try {
@@ -160,11 +154,5 @@ try {
 	process.exitCode = 1;
 }
 
-process.on("SIGTERM", async () => {
-	await app.close();
-	await closePrisma();
-});
-process.on("SIGINT", async () => {
-	await app.close();
-	await closePrisma();
-});
+process.on("SIGTERM", async () => { await app.close(); await closePrisma(); });
+process.on("SIGINT", async () => { await app.close(); await closePrisma(); });
