@@ -1,0 +1,92 @@
+:root {
+	font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+	color-scheme: dark;
+	background: var(--oryon-color-background, #0d0f0b);
+	color: var(--oryon-color-foreground, #f5f7f2);
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	min-height: 100%;
+}
+
+body {
+	min-height: 100vh;
+	background: var(--oryon-color-background, #0d0f0b);
+}
+
+.shell {
+	display: grid;
+	min-height: 100vh;
+	place-items: center;
+	padding: 24px;
+}
+
+.card {
+	width: min(720px, 100%);
+	padding: clamp(28px, 6vw, 64px);
+	border: 1px solid rgb(255 255 255 / 0.08);
+	border-radius: 28px;
+	background: rgb(255 255 255 / 0.04);
+	box-shadow: 0 28px 80px rgb(0 0 0 / 0.28);
+}
+
+.eyebrow {
+	margin: 0 0 16px;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: #c3f53c;
+}
+
+h1 {
+	max-width: 12ch;
+	margin: 0;
+	font-size: clamp(40px, 8vw, 76px);
+	line-height: 0.95;
+	letter-spacing: -0.05em;
+}
+
+.body {
+	max-width: 56ch;
+	margin: 24px 0 0;
+	font-size: 18px;
+	line-height: 1.6;
+	color: rgb(245 247 242 / 0.7);
+}
+
+.status {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	margin-top: 32px;
+	padding: 10px 14px;
+	border-radius: 999px;
+	background: rgb(195 245 60 / 0.1);
+	color: #c3f53c;
+	font-size: 14px;
+	font-weight: 650;
+}
+
+.status span {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #c3f53c;
+}
+
+@media (max-width: 640px) {
+	.shell {
+		padding: 16px;
+	}
+
+	.card {
+		border-radius: 22px;
+	}
+}
