@@ -36,14 +36,18 @@ const COPY = {
 
 type Filter = "ALL" | "INSTALLED" | "AVAILABLE";
 
+type StatusState = "positive" | "warning" | "danger" | "neutral" | "info";
+
 function statusLabel(status: DomainTemplateSummary["status"]): string {
   if (status === "INSTALLED") return COPY.active;
   if (status === "INACTIVE") return COPY.inactive;
   return COPY.availableStatus;
 }
 
-function templateFromSummary(summary: DomainTemplateSummary, manifests: Map<string, DomainTemplateManifest>): DomainTemplateManifest | null {
-  return manifests.get(summary.key) ?? null;
+function statusState(status: DomainTemplateSummary["status"]): StatusState {
+  if (status === "INSTALLED") return "positive";
+  if (status === "INACTIVE") return "warning";
+  return "neutral";
 }
 
 export function DomainTemplatesStudio() {
@@ -83,7 +87,8 @@ export function DomainTemplatesStudio() {
     return true;
   }), [filter, templates]);
 
-  const selected = selectedKey ? templateFromSummary(templates.find((template) => template.key === selectedKey) ?? templates[0], manifests) : null;
+  const selectedSummary = selectedKey ? templates.find((template) => template.key === selectedKey) : undefined;
+  const selected = selectedSummary ? manifests.get(selectedSummary.key) ?? null : null;
 
   const act = async (key: string, action: "install" | "deactivate") => {
     setBusyKey(key);
@@ -107,11 +112,11 @@ export function DomainTemplatesStudio() {
       <PageHeader eyebrow={COPY.eyebrow} title={COPY.title} description={COPY.description} />
       <div className="domain-template-toolbar" aria-label={COPY.all}>
         <div className="domain-template-filters" role="tablist" aria-label={COPY.all}>
-          <Button size="sm" variant={filter === "ALL" ? "primary" : "secondary"} onClick={() => setFilter("ALL")}>{COPY.all}</Button>
-          <Button size="sm" variant={filter === "INSTALLED" ? "primary" : "secondary"} onClick={() => setFilter("INSTALLED")}>{COPY.installed}</Button>
-          <Button size="sm" variant={filter === "AVAILABLE" ? "primary" : "secondary"} onClick={() => setFilter("AVAILABLE")}>{COPY.available}</Button>
+          <Button type="button" size="sm" variant={filter === "ALL" ? "primary" : "secondary"} onClick={() => setFilter("ALL")}>{COPY.all}</Button>
+          <Button type="button" size="sm" variant={filter === "INSTALLED" ? "primary" : "secondary"} onClick={() => setFilter("INSTALLED")}>{COPY.installed}</Button>
+          <Button type="button" size="sm" variant={filter === "AVAILABLE" ? "primary" : "secondary"} onClick={() => setFilter("AVAILABLE")}>{COPY.available}</Button>
         </div>
-        <span className="domain-template-count"><CountBadge count={visible.length} /> {COPY.types}</span>
+        <span className="domain-template-count"><CountBadge>{visible.length}</CountBadge> {COPY.types}</span>
       </div>
 
       {error ? <Card className="domain-template-feedback domain-template-error"><p>{error}</p></Card> : null}
@@ -124,7 +129,7 @@ export function DomainTemplatesStudio() {
           <Card key={template.key} className="domain-template-card">
             <div className="domain-template-card-top">
               <span className="domain-template-icon" aria-hidden="true">{template.icon}</span>
-              <StatusChip label={statusLabel(template.status)} />
+              <StatusChip state={statusState(template.status)}>{statusLabel(template.status)}</StatusChip>
             </div>
             <div>
               <div className="domain-template-title-row"><h2>{template.name}</h2><span className="domain-template-version">v{template.version}</span></div>
@@ -136,11 +141,11 @@ export function DomainTemplatesStudio() {
             </div>
             <p className="domain-template-audience">{template.audience}</p>
             <div className="domain-template-actions">
-              <Button size="sm" variant="secondary" onClick={() => setSelectedKey(template.key)}>{COPY.details}</Button>
+              <Button type="button" size="sm" variant="secondary" onClick={() => setSelectedKey(template.key)}>{COPY.details}</Button>
               {template.status === "INSTALLED" ? (
-                <Button size="sm" variant="secondary" disabled={busyKey === template.key} onClick={() => void act(template.key, "deactivate")}>{busyKey === template.key ? COPY.deactivating : COPY.deactivate}</Button>
+                <Button type="button" size="sm" variant="secondary" disabled={busyKey === template.key} onClick={() => void act(template.key, "deactivate")}>{busyKey === template.key ? COPY.deactivating : COPY.deactivate}</Button>
               ) : (
-                <Button size="sm" variant="primary" disabled={busyKey === template.key} onClick={() => void act(template.key, "install")}>{busyKey === template.key ? COPY.installing : template.status === "INACTIVE" ? COPY.reactivate : COPY.install}</Button>
+                <Button type="button" size="sm" variant="primary" disabled={busyKey === template.key} onClick={() => void act(template.key, "install")}>{busyKey === template.key ? COPY.installing : template.status === "INACTIVE" ? COPY.reactivate : COPY.install}</Button>
               )}
             </div>
           </Card>
@@ -152,7 +157,7 @@ export function DomainTemplatesStudio() {
           <Card className="domain-template-detail-card">
             <div className="domain-template-detail-header">
               <div><span className="domain-template-detail-kicker">{COPY.details}</span><h2>{selected.name}</h2><p>{selected.description}</p></div>
-              <Button size="sm" variant="secondary" onClick={() => setSelectedKey(null)}>{COPY.close}</Button>
+              <Button type="button" size="sm" variant="secondary" onClick={() => setSelectedKey(null)}>{COPY.close}</Button>
             </div>
             <div className="domain-template-detail-body">
               <div className="domain-template-detail-section"><h3>{COPY.types}</h3><div className="domain-template-chip-grid">{selected.objectTypes.map((type) => <div className="domain-template-type-chip" key={type.key}><strong>{type.name}</strong><span>{type.pluralName}</span><code>{type.key}</code></div>)}</div></div>
