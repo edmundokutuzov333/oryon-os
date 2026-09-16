@@ -7,6 +7,8 @@ export { IdentityRepository } from "./identity.repository.js";
 export { MeetingRepository } from "./meeting.repository.js";
 export { PageAttachmentsRepository } from "./page-attachments.repository.js";
 export { PermissionRepository } from "./permission.repository.js";
+export { AiRepository } from "./ai.repository.js";
+export { SearchRepository } from "./search.repository.js";
 export type { PermissionSnapshot, ExternalExposureRow } from "./permission.repository.js";
 export { RoomRepository } from "./room.repository.js";
 export { meetingRepository, roomRepository } from "./instances.js";
