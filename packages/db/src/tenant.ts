@@ -1,4 +1,4 @@
-import { type Prisma, type PrismaClient } from "../src/generated/client.js";
+import { type Prisma, type PrismaClient } from "./generated/client.js";
 
 export async function withOrgContext<T>(
 	db: PrismaClient,
