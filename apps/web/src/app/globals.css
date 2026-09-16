@@ -49,14 +49,13 @@ h1 { margin: 0; font-size: clamp(38px, 7vw, 72px); line-height: .96; letter-spac
 .identity-meta span { padding: 8px 10px; border-radius: var(--radius-xs); background: var(--color-ink-050); font-size: 12px; }
 .item-list { display: grid; gap: 8px; }
 .list-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--bg-surface-raise); font-size: 13px; }
-
 .permissions-layout { display: grid; gap: 16px; padding-bottom: 32px; }
 .permissions-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 8px 8px 12px; }
 .permissions-subtitle { max-width: 64ch; margin: 18px 0 0; color: var(--color-ink-300); line-height: 1.55; }
 .permissions-tabs { display: flex; gap: 4px; padding: 5px; border: 1px solid var(--border-default); border-radius: var(--radius-lg); background: var(--bg-chrome); width: fit-content; }
 .permission-tab { min-height: 44px; padding: 0 16px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-ink-300); cursor: pointer; font-weight: 700; }
 .permission-tab.active { background: var(--color-acid-500); color: var(--color-ink-950); }
-.permission-tab:focus-visible, .permissions-form button:focus-visible, .exposure-report button:focus-visible, .quiet-link:focus-visible { outline: 2px solid var(--color-acid-500); outline-offset: 2px; }
+.permission-tab:focus-visible, .permission-form button:focus-visible, .exposure-report button:focus-visible, .quiet-link:focus-visible { outline: 2px solid var(--color-acid-500); outline-offset: 2px; }
 .permission-workbench { display: grid; grid-template-columns: minmax(300px,.85fr) minmax(0,1.4fr); gap: 12px; }
 .permission-form, .permission-result, .exposure-report { border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-surface); }
 .permission-form { display: grid; gap: 12px; padding: 20px; align-content: start; }
@@ -83,30 +82,11 @@ h1 { margin: 0; font-size: clamp(38px, 7vw, 72px); line-height: .96; letter-spac
 .field-access { display: grid; gap: 8px; margin-top: 18px; }
 .field-access .panel-kicker { margin-bottom: 2px; }
 .permissions-empty { min-height: 180px; display: grid; place-items: center; color: var(--color-ink-500); border: 1px dashed var(--border-default); border-radius: var(--radius-sm); }
-.permission-error { margin: 0 0 12px; padding: 12px; border: 1px solid rgba(255,77,94,.32); border-radius: var(--radius-sm); color: var(--color-danger); background: rgba(255,77,94,.06); }
+.permission-error { margin: 0 0 12px; padding: 12px; border: 1px solid color-mix(in srgb,var(--color-danger) 32%,transparent); border-radius: var(--radius-sm); color: var(--color-danger); background: color-mix(in srgb,var(--color-danger) 6%,transparent); }
 .exposure-report { padding: 20px; }
 .exposure-report-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
 .exposure-report h2 { margin: 0; font-size: 28px; letter-spacing: -.04em; }
 .exposure-report .list-item { display: grid; grid-template-columns: minmax(120px,.8fr) minmax(160px,1.2fr) 60px minmax(100px,.6fr); }
-
-@media (max-width:1024px) {
-	.os-grid { grid-template-columns: 1fr 1fr; }
-	.os-panel-hero { grid-column: 1 / -1; }
-	.permission-workbench { grid-template-columns: 1fr; }
-}
-@media (max-width:768px) {
-	.auth-shell, .os-shell { padding: 12px; }
-	.os-chrome { align-items: flex-start; flex-direction: column; }
-	.profile-chip { width: 100%; justify-content: space-between; flex-wrap: wrap; }
-	.os-grid, .permission-action-grid, .exposure-strip { grid-template-columns: 1fr; }
-	.os-panel-hero { grid-column: auto; }
-	.permissions-header { align-items: flex-start; flex-direction: column; }
-	.permissions-tabs { width: 100%; overflow-x: auto; }
-	.permission-tab { flex: 1 0 auto; }
-	.permission-principal { grid-template-columns: 1fr; }
-	.exposure-report .list-item { grid-template-columns: 1fr; gap: 5px; padding: 10px; }
-}
-@media (max-width:480px) {
-	.auth-card, .os-panel, .permission-form, .permission-result, .exposure-report { padding: 20px; }
-	.auth-form button, .auth-form input, .ghost-button, .permission-form > button { min-height: 48px; }
-}
+@media (max-width:1024px) { .os-grid { grid-template-columns: 1fr 1fr; } .os-panel-hero { grid-column: 1 / -1; } .permission-workbench { grid-template-columns: 1fr; } }
+@media (max-width:768px) { .auth-shell, .os-shell { padding: 12px; } .os-chrome { align-items: flex-start; flex-direction: column; } .profile-chip { width: 100%; justify-content: space-between; flex-wrap: wrap; } .os-grid, .permission-action-grid, .exposure-strip { grid-template-columns: 1fr; } .os-panel-hero { grid-column: auto; } .permissions-header { align-items: flex-start; flex-direction: column; } .permissions-tabs { width: 100%; overflow-x: auto; } .permission-tab { flex: 1 0 auto; } .permission-principal { grid-template-columns: 1fr; } .exposure-report .list-item { grid-template-columns: 1fr; gap: 5px; padding: 10px; } }
+@media (max-width:480px) { .auth-card, .os-panel, .permission-form, .permission-result, .exposure-report { padding: 20px; } .auth-form button, .auth-form input, .ghost-button, .permission-form > button { min-height: 48px; } }
