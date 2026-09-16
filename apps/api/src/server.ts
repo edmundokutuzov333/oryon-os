@@ -13,6 +13,7 @@ import { registerPageAttachmentRoutes } from "./page-attachments.js";
 import { registerPermissionRoutes } from "./permissions.js";
 import { registerWorkExperienceRoutes } from "./work-experience.js";
 import { registerWorkObjectRoutes } from "./work-objects.js";
+import { registerDomainTemplateRoutes } from "./domain-templates.js";
 import { AUTH_COOKIE_NAME, authenticate, identityForSession, requestMagicLink, revokeSession, verifyMagicLink } from "./auth.js";
 import { registerRealtime } from "./realtime.js";
 
@@ -41,6 +42,7 @@ await registerPageAttachmentRoutes(app);
 await registerCommunicationRoutesV2(app, { to: (room) => ({ emit: (event, payload) => io.to(room).emit(event, payload) }) });
 await registerMeetingRoutesV2(app);
 await registerGraphRoutes(app);
+await registerDomainTemplateRoutes(app);
 try { await getPrisma().$queryRawUnsafe("SELECT 1"); await app.listen({ port: 4000, host: "0.0.0.0" }); } catch (error) { app.log.error(error); await io.close(); await closePrisma(); process.exitCode = 1; }
 process.on("SIGTERM", async () => { await io.close(); await app.close(); await closePrisma(); });
 process.on("SIGINT", async () => { await io.close(); await app.close(); await closePrisma(); });
