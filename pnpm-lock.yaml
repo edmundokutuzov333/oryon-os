@@ -26,6 +26,9 @@ importers:
       '@oryon/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@oryon/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@oryon/db':
         specifier: workspace:*
         version: link:../../packages/db
