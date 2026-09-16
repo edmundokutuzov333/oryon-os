@@ -65,3 +65,5 @@ A infraestrutura é transversal: não cria domínio de produto nem tabelas espec
 ## Gate de validação da Fase 1
 
 A Fase 1 só é aceite quando o CI conseguir instalar com `--frozen-lockfile`, validar o Compose, construir a imagem PostgreSQL, iniciar PostgreSQL, Redis, NATS JetStream, Typesense, MinIO e LiveKit, executar o bootstrap do bucket e concluir `infra:doctor` com todos os serviços saudáveis.
+
+O mesmo gate também valida os checks de arquitectura e de invariantes V1, typecheck, lint, testes e build, evitando que a infraestrutura seja considerada pronta quando a base do monorepo está inconsistente.
