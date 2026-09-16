@@ -8,7 +8,11 @@ const rules = [
 		forbidden: ["@oryon/db", "@oryon/core", "@oryon/contracts"],
 	},
 	{ dir: "packages/core", forbidden: ["@oryon/db", "@oryon/ai"] },
-	{ dir: "packages/db", forbidden: ["prisma", "@prisma/client"], ignoredDirs: ["src/generated"] },
+	{
+		dir: "packages/db",
+		forbidden: ["prisma", "@prisma/client"],
+		ignoredDirs: ["packages/db/src/generated"],
+	},
 	{ dir: "packages/ai", forbidden: [] },
 ];
 
@@ -19,7 +23,8 @@ async function walk(dir, ignoredDirs = []) {
 		if (entry.name === "node_modules" || entry.name === ".next" || entry.name === "dist") continue;
 		const full = path.join(dir, entry.name);
 		if (entry.isDirectory()) {
-			if (ignoredDirs.some((ignored) => full === path.join(root, ignored))) continue;
+			const relative = path.relative(root, full).split(path.sep).join("/");
+			if (ignoredDirs.includes(relative)) continue;
 			files.push(...(await walk(full, ignoredDirs)));
 		} else if (/\.(ts|tsx|mts|cts|js|jsx)$/.test(entry.name)) {
 			files.push(full);
