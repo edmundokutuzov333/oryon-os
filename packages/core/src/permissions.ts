@@ -28,6 +28,7 @@ function scopeMatches(binding: PermissionRoleBinding, resource: PermissionResour
 		case "PROJECT": return binding.scopeId === resource.projectId;
 		case "OBJECT": return binding.scopeId === resource.id;
 		case "TEAM": return binding.scopeId !== null && subject.teamIds.includes(binding.scopeId);
+		default: return false;
 	}
 }
 
@@ -40,9 +41,7 @@ function permissionStringMatches(permission: string, resourceType: string, actio
 function roleAllows(roles: PermissionRoleBinding[], resource: PermissionResource, subject: PermissionSubject, action: PermissionAction, now: Date) {
 	for (const role of roles) {
 		if (!notExpired(role.expiresAt, now) || !scopeMatches(role, resource, subject)) continue;
-		if (role.permissions.some((permission) => permissionStringMatches(permission, resource.type, action))) {
-			return { allowed: true, matchedBy: `role:${role.scopeType.toLowerCase()}` };
-		}
+		if (role.permissions.some((permission) => permissionStringMatches(permission, resource.type, action))) return { allowed: true, matchedBy: `role:${role.scopeType.toLowerCase()}` };
 	}
 	return { allowed: false, matchedBy: null as string | null };
 }
@@ -54,7 +53,7 @@ function grantMatches(grant: PermissionGrant, resource: PermissionResource, subj
 
 function grantAllows(grants: PermissionGrant[], resource: PermissionResource, subject: PermissionSubject, action: PermissionAction, now: Date) {
 	for (const grant of grants) {
-		if (!grantMatches(grant, resource, subject)) continue;
+		if (!grantMatches(grant, resource, subject, now)) continue;
 		if (action === "use_external" && grant.externalEmail !== null) return { allowed: true, matchedBy: "grant:external_email" };
 		if (action === "use_ai" && (grant.level === "MANAGE" || grant.level === "OWNER")) return { allowed: true, matchedBy: `grant:${grant.level.toLowerCase()}` };
 		if (LEVEL_ACTIONS[grant.level].includes(action)) return { allowed: true, matchedBy: `grant:${grant.level.toLowerCase()}` };
