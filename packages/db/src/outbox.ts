@@ -17,21 +17,21 @@ export async function appendDomainEvent(
 	tx: Prisma.TransactionClient,
 	input: DomainEventInput,
 ): Promise<{ readonly id: string }> {
-	const event = await tx.domainEvent.create({
-		data: {
-			orgId: input.orgId,
-			name: input.name,
-			version: input.version ?? 1,
-			actorId: input.actorId,
-			actorType: input.actorType,
-			subjectType: input.subjectType,
-			subjectId: input.subjectId,
-			payload: input.payload,
-			correlationId: input.correlationId,
-			causationId: input.causationId,
-		},
+	const data: Prisma.DomainEventUncheckedCreateInput = {
+		orgId: input.orgId,
+		name: input.name,
+		version: input.version ?? 1,
+		actorType: input.actorType,
+		subjectType: input.subjectType,
+		subjectId: input.subjectId,
+		payload: input.payload,
+	};
+	if (input.actorId !== undefined) data.actorId = input.actorId;
+	if (input.correlationId !== undefined) data.correlationId = input.correlationId;
+	if (input.causationId !== undefined) data.causationId = input.causationId;
+
+	return tx.domainEvent.create({
+		data,
 		select: { id: true },
 	});
-
-	return event;
 }
