@@ -6,3 +6,17 @@ export {
 	maskFields,
 	type PermissionPolicyContext,
 } from "./permissions.js";
+
+export {
+	WorkObjectDomainError,
+	generateHumanId,
+	prepareWorkObjectCreate,
+	transitionStatus,
+	validateCustomFields,
+	validateMoney,
+	validateParent,
+	validateProgress,
+	validateStatusModel,
+	validateWorkObjectDates,
+	validateWorkObjectUpdate,
+} from "./work-object.js";
