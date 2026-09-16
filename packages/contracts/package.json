@@ -1,0 +1,23 @@
+{
+	"name": "@oryon/contracts",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"exports": {
+		"./health": "./src/health.schema.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"build": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"zod": "^4.0.0"
+	},
+	"devDependencies": {
+		"typescript": "workspace:*",
+		"vitest": "^3.2.0",
+		"@biomejs/biome": "workspace:*"
+	}
+}
