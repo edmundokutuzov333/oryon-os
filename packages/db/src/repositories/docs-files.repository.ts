@@ -1,5 +1,5 @@
 import type { PageCreateInput, PageUpdateInput, FileCompleteInput } from "@oryon/contracts/docs-files";
-import type { PrismaClient } from "../generated/client.js";
+import type { Prisma, PrismaClient } from "../generated/client.js";
 import { appendDomainEvent } from "../outbox.js";
 import { withOrgContext } from "../tenant.js";
 
@@ -29,7 +29,7 @@ export class DocsFilesRepository {
         if (!owner) throw new Error("OWNER_NOT_FOUND");
       }
       const position = await tx.page.count({ where: { orgId, parentPageId: input.parentPageId ?? null, deletedAt: null } });
-      const page = await tx.page.create({ data: { orgId, workspaceId: input.workspaceId ?? null, parentPageId: input.parentPageId ?? null, title: input.title, kind: input.kind ?? "DOC", ownerId: input.ownerId ?? actorId, classification: input.classification ?? null, position, contentJson: { type: "doc", content: [{ type: "paragraph" }] }, contentText: "", indexable: false, createdBy: actorId } });
+      const page = await tx.page.create({ data: { orgId, workspaceId: input.workspaceId ?? null, parentPageId: input.parentPageId ?? null, title: input.title, kind: input.kind === "CANVAS" ? "DOC" : input.kind ?? "DOC", ownerId: input.ownerId ?? actorId, classification: input.classification ?? null, position, contentJson: { type: "doc", content: [{ type: "paragraph" }] }, contentText: "", indexable: false, createdBy: actorId } });
       await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "Page", subjectId: page.id, name: "page.created", payload: { title: page.title, kind: page.kind } });
       return page;
     });
@@ -64,7 +64,7 @@ export class DocsFilesRepository {
         ...(input.indexable === undefined ? {} : { indexable: input.indexable }),
         ...(input.publishedSlug === undefined ? {} : { publishedSlug: input.publishedSlug }),
       };
-      const page = await tx.page.update({ where: { id }, data });
+      const page = await tx.page.update({ where: { id }, data: data as Prisma.PageUncheckedUpdateInput });
       const hasContent = input.contentJson !== undefined || input.contentText !== undefined || input.contentYjsBase64 !== undefined;
       if (hasContent) {
         const last = await tx.pageVersion.findFirst({ where: { orgId, pageId: id }, orderBy: { version: "desc" }, select: { version: true } });

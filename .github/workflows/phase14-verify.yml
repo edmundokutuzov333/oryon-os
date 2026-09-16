@@ -1,0 +1,38 @@
+name: Phase 14 Verify
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/contracts/src/domain-templates*"
+      - "packages/db/src/repositories/domain-template.repository.ts"
+      - "apps/api/src/domain-templates.ts"
+      - "apps/web/src/app/api/domain-templates/**"
+      - "apps/web/src/app/os/templates/**"
+      - "apps/web/src/app/os/OryonAppShell.tsx"
+      - "scripts/check-phase14.mjs"
+      - "docs/PHASE_14.md"
+      - "packages/contracts/package.json"
+      - "packages/db/src/repositories/index.ts"
+      - "apps/api/src/server.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+          run_install: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm check:phase14
+      - run: pnpm --filter @oryon/contracts test -- --run src/domain-templates.test.ts
+      - run: pnpm --filter @oryon/contracts typecheck
