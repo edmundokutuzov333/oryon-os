@@ -26,6 +26,9 @@ importers:
       '@oryon/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@oryon/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       fastify:
         specifier: ^5.5.0
         version: 5.12.5
