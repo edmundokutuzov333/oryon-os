@@ -27,43 +27,58 @@ datasource db {
 }
 
 model Organization {
-  id               String    @id @default(cuid(2))
-  slug             String    @unique
-  name             String
-  logoUrl          String?
-  primaryDomain    String?
-  dataRegion       DataRegion @default(EU)
-  reportingCurrency String   @default("USD") @map("reporting_currency")
-  defaultLocale    String    @default("pt-MZ") @map("default_locale")
-  defaultTimezone  String    @default("Africa/Maputo") @map("default_timezone")
-  plan             PlanTier  @default(TRIAL)
-  settings         Json      @default("{}")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-  deletedAt        DateTime? @map("deleted_at")
+  id                String     @id @default(cuid(2))
+  slug              String     @unique
+  name              String
+  logoUrl           String?
+  primaryDomain     String?
+  dataRegion        DataRegion @default(EU)
+  reportingCurrency String     @default("USD") @map("reporting_currency")
+  defaultLocale     String     @default("pt-MZ") @map("default_locale")
+  defaultTimezone   String     @default("Africa/Maputo") @map("default_timezone")
+  plan              PlanTier   @default(TRIAL)
+  settings          Json       @default("{}")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+  deletedAt         DateTime?  @map("deleted_at")
 
-  workspaces Workspace[]
-  users      User[]
-  teams      Team[]
-  workObjects WorkObject[]
-  channels   Channel[]
-  agents     Agent[]
-  roles      Role[]
-  grants     AccessGrant[]
-  labels     ClassificationLabel[]
-  objectTypes ObjectTypeDef[]
-  comments   Comment[]
-  files      FileAsset[]
-  approvals  Approval[]
-  pages      Page[]
-  databases  DataBase[]
-  workflows  Workflow[]
-  events     DomainEvent[]
-  runs       AgentRun[]
-  modelPolicies ModelPolicy[]
-  auditLogs  AuditLog[]
-  notifications Notification[]
-  meetings   Meeting[]
+  workspaces          Workspace[]
+  users               User[]
+  teams               Team[]
+  workObjects         WorkObject[]
+  channels            Channel[]
+  agents              Agent[]
+  roles               Role[]
+  grants              AccessGrant[]
+  labels              ClassificationLabel[]
+  objectTypes         ObjectTypeDef[]
+  comments            Comment[]
+  files               FileAsset[]
+  approvals           Approval[]
+  pages               Page[]
+  databases           DataBase[]
+  workflows           Workflow[]
+  events              DomainEvent[]
+  runs                AgentRun[]
+  modelPolicies       ModelPolicy[]
+  auditLogs           AuditLog[]
+  notifications       Notification[]
+  meetings            Meeting[]
+  edges               Edge[]
+  channelMembers      ChannelMember[]
+  emailAccounts       EmailAccount[]
+  emailThreads        EmailThread[]
+  meetingParticipants MeetingParticipant[]
+  meetingArtifacts    MeetingArtifact[]
+  rooms               Room[]
+  pageVersions        PageVersion[]
+  dataRecords         DataRecord[]
+  savedViews          SavedView[]
+  workflowRuns        WorkflowRun[]
+  attachments         Attachment[]
+  timeEntries         TimeEntry[]
+  messages            Message[]
+  reactions           Reaction[]
 
   @@map("organizations")
 }
@@ -87,41 +102,46 @@ model Workspace {
 }
 
 model User {
-  id               String        @id @default(cuid(2))
-  orgId            String        @map("org_id")
-  email            String
-  emailVerified    DateTime?     @map("email_verified")
-  name             String
-  displayName      String?       @map("display_name")
-  avatarUrl        String?       @map("avatar_url")
-  jobTitle         String?       @map("job_title")
-  timezone         String        @default("Africa/Maputo")
-  locale           String        @default("pt-MZ")
-  workingHours     Json?         @map("working_hours")
-  type             PrincipalType @default(MEMBER)
-  status           UserStatus    @default(ACTIVE)
-  managerId        String?       @map("manager_id")
-  lastSeenAt       DateTime?     @map("last_seen_at")
-  presence         PresenceState @default(OFFLINE)
-  statusEmoji      String?       @map("status_emoji")
-  statusText       String?       @map("status_text")
-  statusExpiresAt  DateTime?     @map("status_expires_at")
-  externalId       String?       @map("external_id")
-  createdAt        DateTime      @default(now()) @map("created_at")
-  updatedAt        DateTime      @updatedAt @map("updated_at")
-  deletedAt        DateTime?     @map("deleted_at")
+  id              String        @id @default(cuid(2))
+  orgId           String        @map("org_id")
+  email           String
+  emailVerified   DateTime?     @map("email_verified")
+  name            String
+  displayName     String?       @map("display_name")
+  avatarUrl       String?       @map("avatar_url")
+  jobTitle        String?       @map("job_title")
+  timezone        String        @default("Africa/Maputo")
+  locale          String        @default("pt-MZ")
+  workingHours    Json?         @map("working_hours")
+  type            PrincipalType @default(MEMBER)
+  status          UserStatus    @default(ACTIVE)
+  managerId       String?       @map("manager_id")
+  lastSeenAt      DateTime?     @map("last_seen_at")
+  presence        PresenceState @default(OFFLINE)
+  statusEmoji     String?       @map("status_emoji")
+  statusText      String?       @map("status_text")
+  statusExpiresAt DateTime?     @map("status_expires_at")
+  externalId      String?       @map("external_id")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  deletedAt       DateTime?     @map("deleted_at")
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  manager User? @relation("ReportsTo", fields: [managerId], references: [id])
-  reports User[] @relation("ReportsTo")
-  teamMembers TeamMember[]
-  roleBindings RoleBinding[]
-  ownedObjects WorkObject[] @relation("ObjectOwner")
-  assignments Assignment[]
-  messages Message[]
-  comments Comment[]
-  agents Agent[] @relation("AgentPrincipal")
-  auditLogs AuditLog[]
+  org                 Organization         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  manager             User?                @relation("ReportsTo", fields: [managerId], references: [id])
+  reports             User[]               @relation("ReportsTo")
+  teamMembers         TeamMember[]
+  roleBindings        RoleBinding[]
+  ownedObjects        WorkObject[]         @relation("ObjectOwner")
+  assignments         Assignment[]
+  messages            Message[]
+  comments            Comment[]
+  agents              Agent[]              @relation("AgentPrincipal")
+  auditLogs           AuditLog[]
+  timeEntries         TimeEntry[]
+  channelMembers      ChannelMember[]
+  reactions           Reaction[]
+  meetingParticipants MeetingParticipant[]
+  notifications       Notification[]
 
   @@unique([orgId, email])
   @@index([orgId, status])
@@ -130,21 +150,21 @@ model User {
 }
 
 model Team {
-  id          String   @id @default(cuid(2))
-  orgId       String   @map("org_id")
-  name        String
-  slug        String
-  description String?
-  parentTeamId String? @map("parent_team_id")
-  leadUserId  String?  @map("lead_user_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  deletedAt   DateTime? @map("deleted_at")
+  id           String    @id @default(cuid(2))
+  orgId        String    @map("org_id")
+  name         String
+  slug         String
+  description  String?
+  parentTeamId String?   @map("parent_team_id")
+  leadUserId   String?   @map("lead_user_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  parentTeam Team? @relation("TeamTree", fields: [parentTeamId], references: [id])
-  children Team[] @relation("TeamTree")
-  members TeamMember[]
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parentTeam Team?        @relation("TeamTree", fields: [parentTeamId], references: [id])
+  children   Team[]       @relation("TeamTree")
+  members    TeamMember[]
 
   @@unique([orgId, slug])
   @@index([orgId, parentTeamId])
@@ -152,11 +172,11 @@ model Team {
 }
 
 model TeamMember {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  teamId String @map("team_id")
-  userId String @map("user_id")
-  role TeamRole @default(MEMBER)
+  id       String   @id @default(cuid(2))
+  orgId    String   @map("org_id")
+  teamId   String   @map("team_id")
+  userId   String   @map("user_id")
+  role     TeamRole @default(MEMBER)
   joinedAt DateTime @default(now()) @map("joined_at")
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -168,30 +188,30 @@ model TeamMember {
 }
 
 model Agent {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  key String
-  name String
-  description String?
-  avatarUrl String? @map("avatar_url")
-  principalId String @map("principal_id")
-  systemPrompt String @db.Text @map("system_prompt")
-  modelPolicyId String? @map("model_policy_id")
-  knowledgeScope Json @default("{}") @map("knowledge_scope")
-  tools Json @default("[]")
-  triggers Json @default("[]")
-  schedule String?
+  id               String           @id @default(cuid(2))
+  orgId            String           @map("org_id")
+  key              String
+  name             String
+  description      String?
+  avatarUrl        String?          @map("avatar_url")
+  principalId      String           @map("principal_id")
+  systemPrompt     String           @map("system_prompt") @db.Text
+  modelPolicyId    String?          @map("model_policy_id")
+  knowledgeScope   Json             @default("{}") @map("knowledge_scope")
+  tools            Json             @default("[]")
+  triggers         Json             @default("[]")
+  schedule         String?
   checkpointPolicy CheckpointPolicy @default(SENSITIVE_ONLY) @map("checkpoint_policy")
-  budgetCapCents BigInt? @map("budget_cap_cents")
-  status AgentStatus @default(DRAFT)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
+  budgetCapCents   BigInt?          @map("budget_cap_cents")
+  status           AgentStatus      @default(DRAFT)
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  deletedAt        DateTime?        @map("deleted_at")
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  principal User @relation("AgentPrincipal", fields: [principalId], references: [id])
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  principal   User         @relation("AgentPrincipal", fields: [principalId], references: [id])
   modelPolicy ModelPolicy? @relation(fields: [modelPolicyId], references: [id])
-  runs AgentRun[]
+  runs        AgentRun[]
 
   @@unique([orgId, key])
   @@index([orgId, status])
@@ -199,17 +219,17 @@ model Agent {
 }
 
 model Role {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  key String
-  name String
+  id          String   @id @default(cuid(2))
+  orgId       String   @map("org_id")
+  key         String
+  name        String
   description String?
-  isSystem Boolean @default(false) @map("is_system")
+  isSystem    Boolean  @default(false) @map("is_system")
   permissions String[]
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org      Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
   bindings RoleBinding[]
 
   @@unique([orgId, key])
@@ -217,17 +237,17 @@ model Role {
 }
 
 model RoleBinding {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  roleId String @map("role_id")
-  principalId String @map("principal_id")
-  scopeType ScopeType @map("scope_type")
-  scopeId String? @map("scope_id")
-  grantedBy String @map("granted_by")
-  expiresAt DateTime? @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
+  id          String    @id @default(cuid(2))
+  orgId       String    @map("org_id")
+  roleId      String    @map("role_id")
+  principalId String    @map("principal_id")
+  scopeType   ScopeType @map("scope_type")
+  scopeId     String?   @map("scope_id")
+  grantedBy   String    @map("granted_by")
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
 
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  role      Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
   principal User @relation(fields: [principalId], references: [id], onDelete: Cascade)
 
   @@unique([roleId, principalId, scopeType, scopeId])
@@ -237,22 +257,23 @@ model RoleBinding {
 }
 
 model AccessGrant {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  resourceType String @map("resource_type")
-  resourceId String @map("resource_id")
-  principalId String? @map("principal_id")
-  teamId String? @map("team_id")
-  externalEmail String? @map("external_email")
-  level AccessLevel
-  fieldMask String[] @map("field_mask")
-  grantedBy String @map("granted_by")
-  reason String?
-  expiresAt DateTime? @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  revokedAt DateTime? @map("revoked_at")
+  id            String      @id @default(cuid(2))
+  orgId         String      @map("org_id")
+  resourceType  String      @map("resource_type")
+  resourceId    String      @map("resource_id")
+  principalId   String?     @map("principal_id")
+  teamId        String?     @map("team_id")
+  externalEmail String?     @map("external_email")
+  level         AccessLevel
+  fieldMask     String[]    @map("field_mask")
+  grantedBy     String      @map("granted_by")
+  reason        String?
+  expiresAt     DateTime?   @map("expires_at")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  revokedAt     DateTime?   @map("revoked_at")
 
   org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
   @@index([orgId, resourceType, resourceId])
   @@index([orgId, principalId])
   @@index([orgId, expiresAt])
@@ -260,91 +281,93 @@ model AccessGrant {
 }
 
 model ClassificationLabel {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  key String
-  name String
-  rank Int
+  id             String  @id @default(cuid(2))
+  orgId          String  @map("org_id")
+  key            String
+  name           String
+  rank           Int
   blocksExternal Boolean @default(false) @map("blocks_external")
-  blocksAi Boolean @default(false) @map("blocks_ai")
+  blocksAi       Boolean @default(false) @map("blocks_ai")
   blocksDownload Boolean @default(false) @map("blocks_download")
-  watermark Boolean @default(false)
-  retentionDays Int? @map("retention_days")
+  watermark      Boolean @default(false)
+  retentionDays  Int?    @map("retention_days")
 
   org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
   @@unique([orgId, key])
   @@map("classification_labels")
 }
 
 model ObjectTypeDef {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  key String
-  name String
-  pluralName String @map("plural_name")
-  icon String?
-  color String?
-  isSystem Boolean @default(false) @map("is_system")
-  idPrefix String @map("id_prefix")
-  schema Json @default("{}")
-  statusModel Json @default("{}") @map("status_model")
-  defaultViews Json @default("[]") @map("default_views")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(cuid(2))
+  orgId        String   @map("org_id")
+  key          String
+  name         String
+  pluralName   String   @map("plural_name")
+  icon         String?
+  color        String?
+  isSystem     Boolean  @default(false) @map("is_system")
+  idPrefix     String   @map("id_prefix")
+  schema       Json     @default("{}")
+  statusModel  Json     @default("{}") @map("status_model")
+  defaultViews Json     @default("[]") @map("default_views")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org     Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   objects WorkObject[]
+
   @@unique([orgId, key])
   @@map("object_type_defs")
 }
 
 model WorkObject {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  workspaceId String? @map("workspace_id")
-  typeKey String @map("type_key")
-  typeDefId String @map("type_def_id")
-  humanId String @map("human_id")
-  title String
-  description String? @db.Text
-  status String @default("open")
-  statusCategory StatusCategory @default(TODO) @map("status_category")
-  priority Priority @default(NORMAL)
-  ownerId String? @map("owner_id")
-  parentObjectId String? @map("parent_object_id")
-  startAt DateTime? @map("start_at")
-  dueAt DateTime? @map("due_at")
-  completedAt DateTime? @map("completed_at")
-  estimateMinutes Int? @map("estimate_minutes")
-  actualMinutes Int? @map("actual_minutes")
-  progress Int @default(0)
-  moneyAmount Decimal? @db.Decimal(19, 4) @map("money_amount")
-  moneyCurrency String? @map("money_currency")
-  probability Int?
-  secondaryDate DateTime? @map("secondary_date")
-  externalRef String? @map("external_ref")
-  severity Int?
-  classification String?
-  tags String[]
-  customFields Json @default("{}") @map("custom_fields")
-  searchVector Unsupported("tsvector")? @map("search_vector")
-  embedding Unsupported("vector(1536)")?
-  createdBy String @map("created_by")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
+  id              String                       @id @default(cuid(2))
+  orgId           String                       @map("org_id")
+  workspaceId     String?                      @map("workspace_id")
+  typeKey         String                       @map("type_key")
+  typeDefId       String                       @map("type_def_id")
+  humanId         String                       @map("human_id")
+  title           String
+  description     String?                      @db.Text
+  status          String                       @default("open")
+  statusCategory  StatusCategory               @default(TODO) @map("status_category")
+  priority        Priority                     @default(NORMAL)
+  ownerId         String?                      @map("owner_id")
+  parentObjectId  String?                      @map("parent_object_id")
+  startAt         DateTime?                    @map("start_at")
+  dueAt           DateTime?                    @map("due_at")
+  completedAt     DateTime?                    @map("completed_at")
+  estimateMinutes Int?                         @map("estimate_minutes")
+  actualMinutes   Int?                         @map("actual_minutes")
+  progress        Int                          @default(0)
+  moneyAmount     Decimal?                     @map("money_amount") @db.Decimal(19, 4)
+  moneyCurrency   String?                      @map("money_currency")
+  probability     Int?
+  secondaryDate   DateTime?                    @map("secondary_date")
+  externalRef     String?                      @map("external_ref")
+  severity        Int?
+  classification  String?
+  tags            String[]
+  customFields    Json                         @default("{}") @map("custom_fields")
+  searchVector    Unsupported("tsvector")?     @map("search_vector")
+  embedding       Unsupported("vector(1536)")?
+  createdBy       String                       @map("created_by")
+  createdAt       DateTime                     @default(now()) @map("created_at")
+  updatedAt       DateTime                     @updatedAt @map("updated_at")
+  deletedAt       DateTime?                    @map("deleted_at")
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  typeDef ObjectTypeDef @relation(fields: [typeDefId], references: [id])
-  owner User? @relation("ObjectOwner", fields: [ownerId], references: [id])
-  parent WorkObject? @relation("ObjectTree", fields: [parentObjectId], references: [id])
-  children WorkObject[] @relation("ObjectTree")
-  assignments Assignment[]
-  comments Comment[]
-  attachments Attachment[]
-  placements ObjectPlacement[]
-  approvals Approval[]
-  timeEntries TimeEntry[]
+  org           Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  typeDef       ObjectTypeDef      @relation(fields: [typeDefId], references: [id])
+  owner         User?              @relation("ObjectOwner", fields: [ownerId], references: [id])
+  parent        WorkObject?        @relation("ObjectTree", fields: [parentObjectId], references: [id])
+  children      WorkObject[]       @relation("ObjectTree")
+  assignments   Assignment[]
+  comments      Comment[]
+  attachments   Attachment[]
+  placements    ObjectPlacement[]
+  approvals     Approval[]
+  timeEntries   TimeEntry[]
   statusHistory StatusTransition[]
 
   @@unique([orgId, humanId])
@@ -357,54 +380,57 @@ model WorkObject {
 }
 
 model ObjectPlacement {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  objectId String @map("object_id")
+  id            String        @id @default(cuid(2))
+  orgId         String        @map("org_id")
+  objectId      String        @map("object_id")
   containerType ContainerType @map("container_type")
-  containerId String @map("container_id")
-  sectionId String? @map("section_id")
-  position Decimal @db.Decimal(20, 10)
-  isPrimary Boolean @default(false) @map("is_primary")
-  createdAt DateTime @default(now()) @map("created_at")
+  containerId   String        @map("container_id")
+  sectionId     String?       @map("section_id")
+  position      Decimal       @db.Decimal(20, 10)
+  isPrimary     Boolean       @default(false) @map("is_primary")
+  createdAt     DateTime      @default(now()) @map("created_at")
 
   object WorkObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+
   @@unique([objectId, containerType, containerId])
   @@index([orgId, containerType, containerId, position])
   @@map("object_placements")
 }
 
 model Assignment {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  objectId String @map("object_id")
-  userId String? @map("user_id")
-  agentId String? @map("agent_id")
-  role AssignmentRole @default(ASSIGNEE)
+  id         String         @id @default(cuid(2))
+  orgId      String         @map("org_id")
+  objectId   String         @map("object_id")
+  userId     String?        @map("user_id")
+  agentId    String?        @map("agent_id")
+  role       AssignmentRole @default(ASSIGNEE)
   allocation Int?
-  assignedAt DateTime @default(now()) @map("assigned_at")
+  assignedAt DateTime       @default(now()) @map("assigned_at")
 
   object WorkObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
-  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([objectId, userId, role])
   @@index([orgId, userId])
   @@map("assignments")
 }
 
 model Edge {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  fromType String @map("from_type")
-  fromId String @map("from_id")
-  toType String @map("to_type")
-  toId String @map("to_id")
-  relation EdgeRelation
-  lagDays Int? @map("lag_days")
-  metadata Json @default("{}")
-  createdBy String @map("created_by")
-  createdAt DateTime @default(now()) @map("created_at")
-  deletedAt DateTime? @map("deleted_at")
+  id        String       @id @default(cuid(2))
+  orgId     String       @map("org_id")
+  fromType  String       @map("from_type")
+  fromId    String       @map("from_id")
+  toType    String       @map("to_type")
+  toId      String       @map("to_id")
+  relation  EdgeRelation
+  lagDays   Int?         @map("lag_days")
+  metadata  Json         @default("{}")
+  createdBy String       @map("created_by")
+  createdAt DateTime     @default(now()) @map("created_at")
+  deletedAt DateTime?    @map("deleted_at")
 
   org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
   @@unique([fromType, fromId, toType, toId, relation])
   @@index([orgId, fromType, fromId, relation])
   @@index([orgId, toType, toId, relation])
@@ -412,220 +438,231 @@ model Edge {
 }
 
 model StatusTransition {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  objectId String @map("object_id")
-  fromStatus String? @map("from_status")
-  toStatus String @map("to_status")
-  actorId String @map("actor_id")
-  actorType PrincipalType @map("actor_type")
-  comment String?
-  durationMs BigInt? @map("duration_ms")
-  createdAt DateTime @default(now()) @map("created_at")
+  id         String        @id @default(cuid(2))
+  orgId      String        @map("org_id")
+  objectId   String        @map("object_id")
+  fromStatus String?       @map("from_status")
+  toStatus   String        @map("to_status")
+  actorId    String        @map("actor_id")
+  actorType  PrincipalType @map("actor_type")
+  comment    String?
+  durationMs BigInt?       @map("duration_ms")
+  createdAt  DateTime      @default(now()) @map("created_at")
 
   object WorkObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+
   @@index([orgId, objectId, createdAt])
   @@map("status_transitions")
 }
 
 model Comment {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  objectId String? @map("object_id")
-  targetType String @map("target_type")
-  targetId String @map("target_id")
-  parentId String? @map("parent_id")
-  authorId String @map("author_id")
+  id         String        @id @default(cuid(2))
+  orgId      String        @map("org_id")
+  objectId   String?       @map("object_id")
+  targetType String        @map("target_type")
+  targetId   String        @map("target_id")
+  parentId   String?       @map("parent_id")
+  authorId   String        @map("author_id")
   authorType PrincipalType @default(MEMBER) @map("author_type")
-  bodyJson Json @map("body_json")
-  bodyText String @db.Text @map("body_text")
-  mentions String[]
-  isInternal Boolean @default(false) @map("is_internal")
-  resolvedAt DateTime? @map("resolved_at")
-  resolvedBy String? @map("resolved_by")
-  anchorJson Json? @map("anchor_json")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
+  bodyJson   Json          @map("body_json")
+  bodyText   String        @map("body_text") @db.Text
+  mentions   String[]
+  isInternal Boolean       @default(false) @map("is_internal")
+  resolvedAt DateTime?     @map("resolved_at")
+  resolvedBy String?       @map("resolved_by")
+  anchorJson Json?         @map("anchor_json")
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+  deletedAt  DateTime?     @map("deleted_at")
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  object WorkObject? @relation(fields: [objectId], references: [id], onDelete: Cascade)
-  author User @relation(fields: [authorId], references: [id])
-  parent Comment? @relation("CommentTree", fields: [parentId], references: [id])
-  replies Comment[] @relation("CommentTree")
+  org     Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  object  WorkObject?  @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  author  User         @relation(fields: [authorId], references: [id])
+  parent  Comment?     @relation("CommentTree", fields: [parentId], references: [id])
+  replies Comment[]    @relation("CommentTree")
+
   @@index([orgId, targetType, targetId, createdAt])
   @@map("comments")
 }
 
 model FileAsset {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  name String
-  mimeType String @map("mime_type")
-  sizeBytes BigInt @map("size_bytes")
-  storageKey String @map("storage_key")
-  checksumSha256 String @map("checksum_sha256")
-  version Int @default(1)
-  previousVersionId String? @map("previous_version_id")
-  folderId String? @map("folder_id")
-  tags String[]
-  classification String?
-  ocrText String? @db.Text @map("ocr_text")
-  embedding Unsupported("vector(1536)")?
-  licenseExpiresAt DateTime? @map("license_expires_at")
-  uploadedBy String @map("uploaded_by")
-  createdAt DateTime @default(now()) @map("created_at")
-  deletedAt DateTime? @map("deleted_at")
+  id                String                       @id @default(cuid(2))
+  orgId             String                       @map("org_id")
+  name              String
+  mimeType          String                       @map("mime_type")
+  sizeBytes         BigInt                       @map("size_bytes")
+  storageKey        String                       @map("storage_key")
+  checksumSha256    String                       @map("checksum_sha256")
+  version           Int                          @default(1)
+  previousVersionId String?                      @map("previous_version_id")
+  folderId          String?                      @map("folder_id")
+  tags              String[]
+  classification    String?
+  ocrText           String?                      @map("ocr_text") @db.Text
+  embedding         Unsupported("vector(1536)")?
+  licenseExpiresAt  DateTime?                    @map("license_expires_at")
+  uploadedBy        String                       @map("uploaded_by")
+  createdAt         DateTime                     @default(now()) @map("created_at")
+  deletedAt         DateTime?                    @map("deleted_at")
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   attachments Attachment[]
+
   @@unique([orgId, checksumSha256, version])
   @@index([orgId, folderId])
   @@map("file_assets")
 }
 
 model Attachment {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  fileId String @map("file_id")
-  objectId String? @map("object_id")
-  targetType String @map("target_type")
-  targetId String @map("target_id")
-  createdAt DateTime @default(now()) @map("created_at")
+  id         String   @id @default(cuid(2))
+  orgId      String   @map("org_id")
+  fileId     String   @map("file_id")
+  objectId   String?  @map("object_id")
+  targetType String   @map("target_type")
+  targetId   String   @map("target_id")
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  file FileAsset @relation(fields: [fileId], references: [id], onDelete: Cascade)
-  object WorkObject? @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  file   FileAsset    @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  object WorkObject?  @relation(fields: [objectId], references: [id], onDelete: Cascade)
+
   @@unique([fileId, targetType, targetId])
   @@index([orgId, targetType, targetId])
   @@map("attachments")
 }
 
 model Approval {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  objectId String @map("object_id")
-  stepIndex Int @map("step_index")
-  mode ApprovalMode @default(SEQUENTIAL)
-  quorum Int?
-  approverId String? @map("approver_id")
-  approverTeamId String? @map("approver_team_id")
-  delegatedToId String? @map("delegated_to_id")
-  state ApprovalState @default(PENDING)
-  comment String?
-  signatureId String? @map("signature_id")
-  dueAt DateTime? @map("due_at")
-  escalatedAt DateTime? @map("escalated_at")
-  decidedAt DateTime? @map("decided_at")
-  createdAt DateTime @default(now()) @map("created_at")
+  id             String        @id @default(cuid(2))
+  orgId          String        @map("org_id")
+  objectId       String        @map("object_id")
+  stepIndex      Int           @map("step_index")
+  mode           ApprovalMode  @default(SEQUENTIAL)
+  quorum         Int?
+  approverId     String?       @map("approver_id")
+  approverTeamId String?       @map("approver_team_id")
+  delegatedToId  String?       @map("delegated_to_id")
+  state          ApprovalState @default(PENDING)
+  comment        String?
+  signatureId    String?       @map("signature_id")
+  dueAt          DateTime?     @map("due_at")
+  escalatedAt    DateTime?     @map("escalated_at")
+  decidedAt      DateTime?     @map("decided_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  object WorkObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  object WorkObject   @relation(fields: [objectId], references: [id], onDelete: Cascade)
+
   @@index([orgId, approverId, state])
   @@index([orgId, objectId, stepIndex])
   @@map("approvals")
 }
 
 model TimeEntry {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  objectId String @map("object_id")
-  userId String @map("user_id")
-  startedAt DateTime @map("started_at")
-  endedAt DateTime? @map("ended_at")
-  minutes Int
-  billable Boolean @default(false)
-  rateAmount Decimal? @db.Decimal(19, 4) @map("rate_amount")
-  rateCurrency String? @map("rate_currency")
-  note String?
-  approvedBy String? @map("approved_by")
-  approvedAt DateTime? @map("approved_at")
-  lockedAt DateTime? @map("locked_at")
+  id           String    @id @default(cuid(2))
+  orgId        String    @map("org_id")
+  objectId     String    @map("object_id")
+  userId       String    @map("user_id")
+  startedAt    DateTime  @map("started_at")
+  endedAt      DateTime? @map("ended_at")
+  minutes      Int
+  billable     Boolean   @default(false)
+  rateAmount   Decimal?  @map("rate_amount") @db.Decimal(19, 4)
+  rateCurrency String?   @map("rate_currency")
+  note         String?
+  approvedBy   String?   @map("approved_by")
+  approvedAt   DateTime? @map("approved_at")
+  lockedAt     DateTime? @map("locked_at")
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  object WorkObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id])
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  object WorkObject   @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id])
+
   @@index([orgId, userId, startedAt])
   @@index([orgId, objectId])
   @@map("time_entries")
 }
 
 model Channel {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  workspaceId String? @map("workspace_id")
-  key String
-  name String
-  topic String?
-  purpose String?
-  kind ChannelKind @default(TEXT)
-  visibility Visibility @default(ORG)
-  isShared Boolean @default(false) @map("is_shared")
-  sharedWithOrgIds String[] @map("shared_with_org_ids")
-  linkedObjectId String? @map("linked_object_id")
-  slaMinutes Int? @map("sla_minutes")
-  retentionDays Int? @map("retention_days")
-  aiExcluded Boolean @default(false) @map("ai_excluded")
-  archivedAt DateTime? @map("archived_at")
-  createdBy String @map("created_by")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id               String      @id @default(cuid(2))
+  orgId            String      @map("org_id")
+  workspaceId      String?     @map("workspace_id")
+  key              String
+  name             String
+  topic            String?
+  purpose          String?
+  kind             ChannelKind @default(TEXT)
+  visibility       Visibility  @default(ORG)
+  isShared         Boolean     @default(false) @map("is_shared")
+  sharedWithOrgIds String[]    @map("shared_with_org_ids")
+  linkedObjectId   String?     @map("linked_object_id")
+  slaMinutes       Int?        @map("sla_minutes")
+  retentionDays    Int?        @map("retention_days")
+  aiExcluded       Boolean     @default(false) @map("ai_excluded")
+  archivedAt       DateTime?   @map("archived_at")
+  createdBy        String      @map("created_by")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  members ChannelMember[]
+  org      Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  members  ChannelMember[]
   messages Message[]
+
   @@unique([orgId, key])
   @@index([orgId, kind, archivedAt])
   @@map("channels")
 }
 
 model ChannelMember {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  channelId String @map("channel_id")
-  userId String @map("user_id")
-  role ChannelRole @default(MEMBER)
-  lastReadAt DateTime? @map("last_read_at")
+  id           String            @id @default(cuid(2))
+  orgId        String            @map("org_id")
+  channelId    String            @map("channel_id")
+  userId       String            @map("user_id")
+  role         ChannelRole       @default(MEMBER)
+  lastReadAt   DateTime?         @map("last_read_at")
   notification NotificationLevel @default(MENTIONS)
-  mutedUntil DateTime? @map("muted_until")
-  joinedAt DateTime @default(now()) @map("joined_at")
+  mutedUntil   DateTime?         @map("muted_until")
+  joinedAt     DateTime          @default(now()) @map("joined_at")
 
-  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel        Channel       @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  organizationId String?
+
   @@unique([channelId, userId])
   @@index([orgId, userId])
   @@map("channel_members")
 }
 
 model Message {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  channelId String @map("channel_id")
-  parentId String? @map("parent_id")
-  authorId String @map("author_id")
-  authorType PrincipalType @default(MEMBER) @map("author_type")
-  bodyJson Json @map("body_json")
-  bodyText String @db.Text @map("body_text")
-  mentions String[]
-  kind MessageKind @default(TEXT)
-  mediaFileId String? @map("media_file_id")
-  transcript String? @db.Text
-  sourceLocale String? @map("source_locale")
-  translations Json @default("{}")
-  replyCount Int @default(0) @map("reply_count")
-  resolvedAt DateTime? @map("resolved_at")
-  pinnedAt DateTime? @map("pinned_at")
-  scheduledFor DateTime? @map("scheduled_for")
-  editedAt DateTime? @map("edited_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  deletedAt DateTime? @map("deleted_at")
+  id           String        @id @default(cuid(2))
+  orgId        String        @map("org_id")
+  channelId    String        @map("channel_id")
+  parentId     String?       @map("parent_id")
+  authorId     String        @map("author_id")
+  authorType   PrincipalType @default(MEMBER) @map("author_type")
+  bodyJson     Json          @map("body_json")
+  bodyText     String        @map("body_text") @db.Text
+  mentions     String[]
+  kind         MessageKind   @default(TEXT)
+  mediaFileId  String?       @map("media_file_id")
+  transcript   String?       @db.Text
+  sourceLocale String?       @map("source_locale")
+  translations Json          @default("{}")
+  replyCount   Int           @default(0) @map("reply_count")
+  resolvedAt   DateTime?     @map("resolved_at")
+  pinnedAt     DateTime?     @map("pinned_at")
+  scheduledFor DateTime?     @map("scheduled_for")
+  editedAt     DateTime?     @map("edited_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  deletedAt    DateTime?     @map("deleted_at")
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  author User @relation(fields: [authorId], references: [id])
-  parent Message? @relation("MessageThread", fields: [parentId], references: [id])
-  replies Message[] @relation("MessageThread")
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  channel   Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  author    User         @relation(fields: [authorId], references: [id])
+  parent    Message?     @relation("MessageThread", fields: [parentId], references: [id])
+  replies   Message[]    @relation("MessageThread")
   reactions Reaction[]
+
   @@index([orgId, channelId, createdAt(sort: Desc)])
   @@index([orgId, parentId])
   @@index([orgId, scheduledFor])
@@ -633,177 +670,185 @@ model Message {
 }
 
 model Reaction {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  messageId String? @map("message_id")
-  targetType String @map("target_type")
-  targetId String @map("target_id")
-  userId String @map("user_id")
-  emoji String
-  createdAt DateTime @default(now()) @map("created_at")
+  id         String   @id @default(cuid(2))
+  orgId      String   @map("org_id")
+  messageId  String?  @map("message_id")
+  targetType String   @map("target_type")
+  targetId   String   @map("target_id")
+  userId     String   @map("user_id")
+  emoji      String
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  message Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org     Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  message Message?     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([targetType, targetId, userId, emoji])
   @@index([orgId, targetType, targetId])
   @@map("reactions")
 }
 
 model EmailAccount {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  ownerId String? @map("owner_id")
-  address String
-  provider EmailProvider
-  isShared Boolean @default(false) @map("is_shared")
-  oauthRef String @map("oauth_ref")
-  syncCursor String? @map("sync_cursor")
-  lastSyncAt DateTime? @map("last_sync_at")
-  signatureHtml String? @db.Text @map("signature_html")
-  threads EmailThread[]
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  id            String        @id @default(cuid(2))
+  orgId         String        @map("org_id")
+  ownerId       String?       @map("owner_id")
+  address       String
+  provider      EmailProvider
+  isShared      Boolean       @default(false) @map("is_shared")
+  oauthRef      String        @map("oauth_ref")
+  syncCursor    String?       @map("sync_cursor")
+  lastSyncAt    DateTime?     @map("last_sync_at")
+  signatureHtml String?       @map("signature_html") @db.Text
+  threads       EmailThread[]
+  org           Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
   @@unique([orgId, address])
   @@map("email_accounts")
 }
 
 model EmailThread {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  accountId String @map("account_id")
-  subject String
-  participants String[]
-  labels String[]
-  triageBucket TriageBucket? @map("triage_bucket")
-  triageReason String? @map("triage_reason")
-  assigneeId String? @map("assignee_id")
-  state EmailState @default(OPEN)
-  snoozedUntil DateTime? @map("snoozed_until")
-  linkedObjectId String? @map("linked_object_id")
-  lastMessageAt DateTime @map("last_message_at")
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  account EmailAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  id             String        @id @default(cuid(2))
+  orgId          String        @map("org_id")
+  accountId      String        @map("account_id")
+  subject        String
+  participants   String[]
+  labels         String[]
+  triageBucket   TriageBucket? @map("triage_bucket")
+  triageReason   String?       @map("triage_reason")
+  assigneeId     String?       @map("assignee_id")
+  state          EmailState    @default(OPEN)
+  snoozedUntil   DateTime?     @map("snoozed_until")
+  linkedObjectId String?       @map("linked_object_id")
+  lastMessageAt  DateTime      @map("last_message_at")
+  org            Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  account        EmailAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
   @@index([orgId, accountId, lastMessageAt(sort: Desc)])
   @@index([orgId, assigneeId, state])
   @@map("email_threads")
 }
 
 model Meeting {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  objectId String? @map("object_id")
-  title String
-  agendaJson Json @default("[]") @map("agenda_json")
-  startAt DateTime @map("start_at")
-  endAt DateTime @map("end_at")
-  timezone String
-  roomId String? @map("room_id")
-  joinUrl String @map("join_url")
-  provider MeetingProvider @default(ORYON)
-  externalRef String? @map("external_ref")
-  recurrenceRule String? @map("recurrence_rule")
-  e2ee Boolean @default(false)
-  aiEnabled Boolean @default(true) @map("ai_enabled")
-  aiDisabledAt DateTime? @map("ai_disabled_at")
-  estimatedCostCents BigInt? @map("estimated_cost_cents")
-  effectivenessScore Int? @map("effectiveness_score")
-  state MeetingState @default(SCHEDULED)
-  createdBy String @map("created_by")
-  createdAt DateTime @default(now()) @map("created_at")
+  id                 String          @id @default(cuid(2))
+  orgId              String          @map("org_id")
+  objectId           String?         @map("object_id")
+  title              String
+  agendaJson         Json            @default("[]") @map("agenda_json")
+  startAt            DateTime        @map("start_at")
+  endAt              DateTime        @map("end_at")
+  timezone           String
+  roomId             String?         @map("room_id")
+  joinUrl            String          @map("join_url")
+  provider           MeetingProvider @default(ORYON)
+  externalRef        String?         @map("external_ref")
+  recurrenceRule     String?         @map("recurrence_rule")
+  e2ee               Boolean         @default(false)
+  aiEnabled          Boolean         @default(true) @map("ai_enabled")
+  aiDisabledAt       DateTime?       @map("ai_disabled_at")
+  estimatedCostCents BigInt?         @map("estimated_cost_cents")
+  effectivenessScore Int?            @map("effectiveness_score")
+  state              MeetingState    @default(SCHEDULED)
+  createdBy          String          @map("created_by")
+  createdAt          DateTime        @default(now()) @map("created_at")
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org          Organization         @relation(fields: [orgId], references: [id], onDelete: Cascade)
   participants MeetingParticipant[]
-  artifacts MeetingArtifact[]
+  artifacts    MeetingArtifact[]
+
   @@index([orgId, startAt])
   @@index([orgId, state])
   @@map("meetings")
 }
 
 model MeetingParticipant {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  meetingId String @map("meeting_id")
-  userId String? @map("user_id")
-  email String?
-  role MeetingRole @default(ATTENDEE)
-  rsvp RsvpState @default(PENDING)
-  joinedAt DateTime? @map("joined_at")
-  leftAt DateTime? @map("left_at")
-  talkTimeMs BigInt? @map("talk_time_ms")
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  user User? @relation(fields: [userId], references: [id])
+  id         String       @id @default(cuid(2))
+  orgId      String       @map("org_id")
+  meetingId  String       @map("meeting_id")
+  userId     String?      @map("user_id")
+  email      String?
+  role       MeetingRole  @default(ATTENDEE)
+  rsvp       RsvpState    @default(PENDING)
+  joinedAt   DateTime?    @map("joined_at")
+  leftAt     DateTime?    @map("left_at")
+  talkTimeMs BigInt?      @map("talk_time_ms")
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  meeting    Meeting      @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user       User?        @relation(fields: [userId], references: [id])
+
   @@unique([meetingId, userId])
   @@index([orgId, userId])
   @@map("meeting_participants")
 }
 
 model MeetingArtifact {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  meetingId String @map("meeting_id")
-  kind ArtifactKind
-  fileId String? @map("file_id")
-  pageId String? @map("page_id")
-  contentJson Json? @map("content_json")
-  transcript String? @db.Text
-  language String?
-  createdAt DateTime @default(now()) @map("created_at")
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  id          String       @id @default(cuid(2))
+  orgId       String       @map("org_id")
+  meetingId   String       @map("meeting_id")
+  kind        ArtifactKind
+  fileId      String?      @map("file_id")
+  pageId      String?      @map("page_id")
+  contentJson Json?        @map("content_json")
+  transcript  String?      @db.Text
+  language    String?
+  createdAt   DateTime     @default(now()) @map("created_at")
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  meeting     Meeting      @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
   @@index([orgId, meetingId, kind])
   @@map("meeting_artifacts")
 }
 
 model Room {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  buildingId String? @map("building_id")
-  floor String?
-  name String
-  capacity Int
-  equipment String[]
-  deviceId String? @map("device_id")
-  bookable Boolean @default(true)
-  readinessJson Json? @map("readiness_json")
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  id            String       @id @default(cuid(2))
+  orgId         String       @map("org_id")
+  buildingId    String?      @map("building_id")
+  floor         String?
+  name          String
+  capacity      Int
+  equipment     String[]
+  deviceId      String?      @map("device_id")
+  bookable      Boolean      @default(true)
+  readinessJson Json?        @map("readiness_json")
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
   @@index([orgId, buildingId])
   @@map("rooms")
 }
 
 model Page {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  workspaceId String? @map("workspace_id")
-  parentPageId String? @map("parent_page_id")
-  title String
-  icon String?
-  coverUrl String? @map("cover_url")
-  contentYjs Bytes? @map("content_yjs")
-  contentJson Json? @map("content_json")
-  contentText String? @db.Text @map("content_text")
-  kind PageKind @default(DOC)
-  ownerId String? @map("owner_id")
-  classification String?
-  verifiedAt DateTime? @map("verified_at")
-  verifiedBy String? @map("verified_by")
-  reviewEveryDays Int? @map("review_every_days")
-  nextReviewAt DateTime? @map("next_review_at")
-  publishedSlug String? @map("published_slug")
-  publishedAt DateTime? @map("published_at")
-  indexable Boolean @default(false)
-  position Decimal @db.Decimal(20, 10)
-  searchVector Unsupported("tsvector")? @map("search_vector")
-  embedding Unsupported("vector(1536)")?
-  createdBy String @map("created_by")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
+  id              String                       @id @default(cuid(2))
+  orgId           String                       @map("org_id")
+  workspaceId     String?                      @map("workspace_id")
+  parentPageId    String?                      @map("parent_page_id")
+  title           String
+  icon            String?
+  coverUrl        String?                      @map("cover_url")
+  contentYjs      Bytes?                       @map("content_yjs")
+  contentJson     Json?                        @map("content_json")
+  contentText     String?                      @map("content_text") @db.Text
+  kind            PageKind                     @default(DOC)
+  ownerId         String?                      @map("owner_id")
+  classification  String?
+  verifiedAt      DateTime?                    @map("verified_at")
+  verifiedBy      String?                      @map("verified_by")
+  reviewEveryDays Int?                         @map("review_every_days")
+  nextReviewAt    DateTime?                    @map("next_review_at")
+  publishedSlug   String?                      @map("published_slug")
+  publishedAt     DateTime?                    @map("published_at")
+  indexable       Boolean                      @default(false)
+  position        Decimal                      @db.Decimal(20, 10)
+  searchVector    Unsupported("tsvector")?     @map("search_vector")
+  embedding       Unsupported("vector(1536)")?
+  createdBy       String                       @map("created_by")
+  createdAt       DateTime                     @default(now()) @map("created_at")
+  updatedAt       DateTime                     @updatedAt @map("updated_at")
+  deletedAt       DateTime?                    @map("deleted_at")
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  parent Page? @relation("PageTree", fields: [parentPageId], references: [id])
-  children Page[] @relation("PageTree")
+  org      Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parent   Page?         @relation("PageTree", fields: [parentPageId], references: [id])
+  children Page[]        @relation("PageTree")
   versions PageVersion[]
+
   @@unique([orgId, publishedSlug])
   @@index([orgId, parentPageId, position])
   @@index([orgId, nextReviewAt])
@@ -811,131 +856,138 @@ model Page {
 }
 
 model PageVersion {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  pageId String @map("page_id")
-  version Int
-  snapshot Bytes
-  authorId String @map("author_id")
-  summary String?
-  createdAt DateTime @default(now()) @map("created_at")
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  id        String       @id @default(cuid(2))
+  orgId     String       @map("org_id")
+  pageId    String       @map("page_id")
+  version   Int
+  snapshot  Bytes
+  authorId  String       @map("author_id")
+  summary   String?
+  createdAt DateTime     @default(now()) @map("created_at")
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  page      Page         @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
   @@unique([pageId, version])
   @@index([orgId, pageId, version])
   @@map("page_versions")
 }
 
 model DataBase {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  workspaceId String? @map("workspace_id")
-  name String
-  icon String?
-  schema Json @default("{}")
-  syncSource Json? @map("sync_source")
-  rowSecurity Json? @map("row_security")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  records DataRecord[]
-  views SavedView[]
+  id          String       @id @default(cuid(2))
+  orgId       String       @map("org_id")
+  workspaceId String?      @map("workspace_id")
+  name        String
+  icon        String?
+  schema      Json         @default("{}")
+  syncSource  Json?        @map("sync_source")
+  rowSecurity Json?        @map("row_security")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  records     DataRecord[]
+  views       SavedView[]
+
   @@index([orgId, workspaceId])
   @@map("databases")
 }
 
 model DataRecord {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  databaseId String @map("database_id")
-  fields Json
-  position Decimal @db.Decimal(20, 10)
-  embedding Unsupported("vector(1536)")?
-  createdBy String @map("created_by")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  database DataBase @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  id         String                       @id @default(cuid(2))
+  orgId      String                       @map("org_id")
+  databaseId String                       @map("database_id")
+  fields     Json
+  position   Decimal                      @db.Decimal(20, 10)
+  embedding  Unsupported("vector(1536)")?
+  createdBy  String                       @map("created_by")
+  createdAt  DateTime                     @default(now()) @map("created_at")
+  updatedAt  DateTime                     @updatedAt @map("updated_at")
+  deletedAt  DateTime?                    @map("deleted_at")
+  org        Organization                 @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  database   DataBase                     @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+
   @@index([orgId, databaseId, position])
   @@map("data_records")
 }
 
 model SavedView {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  name String
-  viewType ViewType @map("view_type")
+  id            String        @id @default(cuid(2))
+  orgId         String        @map("org_id")
+  name          String
+  viewType      ViewType      @map("view_type")
   containerType ContainerType @map("container_type")
-  containerId String @map("container_id")
-  databaseId String? @map("database_id")
-  filters Json @default("[]")
-  sorts Json @default("[]")
-  grouping Json?
-  visibleFields String[] @map("visible_fields")
-  scope ViewScope @default(PERSONAL)
-  ownerId String? @map("owner_id")
-  query String?
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  database DataBase? @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  containerId   String        @map("container_id")
+  databaseId    String?       @map("database_id")
+  filters       Json          @default("[]")
+  sorts         Json          @default("[]")
+  grouping      Json?
+  visibleFields String[]      @map("visible_fields")
+  scope         ViewScope     @default(PERSONAL)
+  ownerId       String?       @map("owner_id")
+  query         String?
+  org           Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  database      DataBase?     @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+
   @@index([orgId, containerType, containerId])
   @@map("saved_views")
 }
 
 model Workflow {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  key String
-  name String
+  id          String        @id @default(cuid(2))
+  orgId       String        @map("org_id")
+  key         String
+  name        String
   description String?
-  triggerJson Json @map("trigger_json")
-  stepsJson Json @map("steps_json")
-  state WorkflowState @default(DRAFT)
-  version Int @default(1)
-  createdBy String @map("created_by")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  runs WorkflowRun[]
+  triggerJson Json          @map("trigger_json")
+  stepsJson   Json          @map("steps_json")
+  state       WorkflowState @default(DRAFT)
+  version     Int           @default(1)
+  createdBy   String        @map("created_by")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  org         Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  runs        WorkflowRun[]
+
   @@unique([orgId, key, version])
   @@index([orgId, state])
   @@map("workflows")
 }
 
 model WorkflowRun {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  workflowId String @map("workflow_id")
-  triggerEventId String? @map("trigger_event_id")
-  inputJson Json @map("input_json")
-  stepLogJson Json @default("[]") @map("step_log_json")
-  state RunState @default(RUNNING)
-  errorJson Json? @map("error_json")
-  waitingOnApprovalId String? @map("waiting_on_approval_id")
-  startedAt DateTime @default(now()) @map("started_at")
-  finishedAt DateTime? @map("finished_at")
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  id                  String       @id @default(cuid(2))
+  orgId               String       @map("org_id")
+  workflowId          String       @map("workflow_id")
+  triggerEventId      String?      @map("trigger_event_id")
+  inputJson           Json         @map("input_json")
+  stepLogJson         Json         @default("[]") @map("step_log_json")
+  state               RunState     @default(RUNNING)
+  errorJson           Json?        @map("error_json")
+  waitingOnApprovalId String?      @map("waiting_on_approval_id")
+  startedAt           DateTime     @default(now()) @map("started_at")
+  finishedAt          DateTime?    @map("finished_at")
+  org                 Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  workflow            Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
   @@index([orgId, workflowId, startedAt(sort: Desc)])
   @@index([orgId, state])
   @@map("workflow_runs")
 }
 
 model DomainEvent {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  name String
-  version Int @default(1)
-  actorId String? @map("actor_id")
-  actorType PrincipalType @map("actor_type")
-  subjectType String @map("subject_type")
-  subjectId String @map("subject_id")
-  payload Json
-  correlationId String? @map("correlation_id")
-  causationId String? @map("causation_id")
-  publishedAt DateTime? @map("published_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  id            String        @id @default(cuid(2))
+  orgId         String        @map("org_id")
+  name          String
+  version       Int           @default(1)
+  actorId       String?       @map("actor_id")
+  actorType     PrincipalType @map("actor_type")
+  subjectType   String        @map("subject_type")
+  subjectId     String        @map("subject_id")
+  payload       Json
+  correlationId String?       @map("correlation_id")
+  causationId   String?       @map("causation_id")
+  publishedAt   DateTime?     @map("published_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  org           Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
   @@index([orgId, name, createdAt(sort: Desc)])
   @@index([orgId, subjectType, subjectId, createdAt(sort: Desc)])
   @@index([correlationId])
@@ -944,71 +996,74 @@ model DomainEvent {
 }
 
 model AgentRun {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  agentId String @map("agent_id")
-  triggeredBy String? @map("triggered_by")
-  triggerType TriggerType @map("trigger_type")
-  inputJson Json @map("input_json")
-  stepsJson Json @default("[]") @map("steps_json")
-  toolCallsJson Json @default("[]") @map("tool_calls_json")
-  readResources Json @default("[]") @map("read_resources")
-  writtenResources Json @default("[]") @map("written_resources")
-  outputJson Json? @map("output_json")
-  state RunState @default(RUNNING)
-  checkpointState CheckpointState? @map("checkpoint_state")
-  checkpointApproverId String? @map("checkpoint_approver_id")
-  modelKey String? @map("model_key")
-  inputTokens Int? @map("input_tokens")
-  outputTokens Int? @map("output_tokens")
-  costCents BigInt? @map("cost_cents")
-  rollbackToken String? @map("rollback_token")
-  rolledBackAt DateTime? @map("rolled_back_at")
-  startedAt DateTime @default(now()) @map("started_at")
-  finishedAt DateTime? @map("finished_at")
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  id                   String           @id @default(cuid(2))
+  orgId                String           @map("org_id")
+  agentId              String           @map("agent_id")
+  triggeredBy          String?          @map("triggered_by")
+  triggerType          TriggerType      @map("trigger_type")
+  inputJson            Json             @map("input_json")
+  stepsJson            Json             @default("[]") @map("steps_json")
+  toolCallsJson        Json             @default("[]") @map("tool_calls_json")
+  readResources        Json             @default("[]") @map("read_resources")
+  writtenResources     Json             @default("[]") @map("written_resources")
+  outputJson           Json?            @map("output_json")
+  state                RunState         @default(RUNNING)
+  checkpointState      CheckpointState? @map("checkpoint_state")
+  checkpointApproverId String?          @map("checkpoint_approver_id")
+  modelKey             String?          @map("model_key")
+  inputTokens          Int?             @map("input_tokens")
+  outputTokens         Int?             @map("output_tokens")
+  costCents            BigInt?          @map("cost_cents")
+  rollbackToken        String?          @map("rollback_token")
+  rolledBackAt         DateTime?        @map("rolled_back_at")
+  startedAt            DateTime         @default(now()) @map("started_at")
+  finishedAt           DateTime?        @map("finished_at")
+  org                  Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  agent                Agent            @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
   @@index([orgId, agentId, startedAt(sort: Desc)])
   @@index([orgId, state])
   @@map("agent_runs")
 }
 
 model ModelPolicy {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  key String
-  name String
-  routingRules Json @map("routing_rules")
-  allowedModels String[] @map("allowed_models")
-  fallbackModel String @map("fallback_model")
-  maxClassification String? @map("max_classification")
-  residencyRegion DataRegion? @map("residency_region")
-  monthlyCapCents BigInt? @map("monthly_cap_cents")
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  agents Agent[]
+  id                String       @id @default(cuid(2))
+  orgId             String       @map("org_id")
+  key               String
+  name              String
+  routingRules      Json         @map("routing_rules")
+  allowedModels     String[]     @map("allowed_models")
+  fallbackModel     String       @map("fallback_model")
+  maxClassification String?      @map("max_classification")
+  residencyRegion   DataRegion?  @map("residency_region")
+  monthlyCapCents   BigInt?      @map("monthly_cap_cents")
+  org               Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  agents            Agent[]
+
   @@unique([orgId, key])
   @@map("model_policies")
 }
 
 model AuditLog {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  actorId String? @map("actor_id")
-  actorType PrincipalType @map("actor_type")
-  onBehalfOfId String? @map("on_behalf_of_id")
-  action String
-  resourceType String @map("resource_type")
-  resourceId String @map("resource_id")
-  beforeJson Json? @map("before_json")
-  afterJson Json? @map("after_json")
-  decision AuditDecision @default(ALLOW)
-  reason String?
-  ipAddress String? @map("ip_address")
-  userAgent String? @map("user_agent")
-  sessionId String? @map("session_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  actor User? @relation(fields: [actorId], references: [id])
+  id           String        @id @default(cuid(2))
+  orgId        String        @map("org_id")
+  actorId      String?       @map("actor_id")
+  actorType    PrincipalType @map("actor_type")
+  onBehalfOfId String?       @map("on_behalf_of_id")
+  action       String
+  resourceType String        @map("resource_type")
+  resourceId   String        @map("resource_id")
+  beforeJson   Json?         @map("before_json")
+  afterJson    Json?         @map("after_json")
+  decision     AuditDecision @default(ALLOW)
+  reason       String?
+  ipAddress    String?       @map("ip_address")
+  userAgent    String?       @map("user_agent")
+  sessionId    String?       @map("session_id")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  org          Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  actor        User?         @relation(fields: [actorId], references: [id])
+
   @@index([orgId, createdAt(sort: Desc)])
   @@index([orgId, resourceType, resourceId, createdAt(sort: Desc)])
   @@index([orgId, actorId, createdAt(sort: Desc)])
@@ -1016,61 +1071,356 @@ model AuditLog {
 }
 
 model Notification {
-  id String @id @default(cuid(2))
-  orgId String @map("org_id")
-  userId String @map("user_id")
-  kind String
-  title String
-  body String?
-  targetType String? @map("target_type")
-  targetId String? @map("target_id")
-  priority Priority @default(NORMAL)
-  readAt DateTime? @map("read_at")
-  archivedAt DateTime? @map("archived_at")
-  deliverAt DateTime @default(now()) @map("deliver_at")
-  channels String[]
-  createdAt DateTime @default(now()) @map("created_at")
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String       @id @default(cuid(2))
+  orgId      String       @map("org_id")
+  userId     String       @map("user_id")
+  kind       String
+  title      String
+  body       String?
+  targetType String?      @map("target_type")
+  targetId   String?      @map("target_id")
+  priority   Priority     @default(NORMAL)
+  readAt     DateTime?    @map("read_at")
+  archivedAt DateTime?    @map("archived_at")
+  deliverAt  DateTime     @default(now()) @map("deliver_at")
+  channels   String[]
+  createdAt  DateTime     @default(now()) @map("created_at")
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([orgId, userId, readAt, deliverAt(sort: Desc)])
   @@map("notifications")
 }
 
-enum DataRegion { EU US AFRICA APAC LATAM }
-enum PlanTier { TRIAL STARTER BUSINESS ENTERPRISE }
-enum Visibility { PUBLIC ORG TEAM PRIVATE }
-enum PrincipalType { MEMBER GUEST CLIENT VENDOR AGENT SERVICE_ACCOUNT }
-enum UserStatus { INVITED ACTIVE SUSPENDED DEACTIVATED }
-enum PresenceState { ONLINE AWAY BUSY IN_MEETING FOCUS DND OFFLINE }
-enum TeamRole { LEAD MEMBER VIEWER }
-enum ScopeType { ORG WORKSPACE TEAM PROJECT OBJECT }
-enum AccessLevel { VIEW COMMENT EDIT MANAGE OWNER }
-enum AgentStatus { DRAFT ACTIVE PAUSED ARCHIVED }
-enum CheckpointPolicy { NEVER SENSITIVE_ONLY ALWAYS }
-enum CheckpointState { WAITING APPROVED REJECTED }
-enum StatusCategory { BACKLOG TODO IN_PROGRESS BLOCKED IN_REVIEW DONE CANCELLED }
-enum Priority { LOWEST LOW NORMAL HIGH URGENT }
-enum ContainerType { WORKSPACE PROJECT SPRINT CHANNEL DATABASE PORTFOLIO GOAL PIPELINE COMMUNITY }
-enum AssignmentRole { ASSIGNEE REVIEWER APPROVER FOLLOWER WATCHER }
-enum EdgeRelation { BLOCKS BLOCKED_BY DUPLICATES RELATES_TO DERIVED_FROM CONVERTED_TO PARENT_OF MENTIONS ATTACHED_TO OWNS DISCUSSED_IN DECIDED_IN RESULTED_IN FINISH_TO_START START_TO_START FINISH_TO_FINISH START_TO_FINISH }
-enum ApprovalMode { SEQUENTIAL PARALLEL QUORUM }
-enum ApprovalState { PENDING APPROVED REJECTED DELEGATED EXPIRED CANCELLED }
-enum ChannelKind { TEXT FORUM VOICE STAGE ANNOUNCEMENT DM GROUP_DM }
-enum ChannelRole { OWNER ADMIN MODERATOR MEMBER GUEST }
-enum NotificationLevel { ALL MENTIONS NONE }
-enum MessageKind { TEXT VOICE VIDEO FILE SYSTEM CANVAS POLL }
-enum EmailProvider { GMAIL OUTLOOK IMAP ORYON }
-enum EmailState { OPEN SNOOZED ARCHIVED SPAM }
-enum TriageBucket { URGENT ACTION_NEEDED FYI ROUTINE PROMOTIONAL }
-enum MeetingProvider { ORYON ZOOM TEAMS MEET WEBEX SIP }
-enum MeetingState { SCHEDULED LIVE ENDED CANCELLED }
-enum MeetingRole { ORGANIZER COHOST PRESENTER ATTENDEE OBSERVER }
-enum RsvpState { PENDING ACCEPTED DECLINED TENTATIVE }
-enum ArtifactKind { RECORDING TRANSCRIPT NOTES SUMMARY DECISIONS TASKS DOCUMENT WHITEBOARD CHAT_LOG AI_REPORT CLIP }
-enum PageKind { DOC WIKI SOP MEETING_NOTES POSTMORTEM TEMPLATE KB_ARTICLE }
-enum ViewType { BOARD KANBAN LIST TABLE CALENDAR TIMELINE GANTT WORKLOAD CAPACITY MATRIX GALLERY MAP MIND_MAP HILL_CHART BURNDOWN BURNUP CUMULATIVE_FLOW PORTFOLIO CHART FORM }
-enum ViewScope { PERSONAL TEAM SHARED PUBLIC }
-enum WorkflowState { DRAFT ACTIVE PAUSED ARCHIVED }
-enum RunState { RUNNING WAITING SUCCEEDED FAILED CANCELLED ROLLED_BACK }
-enum TriggerType { EVENT SCHEDULE MANUAL MENTION WEBHOOK FORM }
-enum AuditDecision { ALLOW DENY }
+enum DataRegion {
+  EU
+  US
+  AFRICA
+  APAC
+  LATAM
+}
+
+enum PlanTier {
+  TRIAL
+  STARTER
+  BUSINESS
+  ENTERPRISE
+}
+
+enum Visibility {
+  PUBLIC
+  ORG
+  TEAM
+  PRIVATE
+}
+
+enum PrincipalType {
+  MEMBER
+  GUEST
+  CLIENT
+  VENDOR
+  AGENT
+  SERVICE_ACCOUNT
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum PresenceState {
+  ONLINE
+  AWAY
+  BUSY
+  IN_MEETING
+  FOCUS
+  DND
+  OFFLINE
+}
+
+enum TeamRole {
+  LEAD
+  MEMBER
+  VIEWER
+}
+
+enum ScopeType {
+  ORG
+  WORKSPACE
+  TEAM
+  PROJECT
+  OBJECT
+}
+
+enum AccessLevel {
+  VIEW
+  COMMENT
+  EDIT
+  MANAGE
+  OWNER
+}
+
+enum AgentStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum CheckpointPolicy {
+  NEVER
+  SENSITIVE_ONLY
+  ALWAYS
+}
+
+enum CheckpointState {
+  WAITING
+  APPROVED
+  REJECTED
+}
+
+enum StatusCategory {
+  BACKLOG
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  IN_REVIEW
+  DONE
+  CANCELLED
+}
+
+enum Priority {
+  LOWEST
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum ContainerType {
+  WORKSPACE
+  PROJECT
+  SPRINT
+  CHANNEL
+  DATABASE
+  PORTFOLIO
+  GOAL
+  PIPELINE
+  COMMUNITY
+}
+
+enum AssignmentRole {
+  ASSIGNEE
+  REVIEWER
+  APPROVER
+  FOLLOWER
+  WATCHER
+}
+
+enum EdgeRelation {
+  BLOCKS
+  BLOCKED_BY
+  DUPLICATES
+  RELATES_TO
+  DERIVED_FROM
+  CONVERTED_TO
+  PARENT_OF
+  MENTIONS
+  ATTACHED_TO
+  OWNS
+  DISCUSSED_IN
+  DECIDED_IN
+  RESULTED_IN
+  FINISH_TO_START
+  START_TO_START
+  FINISH_TO_FINISH
+  START_TO_FINISH
+}
+
+enum ApprovalMode {
+  SEQUENTIAL
+  PARALLEL
+  QUORUM
+}
+
+enum ApprovalState {
+  PENDING
+  APPROVED
+  REJECTED
+  DELEGATED
+  EXPIRED
+  CANCELLED
+}
+
+enum ChannelKind {
+  TEXT
+  FORUM
+  VOICE
+  STAGE
+  ANNOUNCEMENT
+  DM
+  GROUP_DM
+}
+
+enum ChannelRole {
+  OWNER
+  ADMIN
+  MODERATOR
+  MEMBER
+  GUEST
+}
+
+enum NotificationLevel {
+  ALL
+  MENTIONS
+  NONE
+}
+
+enum MessageKind {
+  TEXT
+  VOICE
+  VIDEO
+  FILE
+  SYSTEM
+  CANVAS
+  POLL
+}
+
+enum EmailProvider {
+  GMAIL
+  OUTLOOK
+  IMAP
+  ORYON
+}
+
+enum EmailState {
+  OPEN
+  SNOOZED
+  ARCHIVED
+  SPAM
+}
+
+enum TriageBucket {
+  URGENT
+  ACTION_NEEDED
+  FYI
+  ROUTINE
+  PROMOTIONAL
+}
+
+enum MeetingProvider {
+  ORYON
+  ZOOM
+  TEAMS
+  MEET
+  WEBEX
+  SIP
+}
+
+enum MeetingState {
+  SCHEDULED
+  LIVE
+  ENDED
+  CANCELLED
+}
+
+enum MeetingRole {
+  ORGANIZER
+  COHOST
+  PRESENTER
+  ATTENDEE
+  OBSERVER
+}
+
+enum RsvpState {
+  PENDING
+  ACCEPTED
+  DECLINED
+  TENTATIVE
+}
+
+enum ArtifactKind {
+  RECORDING
+  TRANSCRIPT
+  NOTES
+  SUMMARY
+  DECISIONS
+  TASKS
+  DOCUMENT
+  WHITEBOARD
+  CHAT_LOG
+  AI_REPORT
+  CLIP
+}
+
+enum PageKind {
+  DOC
+  WIKI
+  SOP
+  MEETING_NOTES
+  POSTMORTEM
+  TEMPLATE
+  KB_ARTICLE
+}
+
+enum ViewType {
+  BOARD
+  KANBAN
+  LIST
+  TABLE
+  CALENDAR
+  TIMELINE
+  GANTT
+  WORKLOAD
+  CAPACITY
+  MATRIX
+  GALLERY
+  MAP
+  MIND_MAP
+  HILL_CHART
+  BURNDOWN
+  BURNUP
+  CUMULATIVE_FLOW
+  PORTFOLIO
+  CHART
+  FORM
+}
+
+enum ViewScope {
+  PERSONAL
+  TEAM
+  SHARED
+  PUBLIC
+}
+
+enum WorkflowState {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum RunState {
+  RUNNING
+  WAITING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  ROLLED_BACK
+}
+
+enum TriggerType {
+  EVENT
+  SCHEDULE
+  MANUAL
+  MENTION
+  WEBHOOK
+  FORM
+}
+
+enum AuditDecision {
+  ALLOW
+  DENY
+}
