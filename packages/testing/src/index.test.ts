@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { ORYON_TESTING_VERSION } from "./index";
+import { ORYON_TESTING_VERSION } from "./index.js";
 
 describe("testing bootstrap", () => {
-  it("exports the testing version", () => expect(ORYON_TESTING_VERSION).toBe("0.1.0"));
+	it("exports the testing version", () =>
+		expect(ORYON_TESTING_VERSION).toBe("0.1.0"));
 });
