@@ -13,6 +13,7 @@ import {
 	revokeSession,
 	verifyMagicLink,
 } from "./auth.js";
+import { registerGraphRoutes } from "./graph.js";
 import { registerPermissionRoutes } from "./permissions.js";
 import { registerWorkObjectRoutes } from "./work-objects.js";
 
@@ -148,6 +149,7 @@ app.post("/v1/auth/logout", async (request, reply) => {
 
 await registerPermissionRoutes(app);
 await registerWorkObjectRoutes(app);
+await registerGraphRoutes(app);
 
 try {
 	await getPrisma().$queryRawUnsafe("SELECT 1");
