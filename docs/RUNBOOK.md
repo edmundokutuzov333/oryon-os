@@ -36,7 +36,7 @@ pnpm infra:doctor
 
 Os valores normais estão em `.env.example`. O LiveKit em modo `--dev` usa `devkey` / `secret` e aceita bind explícito a `0.0.0.0` para desenvolvimento local. citeturn224132search0
 
-A imagem do servidor MinIO usa o registry oficial `quay.io/minio/minio` com tag fixa, evitando a dependência de uma tag antiga do Docker Hub que deixou de ser utilizável neste ambiente. citeturn943006search0turn943006search2
+A imagem do servidor MinIO usa o registry oficial `quay.io/minio/minio` com tag fixa. citeturn943006search0turn943006search2
 
 ## Diagnóstico
 
@@ -61,3 +61,7 @@ Os volumes nomeados são preservados. Para apagar dados locais deliberadamente, 
 A infraestrutura local não contém credenciais de produção. Os volumes são nomeados, os serviços usam healthchecks e as imagens têm versões explicitamente definidas através do Compose. A aplicação deve consumir as URLs do `.env`, nunca nomes ou IPs hardcoded de containers.
 
 A infraestrutura é transversal: não cria domínio de produto nem tabelas específicas. O object graph e a experiência de produto entram nas fases seguintes, sobre esta fundação.
+
+## Gate de validação da Fase 1
+
+A Fase 1 só é aceite quando o CI conseguir instalar com `--frozen-lockfile`, validar o Compose, construir a imagem PostgreSQL, iniciar PostgreSQL, Redis, NATS JetStream, Typesense, MinIO e LiveKit, executar o bootstrap do bucket e concluir `infra:doctor` com todos os serviços saudáveis.
