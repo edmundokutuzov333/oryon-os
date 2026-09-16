@@ -145,7 +145,7 @@ O `WorkObject` já fornece os dados universais e as operações de base. A Fase 
 
 ### Consequências
 
-O mesmo WorkObject pode ser visto, alterado, atribuído e acompanhado em diferentes representações sem perder identidade ou histórico. As fases seguintes podem acrescentar conteúdo, comunicação, documentos e IA ao mesmo objecto sem migração para outro modelo de trabalho.
+O mesmo WorkObject pode ser visto, alterado, atribuído e acompanhado em diferentes representações sem perder identidade ou histórico. As fases seguintes podem acrescentar conteúdo, comunicação, documentos e IA ao mesmo objecto sem migração para outro modelo.
 
 ## ADR-0007: Docs + Files da Fase 9
 
@@ -172,3 +172,31 @@ O schema canónico já fornece `Page`, `PageVersion`, `FileAsset` e `Attachment`
 ### Consequências
 
 Docs, Files e Work permanecem partes do mesmo sistema de identidade, tenancy, permissões e auditoria. A Fase 9 estabelece a base de conteúdo e storage sobre a qual as fases de Comunicação, Meetings, Search + AI e Agents podem actuar sem duplicar documentos ou ficheiros.
+
+## ADR-0008: Comunicação da Fase 10
+
+- Estado: aceite para implementação da Fase 10
+- Data: 2026-09-16
+
+### Contexto
+
+A Fase 10 precisa de transformar as entidades de comunicação já presentes no schema canónico em uma experiência empresarial completa, sem criar um modelo paralelo para DMs, threads ou notificações. O schema fornece `Channel`, `ChannelMember`, `Message`, `Reaction` e `Notification`, e o Work Graph fornece `DERIVED_FROM` para ligar uma mensagem a trabalho real.
+
+### Decisão
+
+1. `Channel` é o contentor universal de comunicação. `TEXT`, `FORUM`, `VOICE`, `STAGE`, `ANNOUNCEMENT`, `DM` e `GROUP_DM` são variações do mesmo modelo.
+2. `ChannelMember` é a fonte de membership e de read state. `lastReadAt` é persistido por utilizador e canal e alimenta `unreadCount`.
+3. `Message.parentId` é a representação única de threads. `replyCount` é mantido no pai para acesso rápido, sem criar uma tabela `Thread` paralela.
+4. `Reaction` representa reacções por utilizador e emoji. A resposta da API agrega as reacções e indica se o principal actual reagiu.
+5. `Message.mentions` guarda IDs de utilizador. A API só materializa `Notification` para membros efectivamente presentes no canal; `/v1/people` fornece pesquisa de pessoas para a UI resolver menções e criar DMs.
+6. A criação e envio de mensagens requerem `comment` sobre o recurso `channel`, usando o mesmo `can()` da Fase 4. A membership é hidratada no `PermissionSubject.channelIds` e é consumida pelo domínio puro, sem autorização duplicada.
+7. `Notification` é o modelo de Inbox V1. Ler uma notificação ou todas as notificações é uma mutação tenant-aware associada ao principal autenticado.
+8. Realtime usa Socket.IO 4.8.x sobre o mesmo servidor Fastify. O handshake autentica a sessão existente e o `orgId`; sockets entram em rooms por organização, utilizador e canal.
+9. REST continua a ser a fonte de verdade. Socket.IO acelera entrega de eventos; depois de reconectar, a UI usa `catch-up` por timestamp para recuperar mensagens potencialmente perdidas.
+10. Os eventos realtime são `message.created`, `message.updated`, `message.deleted`, `reaction.updated`, `notification.created` e `channel.updated`.
+11. Conversão de mensagem em trabalho usa o `WorkObject` universal e cria um `Edge` `DERIVED_FROM` entre `message` e `work_object` na mesma transacção, sem copiar a mensagem para um modelo de task.
+12. DMs e canais continuam sujeitos a tenancy, RLS, membership e permission engine. Nenhum socket pode entrar num canal sem uma membership válida.
+
+### Consequências
+
+Comunicação passa a ser uma camada transversal do mesmo Work Graph. Mensagens podem gerar trabalho sem quebrar a identidade do objecto, notificações têm estado persistido, threads são apenas mensagens relacionadas e a UI pode funcionar em tempo real com recuperação segura após desconexão.
