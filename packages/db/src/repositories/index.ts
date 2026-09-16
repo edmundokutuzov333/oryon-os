@@ -9,6 +9,7 @@ export { PageAttachmentsRepository } from "./page-attachments.repository.js";
 export { PermissionRepository } from "./permission.repository.js";
 export type { PermissionSnapshot, ExternalExposureRow } from "./permission.repository.js";
 export { RoomRepository } from "./room.repository.js";
+export { meetingRepository, roomRepository } from "./instances.js";
 export { WorkExperienceRepository } from "./work-experience.repository.js";
 export { WorkObjectRepository } from "./work-object.repository.js";
 export type { WorkObjectListInput } from "./work-object.repository.js";
