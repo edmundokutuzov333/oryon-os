@@ -13,6 +13,7 @@ import {
 	revokeSession,
 	verifyMagicLink,
 } from "./auth.js";
+import { registerPermissionRoutes } from "./permissions.js";
 
 const app = Fastify({ logger: true });
 
@@ -149,6 +150,8 @@ app.post("/v1/auth/logout", async (request, reply) => {
 		return reply.code(status).send(errorEnvelope(request, status === 400 ? "ORG_HEADER_MISSING" : "UNAUTHENTICATED", status, message));
 	}
 });
+
+await registerPermissionRoutes(app);
 
 try {
 	await getPrisma().$queryRawUnsafe("SELECT 1");
