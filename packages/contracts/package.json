@@ -11,6 +11,10 @@
 		"./identity": {
 			"types": "./src/identity.schema.ts",
 			"default": "./src/identity.schema.ts"
+		},
+		"./permissions": {
+			"types": "./src/permissions.schema.ts",
+			"default": "./src/permissions.schema.ts"
 		}
 	},
 	"scripts": {
