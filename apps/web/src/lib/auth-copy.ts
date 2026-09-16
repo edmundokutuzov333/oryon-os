@@ -23,6 +23,7 @@ export const authCopy = {
 	role: "Função",
 	permissions: "Permissões",
 	work: "Work Objects",
+	navigation: "Navegação do workspace",
 	notAvailable: "Sessão não disponível.",
 	backToLogin: "Voltar ao acesso",
 };
