@@ -81,7 +81,7 @@ export class WorkObjectRepository {
 			}
 			const state = typeDef.statusModel.states.find((candidate) => candidate.key === prepared.status);
 			if (!state) throw new Error("INVALID_STATUS");
-			const object = await tx.workObject.create({ data: { id, orgId, workspaceId: prepared.workspaceId ?? null, typeKey: prepared.typeKey, typeDefId: typeRow.id, humanId: generateHumanId(id, typeRow.idPrefix), title: prepared.title, description: prepared.description ?? null, status: prepared.status, statusCategory: state.category, priority: prepared.priority ?? "NORMAL", ownerId: prepared.ownerId ?? null, parentObjectId: prepared.parentObjectId ?? null, startAt: prepared.startAt ? new Date(prepared.startAt) : null, dueAt: prepared.dueAt ? new Date(prepared.dueAt) : null, progress: prepared.progress ?? 0, moneyAmount: prepared.moneyAmount, moneyCurrency: prepared.moneyCurrency, probability: prepared.probability, secondaryDate: prepared.secondaryDate ? new Date(prepared.secondaryDate) : null, externalRef: prepared.externalRef, severity: prepared.severity, classification: prepared.classification, tags: prepared.tags, customFields: prepared.customFields, createdBy: actorId } });
+			const object = await tx.workObject.create({ data: { id, orgId, workspaceId: prepared.workspaceId ?? null, typeKey: prepared.typeKey, typeDefId: typeRow.id, humanId: generateHumanId(id, typeRow.idPrefix), title: prepared.title, description: prepared.description ?? null, status: prepared.status, statusCategory: state.category, priority: prepared.priority ?? "NORMAL", ownerId: prepared.ownerId ?? null, parentObjectId: prepared.parentObjectId ?? null, startAt: prepared.startAt ? new Date(prepared.startAt) : null, dueAt: prepared.dueAt ? new Date(prepared.dueAt) : null, progress: prepared.progress ?? 0, moneyAmount: prepared.moneyAmount, moneyCurrency: prepared.moneyCurrency, probability: prepared.probability, secondaryDate: prepared.secondaryDate ? new Date(prepared.secondaryDate) : null, externalRef: prepared.externalRef, severity: prepared.severity, classification: prepared.classification, tags: prepared.tags, customFields: JSON.parse(JSON.stringify(prepared.customFields)) as Prisma.InputJsonValue, createdBy: actorId } });
 			if (object.workspaceId) await tx.objectPlacement.create({ data: { orgId, objectId: object.id, containerType: "WORKSPACE", containerId: object.workspaceId, position: "0", isPrimary: true } });
 			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "WorkObject", subjectId: object.id, name: "work_object.created", payload: { typeKey: object.typeKey, humanId: object.humanId, title: object.title, primaryWorkspaceId: object.workspaceId } });
 			return object.id;
@@ -94,7 +94,7 @@ export class WorkObjectRepository {
 			if (!current) throw new Error("NOT_FOUND");
 			const typeDef = typeDefContract(current.typeDef);
 			const mergedCustomFields = input.customFields ? { ...(current.customFields as Record<string, unknown>), ...input.customFields } : undefined;
-			const validationInput = mergedCustomFields ? { ...input, customFields: mergedCustomFields } : input;
+			const validationInput = mergedCustomFields ? { ...input, customFields: JSON.parse(JSON.stringify(mergedCustomFields)) as Prisma.InputJsonValue } : input;
 			validateWorkObjectUpdate(validationInput, typeDef, current.status);
 			validateWorkObjectDates(input.startAt ?? current.startAt?.toISOString(), input.dueAt ?? current.dueAt?.toISOString());
 			const moneyAmount = input.moneyAmount !== undefined ? input.moneyAmount : current.moneyAmount?.toString() ?? null;
@@ -117,7 +117,7 @@ export class WorkObjectRepository {
 				statusCategory = transition.statusCategory;
 				completedAt = transition.statusCategory === "DONE" ? new Date() : null;
 			}
-			const data: Prisma.WorkObjectUpdateInput = { statusCategory, completedAt };
+			const data: Prisma.WorkObjectUncheckedUpdateInput = { statusCategory, completedAt };
 			if (input.title !== undefined) data.title = input.title;
 			if (input.description !== undefined) data.description = input.description;
 			if (input.status !== undefined) data.status = input.status;

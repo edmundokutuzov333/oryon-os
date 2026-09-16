@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { generateHumanId, prepareWorkObjectCreate } from "@oryon/core";
 import type { MeetingArtifactConvertInput, MeetingArtifactCreateInput, MeetingCreateInput, MeetingParticipantCreateInput, MeetingParticipantUpdateInput, MeetingUpdateInput } from "@oryon/contracts/meeting";
-import type { Prisma, PrismaClient } from "../generated/client.js";
+import { Prisma, type PrismaClient } from "../generated/client.js";
 import { appendDomainEvent } from "../outbox.js";
 import { withOrgContext } from "../tenant.js";
 
@@ -145,7 +145,7 @@ export class MeetingRepository {
 				const file = await tx.fileAsset.findFirst({ where: { orgId, id: input.fileId, deletedAt: null }, select: { id: true } });
 				if (!file) throw new Error("FILE_NOT_FOUND");
 			}
-			const row = await tx.meetingArtifact.create({ data: { orgId, meetingId, kind: input.kind, contentJson: input.contentJson === undefined ? null : (input.contentJson as Prisma.InputJsonValue), transcript: input.transcript ?? null, language: input.language ?? null, fileId: input.fileId ?? null, pageId: input.pageId ?? null } });
+			const row = await tx.meetingArtifact.create({ data: { orgId, meetingId, kind: input.kind, contentJson: input.contentJson === undefined ? Prisma.JsonNull : (input.contentJson as Prisma.InputJsonValue), transcript: input.transcript ?? null, language: input.language ?? null, fileId: input.fileId ?? null, pageId: input.pageId ?? null } });
 			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "MeetingArtifact", subjectId: row.id, name: "meeting.artifact.created", payload: { meetingId, kind: input.kind } });
 			return row;
 		});
@@ -166,7 +166,7 @@ export class MeetingRepository {
 			const object = await tx.workObject.create({ data: { id: objectId, orgId, workspaceId: prepared.workspaceId ?? null, typeKey: prepared.typeKey, typeDefId: typeRow.id, humanId: generateHumanId(objectId, typeRow.idPrefix), title: prepared.title, description: prepared.description ?? null, status: prepared.status, statusCategory: initial.category, priority: prepared.priority ?? "NORMAL", ownerId: actorId, parentObjectId: null, startAt: null, dueAt: null, progress: 0, moneyAmount: null, moneyCurrency: null, probability: null, secondaryDate: null, externalRef: null, severity: null, classification: null, tags: prepared.tags, customFields: prepared.customFields, createdBy: actorId } });
 			if (object.workspaceId) await tx.objectPlacement.create({ data: { orgId, objectId: object.id, containerType: "WORKSPACE", containerId: object.workspaceId, position: "0", isPrimary: true } });
 			const relation = artifact.kind === "DECISIONS" ? "DECIDED_IN" : "RESULTED_IN";
-			const edge = await tx.edge.create({ data: { orgId, fromType: "work_object", fromId: object.id, toType: "meeting", toId: meetingId, relation, metadata: { artifactId }, createdBy: actorId } });
+			const edge = await tx.edge.create({ data: { orgId, fromType: "work_object", fromId: object.id, toType: "meeting", toId: meetingId, relation, metadata: { artifactId } as Prisma.InputJsonValue, createdBy: actorId } });
 			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "WorkObject", subjectId: object.id, name: "meeting.artifact.converted", payload: { meetingId, artifactId, workObjectId: object.id, relation } });
 			return { artifactId, workObjectId: object.id, edgeId: edge.id };
 		});

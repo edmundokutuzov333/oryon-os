@@ -1,6 +1,6 @@
 import { graphNodeKey, validateGraphSelfEdge } from "@oryon/core";
 import type { GraphEdgeCreateInput, GraphNodeRef, GraphRelation, GraphTimelineEvent, GraphTraverseQuery } from "@oryon/contracts/graph";
-import type { Prisma, PrismaClient } from "../generated/client.js";
+import { Prisma, type PrismaClient } from "../generated/client.js";
 import { appendDomainEvent } from "../outbox.js";
 import { withOrgContext } from "../tenant.js";
 
@@ -110,7 +110,7 @@ export class GraphRepository {
 
 			const existing = await tx.edge.findFirst({ where: { orgId, fromType: input.from.type, fromId: input.from.id, toType: input.to.type, toId: input.to.id, relation: input.relation, deletedAt: null }, select: { id: true } });
 			if (existing) throw new Error("CONFLICT");
-			const row = await tx.edge.create({ data: { orgId, fromType: input.from.type, fromId: input.from.id, toType: input.to.type, toId: input.to.id, relation: input.relation, lagDays: input.lagDays ?? null, metadata: input.metadata, createdBy: actorId } });
+			const row = await tx.edge.create({ data: { orgId, fromType: input.from.type, fromId: input.from.id, toType: input.to.type, toId: input.to.id, relation: input.relation, lagDays: input.lagDays ?? null, metadata: JSON.parse(JSON.stringify(input.metadata)) as Prisma.InputJsonValue, createdBy: actorId } });
 			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "Edge", subjectId: row.id, name: "graph.edge.created", payload: { from: input.from, to: input.to, relation: input.relation } });
 			return { id: row.id };
 		});

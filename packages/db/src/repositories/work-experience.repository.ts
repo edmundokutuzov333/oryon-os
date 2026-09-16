@@ -60,10 +60,10 @@ export class WorkExperienceRepository {
   async listHistory(orgId: string, objectId: string) {
     return withOrgContext(this.db, orgId, async (tx) => {
       const [events, transitions] = await Promise.all([
-        tx.domainEvent.findMany({ where: { orgId, subjectType: "WorkObject", subjectId: objectId }, orderBy: { occurredAt: "asc" }, take: 300 }),
+        tx.domainEvent.findMany({ where: { orgId, subjectType: "WorkObject", subjectId: objectId }, orderBy: { createdAt: "asc" }, take: 300 }),
         tx.statusTransition.findMany({ where: { orgId, objectId }, orderBy: { createdAt: "asc" }, take: 300 }),
       ]);
-      return [...events.map((event) => ({ id: event.id, kind: "DOMAIN_EVENT" as const, name: event.name, actorId: event.actorId, fromStatus: null, toStatus: null, comment: null, occurredAt: event.occurredAt })), ...transitions.map((transition) => ({ id: transition.id, kind: "STATUS_TRANSITION" as const, name: "work_object.status.changed", actorId: transition.actorId, fromStatus: transition.fromStatus, toStatus: transition.toStatus, comment: transition.comment, occurredAt: transition.createdAt }))]
+      return [...events.map((event) => ({ id: event.id, kind: "DOMAIN_EVENT" as const, name: event.name, actorId: event.actorId, fromStatus: null, toStatus: null, comment: null, occurredAt: event.createdAt })), ...transitions.map((transition) => ({ id: transition.id, kind: "STATUS_TRANSITION" as const, name: "work_object.status.changed", actorId: transition.actorId, fromStatus: transition.fromStatus, toStatus: transition.toStatus, comment: transition.comment, occurredAt: transition.createdAt }))]
         .sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime()).slice(0, 500);
     });
   }
