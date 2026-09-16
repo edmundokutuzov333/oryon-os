@@ -13,7 +13,7 @@ const resource: PermissionResource = {
 	classification: "internal",
 };
 
-const subject = { id: "usr_1", type: "MEMBER" as const, email: "member@example.com", teamIds: ["team_1"] };
+const subject = { id: "usr_1", type: "MEMBER" as const, email: "member@example.com", teamIds: ["team_1"], channelIds: ["chn_1"] };
 const base: PermissionPolicyContext = { orgId: "org_1", subject, roles: [], grants: [], classification: null };
 const now = new Date("2026-01-01T00:00:00.000Z");
 
@@ -42,14 +42,18 @@ describe("permission engine", () => {
 	});
 
 	it("supports explicit external grants and field masks", () => {
-		const context = {
-			...base,
-			grants: [{ resourceType: "work_object", resourceId: "obj_1", principalId: null, teamId: null, externalEmail: "member@example.com", level: "VIEW" as const, fieldMask: ["moneyAmount"], expiresAt: null, revokedAt: null }],
-		};
+		const context = { ...base, grants: [{ resourceType: "work_object", resourceId: "obj_1", principalId: null, teamId: null, externalEmail: "member@example.com", level: "VIEW" as const, fieldMask: ["moneyAmount"], expiresAt: null, revokedAt: null }] };
 		const result = evaluatePermissions(context, { resource, external: true, ai: false, fields: ["title", "moneyAmount"] }, now);
 		expect(result.exposure.external.allowed).toBe(true);
 		expect(result.exposure.fieldAccess.moneyAmount).toBe("masked");
 		expect(maskFields({ title: "Visible", moneyAmount: "100" }, result.exposure.fieldAccess)).toEqual({ title: "Visible", moneyAmount: "••••••" });
+	});
+
+	it("uses channel membership inside can", () => {
+		const channel: PermissionResource = { orgId: "org_1", type: "channel", id: "chn_1", workspaceId: null, projectId: null, ownerId: null, teamId: null, classification: null };
+		expect(can(base, channel, "read", now).allowed).toBe(true);
+		expect(can(base, channel, "comment", now).allowed).toBe(true);
+		expect(can({ ...base, subject: { ...subject, channelIds: [] } }, channel, "read", now).allowed).toBe(false);
 	});
 
 	it("rejects cross-organization resources", () => {
