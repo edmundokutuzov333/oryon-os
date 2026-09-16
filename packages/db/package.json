@@ -11,6 +11,10 @@
 		"./repositories": {
 			"types": "./src/repositories/index.ts",
 			"default": "./src/repositories/index.ts"
+		},
+		"./tenant": {
+			"types": "./src/tenant.ts",
+			"default": "./src/tenant.ts"
 		}
 	},
 	"scripts": {
