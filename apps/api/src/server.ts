@@ -1,4 +1,5 @@
 import { HealthResponseSchema } from "@oryon/contracts/health";
+import { closePrisma, getPrisma } from "@oryon/db";
 import Fastify from "fastify";
 
 const app = Fastify({ logger: true });
@@ -18,8 +19,10 @@ app.get("/v1/health", async (_request, reply) =>
 );
 
 try {
+	await getPrisma().$queryRawUnsafe("SELECT 1");
 	await app.listen({ port: 4000, host: "0.0.0.0" });
 } catch (error) {
 	app.log.error(error);
+	await closePrisma();
 	process.exitCode = 1;
 }
