@@ -1,4 +1,4 @@
-import { readdir, readFile, stat } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 const root = process.cwd();
@@ -8,25 +8,29 @@ const rules = [
 		forbidden: ["@oryon/db", "@oryon/core", "@oryon/contracts"],
 	},
 	{ dir: "packages/core", forbidden: ["@oryon/db", "@oryon/ai"] },
-	{ dir: "packages/db", forbidden: ["prisma", "@prisma/client"], allow: true },
+	{ dir: "packages/db", forbidden: ["prisma", "@prisma/client"], ignoredDirs: ["src/generated"] },
 	{ dir: "packages/ai", forbidden: [] },
 ];
 
-async function walk(dir) {
+async function walk(dir, ignoredDirs = []) {
 	const entries = await readdir(dir, { withFileTypes: true });
 	const files = [];
 	for (const entry of entries) {
 		if (entry.name === "node_modules" || entry.name === ".next" || entry.name === "dist") continue;
 		const full = path.join(dir, entry.name);
-		if (entry.isDirectory()) files.push(...(await walk(full)));
-		else if (/\.(ts|tsx|mts|cts|js|jsx)$/.test(entry.name)) files.push(full);
+		if (entry.isDirectory()) {
+			if (ignoredDirs.some((ignored) => full === path.join(root, ignored))) continue;
+			files.push(...(await walk(full, ignoredDirs)));
+		} else if (/\.(ts|tsx|mts|cts|js|jsx)$/.test(entry.name)) {
+			files.push(full);
+		}
 	}
 	return files;
 }
 
 const violations = [];
 for (const rule of rules) {
-	const files = await walk(path.join(root, rule.dir));
+	const files = await walk(path.join(root, rule.dir), rule.ignoredDirs ?? []);
 	for (const file of files) {
 		const source = await readFile(file, "utf8");
 		for (const forbidden of rule.forbidden) {
