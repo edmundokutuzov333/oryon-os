@@ -10,9 +10,9 @@ type Evaluation = {
 	principal: { id: string; email: string; type: string };
 };
 
-const emptyEvaluation: Evaluation | null = null;
+type Exposure = { resources: Array<{ resourceType: string; resourceId: string; externalPrincipals: number; fieldMasked: boolean }> };
 
-export function PermissionsPanel() {
+export function PermissionsPanel({ organizationId }: { organizationId: string }) {
 	const [mode, setMode] = useState<"evaluate" | "view-as" | "exposure">("evaluate");
 	const [resourceType, setResourceType] = useState("work_object");
 	const [resourceId, setResourceId] = useState("obj_demo_task_0001");
@@ -23,14 +23,14 @@ export function PermissionsPanel() {
 	const [classification, setClassification] = useState("internal");
 	const [fields, setFields] = useState("title,description,moneyAmount");
 	const [targetUserId, setTargetUserId] = useState("usr_demo_member");
-	const [evaluation, setEvaluation] = useState<Evaluation>(emptyEvaluation);
-	const [exposure, setExposure] = useState<{ resources: Array<{ resourceType: string; resourceId: string; externalPrincipals: number; fieldMasked: boolean }> } | null>(null);
+	const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
+	const [exposure, setExposure] = useState<Exposure | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string>();
 
 	function resource() {
 		return {
-			orgId: "org_demo_0001",
+			orgId: organizationId,
 			type: resourceType.trim(),
 			id: resourceId.trim(),
 			workspaceId: workspaceId.trim() || null,
@@ -71,7 +71,7 @@ export function PermissionsPanel() {
 		setError(undefined);
 		try {
 			const response = await fetch("/api/permissions/exposure", { cache: "no-store" });
-			const payload = (await response.json()) as { data?: typeof exposure; error?: { message?: string } };
+			const payload = (await response.json()) as { data?: Exposure; error?: { message?: string } };
 			if (!response.ok || !payload.data) throw new Error(payload.error?.message ?? copy.executionError);
 			setExposure(payload.data);
 		} catch (requestError) {
@@ -110,7 +110,7 @@ export function PermissionsPanel() {
 						<label><span>{copy.classification}</span><input value={classification} onChange={(event) => setClassification(event.target.value)} /></label>
 						<label><span>{copy.fields}</span><input value={fields} onChange={(event) => setFields(event.target.value)} /></label>
 						{mode === "view-as" ? <label><span>{copy.targetUser}</span><input value={targetUserId} onChange={(event) => setTargetUserId(event.target.value)} required /></label> : null}
-						<button type="submit" disabled={busy}>{busy ? "..." : mode === "view-as" ? copy.simulate : copy.run}</button>
+						<button type="submit" disabled={busy}>{busy ? copy.busy : mode === "view-as" ? copy.simulate : copy.run}</button>
 					</form>
 
 					<div className="permission-result" aria-live="polite">
@@ -125,7 +125,7 @@ export function PermissionsPanel() {
 									<div><span>{copy.external}</span><strong>{evaluation.exposure.external.allowed ? copy.allowed : copy.denied}</strong><small>{evaluation.exposure.external.reason}</small></div>
 									<div><span>{copy.ai}</span><strong>{evaluation.exposure.ai.allowed ? copy.allowed : copy.denied}</strong><small>{evaluation.exposure.ai.reason}</small></div>
 									<div><span>{copy.export}</span><strong>{evaluation.exposure.export.allowed ? copy.allowed : copy.denied}</strong><small>{evaluation.exposure.export.reason}</small></div>
-									<div><span>{copy.watermark}</span><strong>{evaluation.exposure.watermark ? copy.allowed : copy.denied}</strong><small>classification</small></div>
+									<div><span>{copy.watermark}</span><strong>{evaluation.exposure.watermark ? copy.allowed : copy.denied}</strong><small>{copy.classificationSource}</small></div>
 								</div>
 								<div className="field-access"><p className="panel-kicker">{copy.fieldAccess}</p>{Object.entries(evaluation.exposure.fieldAccess).map(([field, state]) => <div className="list-item" key={field}><code>{field}</code><span>{state}</span></div>)}</div>
 							</>
@@ -136,7 +136,7 @@ export function PermissionsPanel() {
 				<section className="exposure-report">
 					<div className="exposure-report-header"><div><p className="panel-kicker">{copy.exposure}</p><h2>{copy.title}</h2></div><button type="button" className="ghost-button" onClick={() => void loadExposure()} disabled={busy}>{copy.loadExposure}</button></div>
 					{error ? <p className="permission-error" role="alert">{error}</p> : null}
-					{exposure?.resources.length ? <div className="item-list">{exposure.resources.map((row) => <div className="list-item" key={`${row.resourceType}:${row.resourceId}`}><span>{row.resourceType}</span><code>{row.resourceId}</code><span>{row.externalPrincipals}</span><span>{row.fieldMasked ? "masked" : "unmasked"}</span></div>)}</div> : <p className="permissions-empty">{copy.noResources}</p>}
+					{exposure?.resources.length ? <div className="item-list">{exposure.resources.map((row) => <div className="list-item" key={`${row.resourceType}:${row.resourceId}`}><span>{row.resourceType}</span><code>{row.resourceId}</code><span>{row.externalPrincipals}</span><span>{row.fieldMasked ? copy.masked : copy.unmasked}</span></div>)}</div> : <p className="permissions-empty">{copy.noResources}</p>}
 				</section>
 			)}
 		</section>
