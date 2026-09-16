@@ -39,6 +39,7 @@ export default async function WorkspacePage() {
 				<div className="profile-chip">
 					<span className="avatar" aria-hidden="true">{initials.toUpperCase()}</span>
 					<span>{identity.user.displayName ?? identity.user.name}</span>
+					<a className="quiet-link" href="/os/permissions">{authCopy.permissions}</a>
 					<LogoutButton />
 				</div>
 			</header>
