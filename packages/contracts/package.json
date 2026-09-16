@@ -1,42 +1,17 @@
 {
-	"name": "@oryon/contracts",
-	"private": true,
-	"version": "0.1.0",
-	"type": "module",
-	"exports": {
-		"./health": {
-			"types": "./src/health.schema.ts",
-			"default": "./src/health.schema.ts"
-		},
-		"./identity": {
-			"types": "./src/identity.schema.ts",
-			"default": "./src/identity.schema.ts"
-		},
-		"./permissions": {
-			"types": "./src/permissions.schema.ts",
-			"default": "./src/permissions.schema.ts"
-		},
-		"./work-object": {
-			"types": "./src/work-object.schema.ts",
-			"default": "./src/work-object.schema.ts"
-		},
-		"./graph": {
-			"types": "./src/graph.schema.ts",
-			"default": "./src/graph.schema.ts"
-		}
-	},
-	"scripts": {
-		"typecheck": "tsc --noEmit",
-		"lint": "biome check .",
-		"build": "tsc --noEmit",
-		"test": "vitest run"
-	},
-	"dependencies": {
-		"zod": "^4.0.0"
-	},
-	"devDependencies": {
-		"typescript": "^5.9.2",
-		"vitest": "^3.2.0",
-		"@biomejs/biome": "^2.2.0"
-	}
+  "name": "@oryon/contracts",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./health": { "types": "./src/health.schema.ts", "default": "./src/health.schema.ts" },
+    "./identity": { "types": "./src/identity.schema.ts", "default": "./src/identity.schema.ts" },
+    "./permissions": { "types": "./src/permissions.schema.ts", "default": "./src/permissions.schema.ts" },
+    "./work-object": { "types": "./src/work-object.schema.ts", "default": "./src/work-object.schema.ts" },
+    "./graph": { "types": "./src/graph.schema.ts", "default": "./src/graph.schema.ts" },
+    "./work-experience": { "types": "./src/work-experience.schema.ts", "default": "./src/work-experience.schema.ts" }
+  },
+  "scripts": { "typecheck": "tsc --noEmit", "lint": "biome check .", "build": "tsc --noEmit", "test": "vitest run" },
+  "dependencies": { "zod": "^4.0.0" },
+  "devDependencies": { "typescript": "^5.9.2", "vitest": "^3.2.0", "@biomejs/biome": "^2.2.0" }
 }
