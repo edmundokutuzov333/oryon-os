@@ -194,6 +194,10 @@ importers:
         version: 3.2.7(@types/node@24.13.5)(jiti@2.7.0)(tsx@4.23.13)
 
   packages/core:
+    dependencies:
+      '@oryon/contracts':
+        specifier: workspace:*
+        version: link:../contracts
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.2.0
