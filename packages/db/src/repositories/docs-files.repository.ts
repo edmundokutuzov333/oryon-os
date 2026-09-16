@@ -1,5 +1,5 @@
 import type { PageCreateInput, PageUpdateInput, FileCompleteInput } from "@oryon/contracts/docs-files";
-import type { PrismaClient } from "../generated/client.js";
+import type { Prisma, PrismaClient } from "../generated/client.js";
 import { appendDomainEvent } from "../outbox.js";
 import { withOrgContext } from "../tenant.js";
 
@@ -50,7 +50,7 @@ export class DocsFilesRepository {
           cursor = next?.parentPageId ?? null;
         }
       }
-      const data = {
+      const data: Prisma.PageUncheckedUpdateInput = {
         ...(input.title === undefined ? {} : { title: input.title }),
         ...(input.parentPageId === undefined ? {} : { parentPageId: input.parentPageId }),
         ...(input.icon === undefined ? {} : { icon: input.icon }),

@@ -81,7 +81,7 @@ export class WorkObjectRepository {
 			}
 			const state = typeDef.statusModel.states.find((candidate) => candidate.key === prepared.status);
 			if (!state) throw new Error("INVALID_STATUS");
-			const object = await tx.workObject.create({ data: { id, orgId, workspaceId: prepared.workspaceId ?? null, typeKey: prepared.typeKey, typeDefId: typeRow.id, humanId: generateHumanId(id, typeRow.idPrefix), title: prepared.title, description: prepared.description ?? null, status: prepared.status, statusCategory: state.category, priority: prepared.priority ?? "NORMAL", ownerId: prepared.ownerId ?? null, parentObjectId: prepared.parentObjectId ?? null, startAt: prepared.startAt ? new Date(prepared.startAt) : null, dueAt: prepared.dueAt ? new Date(prepared.dueAt) : null, progress: prepared.progress ?? 0, moneyAmount: prepared.moneyAmount, moneyCurrency: prepared.moneyCurrency, probability: prepared.probability, secondaryDate: prepared.secondaryDate ? new Date(prepared.secondaryDate) : null, externalRef: prepared.externalRef, severity: prepared.severity, classification: prepared.classification, tags: prepared.tags, customFields: prepared.customFields, createdBy: actorId } });
+			const object = await tx.workObject.create({ data: { id, orgId, workspaceId: prepared.workspaceId ?? null, typeKey: prepared.typeKey, typeDefId: typeRow.id, humanId: generateHumanId(id, typeRow.idPrefix), title: prepared.title, description: prepared.description ?? null, status: prepared.status, statusCategory: state.category, priority: prepared.priority ?? "NORMAL", ownerId: prepared.ownerId ?? null, parentObjectId: prepared.parentObjectId ?? null, startAt: prepared.startAt ? new Date(prepared.startAt) : null, dueAt: prepared.dueAt ? new Date(prepared.dueAt) : null, progress: prepared.progress ?? 0, moneyAmount: prepared.moneyAmount, moneyCurrency: prepared.moneyCurrency, probability: prepared.probability, secondaryDate: prepared.secondaryDate ? new Date(prepared.secondaryDate) : null, externalRef: prepared.externalRef, severity: prepared.severity, classification: prepared.classification, tags: prepared.tags, customFields: prepared.customFields as Prisma.InputJsonValue, createdBy: actorId } });
 			if (object.workspaceId) await tx.objectPlacement.create({ data: { orgId, objectId: object.id, containerType: "WORKSPACE", containerId: object.workspaceId, position: "0", isPrimary: true } });
 			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "WorkObject", subjectId: object.id, name: "work_object.created", payload: { typeKey: object.typeKey, humanId: object.humanId, title: object.title, primaryWorkspaceId: object.workspaceId } });
 			return object.id;
@@ -117,7 +117,7 @@ export class WorkObjectRepository {
 				statusCategory = transition.statusCategory;
 				completedAt = transition.statusCategory === "DONE" ? new Date() : null;
 			}
-			const data: Prisma.WorkObjectUpdateInput = { statusCategory, completedAt };
+			const data: Prisma.WorkObjectUncheckedUpdateInput = { statusCategory, completedAt };
 			if (input.title !== undefined) data.title = input.title;
 			if (input.description !== undefined) data.description = input.description;
 			if (input.status !== undefined) data.status = input.status;
@@ -136,7 +136,7 @@ export class WorkObjectRepository {
 			if (input.severity !== undefined) data.severity = input.severity;
 			if (input.classification !== undefined) data.classification = input.classification;
 			if (input.tags !== undefined) data.tags = input.tags;
-			if (mergedCustomFields !== undefined) data.customFields = mergedCustomFields;
+			if (mergedCustomFields !== undefined) data.customFields = mergedCustomFields as Prisma.InputJsonValue;
 			const updated = await tx.workObject.update({ where: { id }, data, include: { assignments: true, placements: true, typeDef: true } });
 			if (input.workspaceId !== undefined && input.workspaceId !== current.workspaceId) {
 				await tx.objectPlacement.updateMany({ where: { orgId, objectId: id, containerType: "WORKSPACE" }, data: { isPrimary: false } });
