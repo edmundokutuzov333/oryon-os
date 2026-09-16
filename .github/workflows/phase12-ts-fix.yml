@@ -1,0 +1,35 @@
+name: Phase 12 type fix
+
+on:
+  push:
+    branches:
+      - feat/phase-12-search-ai
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Apply narrow generated-client type fixes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("packages/db/src/repositories/meeting.repository.ts")
+          s = p.read_text()
+          old = 'metadata: { artifactId } as Prisma.InputJsonValue'
+          new = 'metadata: { artifactId } as unknown as Prisma.InputJsonValue'
+          if old not in s:
+              raise SystemExit("meeting metadata pattern not found")
+          p.write_text(s.replace(old, new))
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/db/src/repositories/meeting.repository.ts
+          git commit -m "fix(db): narrow meeting metadata JSON cast"
+          git push origin HEAD:${GITHUB_REF_NAME}
