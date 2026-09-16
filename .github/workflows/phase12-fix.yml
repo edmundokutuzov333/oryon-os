@@ -1,0 +1,72 @@
+name: Phase 12 CI fix
+
+on:
+  push:
+    branches:
+      - feat/phase-12-search-ai
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Apply deterministic fixes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p = Path(path)
+              s = p.read_text()
+              if old not in s:
+                  raise SystemExit(f"pattern not found: {path}: {old[:120]!r}")
+              p.write_text(s.replace(old, new))
+
+          replace("packages/db/src/repositories/communication.repository.ts", "customFields: prepared.customFields,", "customFields: prepared.customFields as Prisma.InputJsonValue,")
+          replace("packages/db/src/repositories/communication.repository.ts", "data: { orgId, objectId, containerType: \"WORKSPACE\"", "data: { orgId, objectId: object.id, containerType: \"WORKSPACE\"")
+
+          replace("packages/db/src/repositories/docs-files.repository.ts", "import type { PageCreateInput, PageUpdateInput, FileCompleteInput } from \"@oryon/contracts/docs-files\";\nimport type { PrismaClient } from \"../generated/client.js\";", "import type { PageCreateInput, PageUpdateInput, FileCompleteInput } from \"@oryon/contracts/docs-files\";\nimport type { Prisma, PrismaClient } from \"../generated/client.js\";")
+          replace("packages/db/src/repositories/docs-files.repository.ts", "const data = {", "const data: Prisma.PageUncheckedUpdateInput = {")
+
+          replace("packages/db/src/repositories/graph.repository.ts", "import type { Prisma, PrismaClient } from \"../generated/client.js\";", "import { Prisma, type PrismaClient } from \"../generated/client.js\";")
+          replace("packages/db/src/repositories/graph.repository.ts", "metadata: input.metadata,", "metadata: input.metadata as Prisma.InputJsonValue,")
+
+          replace("packages/db/src/repositories/meeting.repository.ts", "import type { Prisma, PrismaClient } from \"../generated/client.js\";", "import { Prisma, type PrismaClient } from \"../generated/client.js\";")
+          replace("packages/db/src/repositories/meeting.repository.ts", "contentJson: input.contentJson === undefined ? null : (input.contentJson as Prisma.InputJsonValue),", "contentJson: input.contentJson === undefined ? Prisma.JsonNull : (input.contentJson as Prisma.InputJsonValue),")
+          replace("packages/db/src/repositories/meeting.repository.ts", "metadata: { artifactId },", "metadata: { artifactId } as Prisma.InputJsonValue,")
+
+          replace("packages/db/src/repositories/work-experience.repository.ts", "orderBy: { occurredAt: \"asc\" },", "orderBy: { createdAt: \"asc\" },")
+          replace("packages/db/src/repositories/work-experience.repository.ts", "occurredAt: event.occurredAt", "occurredAt: event.createdAt")
+
+          replace("packages/db/src/repositories/work-object.repository.ts", "customFields: prepared.customFields,", "customFields: prepared.customFields as Prisma.InputJsonValue,")
+          replace("packages/db/src/repositories/work-object.repository.ts", "const data: Prisma.WorkObjectUpdateInput = { statusCategory, completedAt };", "const data: Prisma.WorkObjectUncheckedUpdateInput = { statusCategory, completedAt };")
+          replace("packages/db/src/repositories/work-object.repository.ts", "data.customFields = mergedCustomFields;", "data.customFields = mergedCustomFields as Prisma.InputJsonValue;")
+
+          replace("packages/db/prisma/schema.prisma", "enum PageKind {\n  DOC\n  WIKI\n  SOP\n  MEETING_NOTES\n  POSTMORTEM\n  TEMPLATE\n  KB_ARTICLE\n}", "enum PageKind {\n  DOC\n  WIKI\n  SOP\n  MEETING_NOTES\n  POSTMORTEM\n  TEMPLATE\n  KB_ARTICLE\n  CANVAS\n  DATABASE_VIEW\n  BRIEF\n  NOTE\n}")
+          PY
+
+          mkdir -p packages/db/prisma/migrations/20260916150000_phase12_page_kind
+          cat > packages/db/prisma/migrations/20260916150000_phase12_page_kind/migration.sql <<'SQL'
+          ALTER TYPE "PageKind" ADD VALUE IF NOT EXISTS 'CANVAS';
+          ALTER TYPE "PageKind" ADD VALUE IF NOT EXISTS 'DATABASE_VIEW';
+          ALTER TYPE "PageKind" ADD VALUE IF NOT EXISTS 'BRIEF';
+          ALTER TYPE "PageKind" ADD VALUE IF NOT EXISTS 'NOTE';
+          SQL
+
+      - name: Commit fixes
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/db packages/db/prisma/migrations
+          git commit -m "fix(db): restore Phase 12 CI compatibility"
+          git push origin HEAD:${GITHUB_REF_NAME}
