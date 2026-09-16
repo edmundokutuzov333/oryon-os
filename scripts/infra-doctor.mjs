@@ -20,7 +20,6 @@ function runDocker(args) {
 
 function parseComposePs(output) {
   if (!output) return [];
-  if (output.startsWith("[")) return JSON.parse(output);
   return output.split("\n").filter(Boolean).map((line) => JSON.parse(line));
 }
 
@@ -43,6 +42,15 @@ function checkPort(port, timeoutMs = 1500) {
   });
 }
 
+async function checkHttp(url, acceptableStatuses = [200]) {
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(2000) });
+    return acceptableStatuses.includes(response.status);
+  } catch {
+    return false;
+  }
+}
+
 async function main() {
   runDocker(["config", "--quiet"]);
   const rows = parseComposePs(runDocker(["ps", "--all", "--format", "json"]));
@@ -55,26 +63,16 @@ async function main() {
     const row = byService.get(service.name);
     const running = row?.State === "running";
     const portOpen = await checkPort(service.port);
-    let endpointOk = true;
-
-    if (service.protocol === "http") {
-      try {
-        const response = await fetch(service.url, { signal: AbortSignal.timeout(2000) });
-        endpointOk = response.ok;
-      } catch {
-        endpointOk = false;
-      }
-    }
-
+    const endpointOk = service.protocol === "http" ? await checkHttp(service.url) : true;
     const ok = running && portOpen && endpointOk;
     failed ||= !ok;
     console.log(`${ok ? "OK " : "ERR"} ${service.name.padEnd(10)} state=${row?.State ?? "missing"} port=${portOpen ? "open" : "closed"}${service.protocol === "http" ? ` http=${endpointOk ? "ok" : "fail"}` : ""}`);
   }
 
-  const init = byService.get("minio-init");
-  const initOk = init?.State === "exited" && init?.ExitCode === "0";
-  failed ||= !initOk;
-  console.log(`${initOk ? "OK " : "ERR"} minio-init state=${init?.State ?? "missing"} exit=${init?.ExitCode ?? "missing"}`);
+  const bucket = process.env.S3_BUCKET ?? "oryon-local";
+  const bucketOk = await checkHttp(`http://127.0.0.1:9000/${bucket}/`, [200, 403]);
+  failed ||= !bucketOk;
+  console.log(`${bucketOk ? "OK " : "ERR"} s3-bucket  bucket=${bucket} reachable=${bucketOk ? "yes" : "no"}`);
 
   if (failed) {
     console.error("Local infrastructure is not ready. Inspect with: pnpm infra:logs");
