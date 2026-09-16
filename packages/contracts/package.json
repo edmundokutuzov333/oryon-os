@@ -4,7 +4,10 @@
 	"version": "0.1.0",
 	"type": "module",
 	"exports": {
-		"./health": "./src/health.schema.ts"
+		"./health": {
+			"types": "./src/health.schema.ts",
+			"default": "./src/health.schema.ts"
+		}
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
