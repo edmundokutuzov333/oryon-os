@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HealthResponseSchema } from "./health.schema";
+import { HealthResponseSchema } from "./health.schema.js";
 
 describe("health contract", () => {
 	it("validates the api health envelope", () => {
