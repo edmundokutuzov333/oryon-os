@@ -19,6 +19,10 @@
 		"./work-object": {
 			"types": "./src/work-object.schema.ts",
 			"default": "./src/work-object.schema.ts"
+		},
+		"./graph": {
+			"types": "./src/graph.schema.ts",
+			"default": "./src/graph.schema.ts"
 		}
 	},
 	"scripts": {
