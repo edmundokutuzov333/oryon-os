@@ -49,7 +49,7 @@ describe("work object domain", () => {
 	});
 
 	it("prepares omitted status from the type model", () => {
-		const prepared = prepareWorkObjectCreate({ typeKey: "task", title: "Ship V1", customFields: { effort: 3 } }, typeDef);
+		const prepared = prepareWorkObjectCreate({ typeKey: "task", title: "Ship V1", tags: [], customFields: { effort: 3 } }, typeDef);
 		expect(prepared.status).toBe("todo");
 	});
 
