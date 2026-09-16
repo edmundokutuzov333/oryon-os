@@ -35,6 +35,7 @@ export default async function WorkspacePage() {
 				</div>
 				<nav className="profile-chip" aria-label={authCopy.navigation}>
 					<a className="quiet-link" href="/os/work">{authCopy.work}</a>
+					<a className="quiet-link" href="/os/graph">{authCopy.graph}</a>
 					<a className="quiet-link" href="/os/permissions">{authCopy.permissions}</a>
 					<span className="avatar" aria-hidden="true">{initials.toUpperCase()}</span>
 					<span>{identity.user.displayName ?? identity.user.name}</span>
