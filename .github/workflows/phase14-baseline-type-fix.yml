@@ -1,0 +1,85 @@
+name: phase14-baseline-type-fix
+on:
+  push:
+    branches: [feat/phase-14-domain-templates]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[phase14-baseline-fix]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Patch Prisma repository compatibility
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          def once(path, pattern, replacement):
+              p = Path(path)
+              text = p.read_text()
+              text2, n = re.subn(pattern, replacement, text, count=1, flags=re.S)
+              if n != 1:
+                  raise SystemExit(f'{path}: pattern not found: {pattern}')
+              p.write_text(text2)
+
+          once('packages/db/src/repositories/communication.repository.ts',
+               r'metadata:\s*\{\s*source:\s*"communication\.convert"\s*\}',
+               'metadata: { source: "communication.convert" } as Prisma.InputJsonValue')
+          once('packages/db/src/repositories/communication.repository.ts',
+               r'(if \(object\.workspaceId\) await tx\.objectPlacement\.create\(\{ data: \{ orgId, )objectId(, containerType: "WORKSPACE")',
+               r'\1workObjectId\2')
+
+          once('packages/db/src/repositories/docs-files.repository.ts',
+               r'import type \{ PrismaClient \} from "\.\./generated/client\.js";',
+               'import type { Prisma, PrismaClient } from "../generated/client.js";')
+          once('packages/db/src/repositories/docs-files.repository.ts',
+               r'kind: input\.kind \?\? "DOC"',
+               'kind: input.kind === "CANVAS" ? "DOC" : input.kind ?? "DOC"')
+          once('packages/db/src/repositories/docs-files.repository.ts',
+               r'const page = await tx\.page\.update\(\{ where: \{ id \}, data \}\);',
+               'const page = await tx.page.update({ where: { id }, data: data as Prisma.PageUncheckedUpdateInput });')
+
+          once('packages/db/src/repositories/graph.repository.ts',
+               r'import type \{ Prisma, PrismaClient \} from "\.\./generated/client\.js";',
+               'import { Prisma, type PrismaClient } from "../generated/client.js";')
+          once('packages/db/src/repositories/graph.repository.ts',
+               r'metadata: input\.metadata',
+               'metadata: JSON.parse(JSON.stringify(input.metadata)) as Prisma.InputJsonValue')
+
+          once('packages/db/src/repositories/meeting.repository.ts',
+               r'import type \{ Prisma, PrismaClient \} from "\.\./generated/client\.js";',
+               'import { Prisma, type PrismaClient } from "../generated/client.js";')
+          once('packages/db/src/repositories/meeting.repository.ts',
+               r'contentJson: input\.contentJson === undefined \? null : \(input\.contentJson as Prisma\.InputJsonValue\)',
+               'contentJson: input.contentJson === undefined ? Prisma.JsonNull : (input.contentJson as Prisma.InputJsonValue)')
+          once('packages/db/src/repositories/meeting.repository.ts',
+               r'metadata: \{ artifactId \}',
+               'metadata: { artifactId } as Prisma.InputJsonValue')
+
+          once('packages/db/src/repositories/work-experience.repository.ts',
+               r'orderBy: \{ occurredAt: "asc" \}',
+               'orderBy: { createdAt: "asc" }')
+          once('packages/db/src/repositories/work-experience.repository.ts',
+               r'occurredAt: event\.occurredAt',
+               'occurredAt: event.createdAt')
+
+          once('packages/db/src/repositories/work-object.repository.ts',
+               r'const data: Prisma\.WorkObjectUpdateInput = \{ statusCategory, completedAt \};',
+               'const data: Prisma.WorkObjectUncheckedUpdateInput = { statusCategory, completedAt };')
+          once('packages/db/src/repositories/work-object.repository.ts',
+               r'customFields: mergedCustomFields \}',
+               'customFields: JSON.parse(JSON.stringify(mergedCustomFields)) as Prisma.InputJsonValue }')
+          once('packages/db/src/repositories/work-object.repository.ts',
+               r'customFields: prepared\.customFields,',
+               'customFields: JSON.parse(JSON.stringify(prepared.customFields)) as Prisma.InputJsonValue,')
+          print('Phase14 baseline Prisma compatibility patch prepared.')
+          PY
+          rm .github/workflows/phase14-baseline-type-fix.yml
+          git config user.name "oryon-ci"
+          git config user.email "ci@oryon.local"
+          git add packages/db/src/repositories .github/workflows/phase14-baseline-type-fix.yml
+          git commit -m "chore(db): align Prisma repository inputs [phase14-baseline-fix]"
+          git push origin HEAD:feat/phase-14-domain-templates
