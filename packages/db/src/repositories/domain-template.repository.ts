@@ -1,5 +1,5 @@
-import type { PrismaClient } from "../generated/client.js";
-import { getDomainTemplate, type DomainTemplateManifest } from "@oryon/contracts/domain-templates";
+import type { Prisma, PrismaClient } from "../generated/client.js";
+import { getDomainTemplate, type DomainTemplateManifest } from "@oryon/contracts/domain-template-data";
 import type { DomainTemplateSummary, DomainTemplateInstallResponse } from "@oryon/contracts/domain-templates";
 import { appendDomainEvent } from "../outbox.js";
 import { withOrgContext } from "../tenant.js";
@@ -24,6 +24,10 @@ function nextSettings(settings: unknown, templates: InstalledTemplateMap): Recor
   const base = settings && typeof settings === "object" && !Array.isArray(settings) ? { ...(settings as Record<string, unknown>) } : {};
   base.domainTemplates = templates;
   return base;
+}
+
+function inputJson(value: Record<string, unknown>): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
 function toSummary(template: DomainTemplateManifest, state?: InstalledTemplateState): DomainTemplateSummary {
@@ -61,7 +65,7 @@ export class DomainTemplateRepository {
     });
   }
 
-  async find(orgId: string, key: string): Promise<DomainTemplateManifest | undefined> {
+  async find(_orgId: string, key: string): Promise<DomainTemplateManifest | undefined> {
     return getDomainTemplate(key);
   }
 
@@ -98,9 +102,9 @@ export class DomainTemplateRepository {
               icon: type.icon,
               isSystem: true,
               idPrefix: type.idPrefix,
-              schema: type.schema,
-              statusModel: type.statusModel,
-              defaultViews: type.defaultViews,
+              schema: inputJson(type.schema),
+              statusModel: inputJson(type.statusModel),
+              defaultViews: inputJson({ views: type.defaultViews }),
             },
           });
           typeDefIds.push(currentType.id);
@@ -116,9 +120,9 @@ export class DomainTemplateRepository {
               icon: type.icon,
               isSystem: true,
               idPrefix: type.idPrefix,
-              schema: type.schema,
-              statusModel: type.statusModel,
-              defaultViews: type.defaultViews,
+              schema: inputJson(type.schema),
+              statusModel: inputJson(type.statusModel),
+              defaultViews: inputJson({ views: type.defaultViews }),
             },
           });
           typeDefIds.push(row.id);
@@ -134,7 +138,7 @@ export class DomainTemplateRepository {
         typeDefIds,
       };
       states[template.key] = next;
-      await tx.organization.update({ where: { id: orgId }, data: { settings: nextSettings(organization.settings, states) } });
+      await tx.organization.update({ where: { id: orgId }, data: { settings: inputJson(nextSettings(organization.settings, states)) } });
       await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "Organization", subjectId: orgId, name: "domain_template.installed", payload: { template: template.key, version: template.version, typeDefIds, relations: template.relations } });
 
       return { key: template.key, version: template.version, status: "INSTALLED", objectTypeIds: typeDefIds, createdCount, updatedCount, reactivated: current?.status === "INACTIVE" };
@@ -152,7 +156,7 @@ export class DomainTemplateRepository {
       if (!current) return { key: template.key, status: "INACTIVE" as const, changed: false };
       if (current.status === "INACTIVE") return { key: template.key, status: "INACTIVE" as const, changed: false };
       states[template.key] = { ...current, status: "INACTIVE" };
-      await tx.organization.update({ where: { id: orgId }, data: { settings: nextSettings(organization.settings, states) } });
+      await tx.organization.update({ where: { id: orgId }, data: { settings: inputJson(nextSettings(organization.settings, states)) } });
       await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "Organization", subjectId: orgId, name: "domain_template.deactivated", payload: { template: template.key, version: current.version, typeDefIds: current.typeDefIds } });
       return { key: template.key, status: "INACTIVE" as const, changed: true };
     });
