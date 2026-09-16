@@ -14,10 +14,7 @@ async function getIdentity() {
 	if (!session || !organization) redirect("/login");
 
 	const response = await fetch(`${apiUrl}/v1/auth/session`, {
-		headers: {
-			"X-Oryon-Org": organization,
-			Cookie: `${cookieName}=${encodeURIComponent(session)}`,
-		},
+		headers: { "X-Oryon-Org": organization, Cookie: `${cookieName}=${encodeURIComponent(session)}` },
 		cache: "no-store",
 	});
 	if (!response.ok) redirect("/login");
@@ -36,12 +33,13 @@ export default async function WorkspacePage() {
 					<p className="eyebrow">{authCopy.eyebrow}</p>
 					<p className="org-name">{identity.organization.name}</p>
 				</div>
-				<div className="profile-chip">
+				<nav className="profile-chip" aria-label={authCopy.navigation}>
+					<a className="quiet-link" href="/os/work">{authCopy.work}</a>
+					<a className="quiet-link" href="/os/permissions">{authCopy.permissions}</a>
 					<span className="avatar" aria-hidden="true">{initials.toUpperCase()}</span>
 					<span>{identity.user.displayName ?? identity.user.name}</span>
-					<a className="quiet-link" href="/os/permissions">{authCopy.permissions}</a>
 					<LogoutButton />
-				</div>
+				</nav>
 			</header>
 
 			<section className="os-grid" aria-label={authCopy.identity}>
@@ -59,27 +57,13 @@ export default async function WorkspacePage() {
 				<article className="os-panel">
 					<p className="panel-kicker">{authCopy.workspaces}</p>
 					<strong className="metric">{identity.workspaces.length}</strong>
-					<div className="item-list">
-						{identity.workspaces.map((workspace) => (
-							<div className="list-item" key={workspace.id}>
-								<span>{workspace.name}</span>
-								<code>{workspace.key}</code>
-							</div>
-						))}
-					</div>
+					<div className="item-list">{identity.workspaces.map((workspace) => <div className="list-item" key={workspace.id}><span>{workspace.name}</span><code>{workspace.key}</code></div>)}</div>
 				</article>
 
 				<article className="os-panel">
 					<p className="panel-kicker">{authCopy.teams}</p>
 					<strong className="metric">{identity.teams.length}</strong>
-					<div className="item-list">
-						{identity.teams.map((team) => (
-							<div className="list-item" key={team.id}>
-								<span>{team.name}</span>
-								<span>{team.role}</span>
-							</div>
-						))}
-					</div>
+					<div className="item-list">{identity.teams.map((team) => <div className="list-item" key={team.id}><span>{team.name}</span><span>{team.role}</span></div>)}</div>
 				</article>
 			</section>
 		</main>
