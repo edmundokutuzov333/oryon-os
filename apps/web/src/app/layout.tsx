@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "@oryon/ui/tokens.css";
 import "./globals.css";
+import "./work.css";
 
 export const metadata: Metadata = {
 	title: "OryonOS V1",
