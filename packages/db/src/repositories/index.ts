@@ -4,6 +4,7 @@ export { DocsFilesRepository } from "./docs-files.repository.js";
 export { GraphRepository } from "./graph.repository.js";
 export type { GraphEdgeRecord, GraphNodeRecord, GraphTraverseResult } from "./graph.repository.js";
 export { IdentityRepository } from "./identity.repository.js";
+export { MeetingRepository } from "./meeting.repository.js";
 export { PageAttachmentsRepository } from "./page-attachments.repository.js";
 export { PermissionRepository } from "./permission.repository.js";
 export type { PermissionSnapshot, ExternalExposureRow } from "./permission.repository.js";
