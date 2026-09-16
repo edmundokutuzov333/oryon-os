@@ -66,9 +66,7 @@ async function checkHttp(url, acceptableStatuses = [200]) {
 
 async function main() {
 	runDocker(["config", "--quiet"]);
-	const rows = parseComposePs(
-		runDocker(["ps", "--all", "--format", "json"]),
-	);
+	const rows = parseComposePs(runDocker(["ps", "--all", "--format", "json"]));
 	const byService = new Map(rows.map((row) => [row.Service ?? row.Name, row]));
 
 	let failed = false;
@@ -104,7 +102,9 @@ async function main() {
 		process.exit(1);
 	}
 
-	console.log("All required OryonOS local infrastructure dependencies are healthy.");
+	console.log(
+		"All required OryonOS local infrastructure dependencies are healthy.",
+	);
 }
 
 await main();
