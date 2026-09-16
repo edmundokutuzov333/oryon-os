@@ -12,7 +12,9 @@
     "./work-experience": { "types": "./src/work-experience.schema.ts", "default": "./src/work-experience.schema.ts" },
     "./docs-files": { "types": "./src/docs-files.schema.ts", "default": "./src/docs-files.schema.ts" },
     "./communication": { "types": "./src/communication.schema.ts", "default": "./src/communication.schema.ts" },
-    "./meeting": { "types": "./src/meeting.schema.ts", "default": "./src/meeting.schema.ts" }
+    "./meeting": { "types": "./src/meeting.schema.ts", "default": "./src/meeting.schema.ts" },
+    "./domain-templates": { "types": "./src/domain-templates.schema.ts", "default": "./src/domain-templates.schema.ts" },
+    "./domain-template-data": { "types": "./src/domain-templates.ts", "default": "./src/domain-templates.ts" }
   },
   "scripts": { "typecheck": "tsc --noEmit", "lint": "biome check .", "build": "tsc --noEmit", "test": "vitest run" },
   "dependencies": { "zod": "^4.0.0" },
