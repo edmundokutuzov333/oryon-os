@@ -21,10 +21,6 @@ const IDS = {
 
 const timestamp = new Date("2026-01-01T00:00:00.000Z");
 
-async function setTenantContext(tx: PrismaClient["$transaction"] extends (...args: infer _Args) => unknown ? never : never): Promise<void> {
-	void tx;
-}
-
 async function main(): Promise<void> {
 	await prisma.$transaction(async (tx) => {
 		await tx.$executeRawUnsafe("SELECT set_config('app.org_id', $1, true)", IDS.org);
