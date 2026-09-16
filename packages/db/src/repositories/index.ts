@@ -1,3 +1,4 @@
+export { CommunicationEnhancedRepository } from "./communication-enhanced.repository.js";
 export { CommunicationRepository } from "./communication.repository.js";
 export { DocsFilesRepository } from "./docs-files.repository.js";
 export { GraphRepository } from "./graph.repository.js";
