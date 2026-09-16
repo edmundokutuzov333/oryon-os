@@ -160,6 +160,7 @@ jobs:
             --data "{\"token\":\"$token\"}")
           access=$(printf '%s' "$verify" | jq -r '.data.accessToken')
           test -n "$access"
+          printf '%s' "$access" >/tmp/oryon-access.txt
           printf '%s' "$verify" | jq -e '.data.accessToken and .data.expiresAt' >/dev/null
           curl --fail --silent http://127.0.0.1:4000/v1/auth/session \
             --header 'X-Oryon-Org: org_demo_0001' \
@@ -167,6 +168,7 @@ jobs:
             | jq -e '.data.user.email == "admin@oryon.local" and .data.organization.id == "org_demo_0001" and (.data.workspaces | length) >= 1 and (.data.teams | length) >= 1' >/dev/null
       - name: Exercise work object engine
         run: |
+          access=$(cat /tmp/oryon-access.txt)
           type_key="vehicle"
           curl --fail --silent --request POST http://127.0.0.1:4000/v1/object-types \
             --header "Authorization: Bearer $access" \
