@@ -43,10 +43,15 @@ function validFieldValue(definition: ObjectFieldDef, value: unknown): boolean {
 		case "USER":
 		case "OBJECT": return typeof value === "string" && value.length > 0;
 	}
+	throw new WorkObjectDomainError("INVALID_CUSTOM_FIELDS", `Unsupported custom field type: ${definition.type}`);
 }
 
 export function validateCustomFields(config: ObjectTypeSchemaConfig, customFields: Record<string, unknown>): Record<string, unknown> {
-	const definitionKeys = new Set(config.fields.map((field) => field.key));
+	const definitionKeys = new Set<string>();
+	for (const field of config.fields) {
+		if (definitionKeys.has(field.key)) throw new WorkObjectDomainError("INVALID_CUSTOM_FIELDS", `Duplicate custom field: ${field.key}`);
+		definitionKeys.add(field.key);
+	}
 	for (const key of Object.keys(customFields)) {
 		if (!definitionKeys.has(key)) throw new WorkObjectDomainError("INVALID_CUSTOM_FIELDS", `Unknown custom field: ${key}`);
 	}
