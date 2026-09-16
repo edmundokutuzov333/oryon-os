@@ -1,0 +1,2 @@
+.agents-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(300px,.8fr);gap:var(--space-4)}
+@media(max-width:768px){.agents-grid{grid-template-columns:1fr}}
