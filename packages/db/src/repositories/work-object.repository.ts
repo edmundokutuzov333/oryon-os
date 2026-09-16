@@ -3,7 +3,9 @@ import {
 	generateHumanId,
 	prepareWorkObjectCreate,
 	transitionStatus,
+	validateMoney,
 	validateParent,
+	validateWorkObjectDates,
 	validateWorkObjectUpdate,
 } from "@oryon/core";
 import type { ObjectTypeDefContract, WorkObjectAssignmentCreateInput, WorkObjectCreateInput, WorkObjectPlacementCreateInput, WorkObjectStatusInput, WorkObjectUpdateInput, WorkObjectTypeCreateInput } from "@oryon/contracts/work-object";
@@ -51,10 +53,6 @@ export class WorkObjectRepository {
 		return withOrgContext(this.db, orgId, (tx) => tx.objectTypeDef.findMany({ where: { orgId }, orderBy: { name: "asc" } }));
 	}
 
-	async findTypeDef(orgId: string, key: string) {
-		return withOrgContext(this.db, orgId, (tx) => tx.objectTypeDef.findFirst({ where: { orgId, key } }));
-	}
-
 	async createTypeDef(orgId: string, actorId: string, input: WorkObjectTypeCreateInput): Promise<{ id: string }> {
 		return withOrgContext(this.db, orgId, async (tx) => {
 			const row = await tx.objectTypeDef.create({ data: { orgId, key: input.key, name: input.name, pluralName: input.pluralName, icon: input.icon ?? null, isSystem: false, idPrefix: input.idPrefix, schema: input.schema, statusModel: input.statusModel, defaultViews: [] } });
@@ -95,6 +93,10 @@ export class WorkObjectRepository {
 			const mergedCustomFields = input.customFields ? { ...(current.customFields as Record<string, unknown>), ...input.customFields } : undefined;
 			const validationInput = mergedCustomFields ? { ...input, customFields: mergedCustomFields } : input;
 			validateWorkObjectUpdate(validationInput, typeDef, current.status);
+			validateWorkObjectDates(input.startAt ?? current.startAt?.toISOString(), input.dueAt ?? current.dueAt?.toISOString());
+			const moneyAmount = input.moneyAmount !== undefined ? input.moneyAmount : current.moneyAmount?.toString() ?? null;
+			const moneyCurrency = input.moneyCurrency !== undefined ? input.moneyCurrency : current.moneyCurrency;
+			validateMoney(moneyAmount, moneyCurrency);
 			validateParent(current.id, input.parentObjectId);
 			if (input.parentObjectId) {
 				const parent = await tx.workObject.findFirst({ where: { orgId, id: input.parentObjectId, deletedAt: null }, select: { id: true } });
@@ -106,8 +108,9 @@ export class WorkObjectRepository {
 			}
 			let statusCategory = current.statusCategory;
 			let completedAt = current.completedAt;
+			let transition: { status: string; statusCategory: ObjectTypeDefContract["statusModel"]["states"][number]["category"] } | null = null;
 			if (input.status) {
-				const transition = transitionStatus(typeDef.statusModel, current.status, { status: input.status });
+				transition = transitionStatus(typeDef.statusModel, current.status, { status: input.status });
 				statusCategory = transition.statusCategory;
 				completedAt = transition.statusCategory === "DONE" ? new Date() : null;
 			}
@@ -131,6 +134,7 @@ export class WorkObjectRepository {
 			if (input.tags !== undefined) data.tags = input.tags;
 			if (mergedCustomFields !== undefined) data.customFields = mergedCustomFields;
 			const updated = await tx.workObject.update({ where: { id }, data, include: { assignments: true, placements: true, typeDef: true } });
+			if (transition && transition.status !== current.status) await tx.statusTransition.create({ data: { orgId, objectId: id, fromStatus: current.status, toStatus: transition.status, actorId, actorType: "MEMBER" } });
 			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "WorkObject", subjectId: id, name: "work_object.updated", payload: { changed: Object.keys(data), status: updated.status } });
 			return updated;
 		});
@@ -183,6 +187,15 @@ export class WorkObjectRepository {
 	}
 
 	async status(orgId: string, actorId: string, id: string, input: WorkObjectStatusInput) {
-		return this.update(orgId, actorId, id, { status: input.status });
+		return withOrgContext(this.db, orgId, async (tx) => {
+			const current = await tx.workObject.findFirst({ where: { orgId, id, deletedAt: null }, include: { typeDef: true } });
+			if (!current) throw new Error("NOT_FOUND");
+			const transition = transitionStatus(typeDefContract(current.typeDef).statusModel, current.status, input);
+			const completedAt = transition.statusCategory === "DONE" ? new Date() : null;
+			const updated = await tx.workObject.update({ where: { id }, data: { status: transition.status, statusCategory: transition.statusCategory, completedAt }, include: { assignments: true, placements: true, typeDef: true } });
+			if (transition.status !== current.status) await tx.statusTransition.create({ data: { orgId, objectId: id, fromStatus: current.status, toStatus: transition.status, actorId, actorType: "MEMBER", comment: input.comment ?? null } });
+			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "WorkObject", subjectId: id, name: "work_object.status_changed", payload: { fromStatus: current.status, toStatus: transition.status, comment: input.comment ?? null } });
+			return updated;
+		});
 	}
 }
