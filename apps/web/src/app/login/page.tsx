@@ -1,5 +1,5 @@
 import { LoginForm } from "./LoginForm";
-import { authCopy } from "../lib/auth-copy";
+import { authCopy } from "../../lib/auth-copy";
 
 export default function LoginPage() {
 	return (
