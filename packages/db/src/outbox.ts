@@ -8,7 +8,7 @@ export interface DomainEventInput {
 	readonly actorType: "MEMBER" | "GUEST" | "CLIENT" | "VENDOR" | "AGENT" | "SERVICE_ACCOUNT";
 	readonly subjectType: string;
 	readonly subjectId: string;
-	readonly payload: Record<string, unknown>;
+	readonly payload: Prisma.InputJsonValue;
 	readonly correlationId?: string;
 	readonly causationId?: string;
 }
