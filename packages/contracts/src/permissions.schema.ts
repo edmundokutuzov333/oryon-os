@@ -1,19 +1,6 @@
 import { z } from "zod";
 
-export const PermissionActionSchema = z.enum([
-	"read",
-	"create",
-	"update",
-	"delete",
-	"comment",
-	"manage",
-	"share",
-	"export",
-	"use_ai",
-	"use_external",
-	"view_as",
-]);
-
+export const PermissionActionSchema = z.enum(["read", "create", "update", "delete", "comment", "manage", "share", "export", "use_ai", "use_external", "view_as"]);
 export const PermissionScopeSchema = z.enum(["ORG", "WORKSPACE", "TEAM", "PROJECT", "OBJECT"]);
 export const PermissionLevelSchema = z.enum(["VIEW", "COMMENT", "EDIT", "MANAGE", "OWNER"]);
 export const PermissionEffectSchema = z.enum(["allow", "deny"]);
@@ -125,17 +112,46 @@ export const PermissionViewAsInputSchema = z.object({
 export const PermissionExposureReportSchema = z.object({
 	generatedAt: z.string().datetime({ offset: true }),
 	organizationId: z.string().min(1),
-	resources: z.array(
-		z.object({
-			resourceType: z.string().min(1),
-			resourceId: z.string().min(1),
-			externalPrincipals: z.number().int().nonnegative(),
-			aiAllowed: z.boolean(),
-			externalAllowed: z.boolean(),
-			fieldMasked: z.boolean(),
-			watermark: z.boolean(),
-		}),
-	),
+	resources: z.array(z.object({
+		resourceType: z.string().min(1),
+		resourceId: z.string().min(1),
+		externalPrincipals: z.number().int().nonnegative(),
+		aiAllowed: z.boolean(),
+		externalAllowed: z.boolean(),
+		fieldMasked: z.boolean(),
+		watermark: z.boolean(),
+	})),
+});
+
+export const PermissionRoleCreateInputSchema = z.object({
+	key: z.string().min(1).max(80).regex(/^[a-z0-9_]+$/),
+	name: z.string().min(1).max(120),
+	description: z.string().max(500).optional(),
+	permissions: z.array(z.string().min(1)).min(1),
+});
+
+export const PermissionRoleBindingCreateInputSchema = z.object({
+	roleId: z.string().min(1),
+	principalId: z.string().min(1),
+	scopeType: PermissionScopeSchema,
+	scopeId: z.string().min(1).nullable().optional(),
+	expiresAt: z.string().datetime({ offset: true }).nullable().optional(),
+});
+
+export const PermissionGrantCreateInputSchema = z.object({
+	resourceType: z.string().min(1),
+	resourceId: z.string().min(1),
+	principalId: z.string().min(1).nullable().optional(),
+	teamId: z.string().min(1).nullable().optional(),
+	externalEmail: z.string().email().nullable().optional(),
+	level: PermissionLevelSchema,
+	fieldMask: z.array(z.string().min(1)).default([]),
+	reason: z.string().max(500).optional(),
+	expiresAt: z.string().datetime({ offset: true }).nullable().optional(),
+}).superRefine((value, ctx) => {
+	if (!value.principalId && !value.teamId && !value.externalEmail) {
+		ctx.addIssue({ code: "custom", message: "A grant must target a principal, team or external email", path: ["principalId"] });
+	}
 });
 
 export type PermissionAction = z.infer<typeof PermissionActionSchema>;
