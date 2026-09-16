@@ -24,14 +24,14 @@ if (phase4Missing.length > 0) {
 	process.exit(1);
 }
 const permissionEngine = await readFile("packages/core/src/permissions.ts", "utf8");
-for (const required of ["export function can(", "export function evaluatePermissions(", "export function maskFields("]) {
+for (const required of ["export function can", "export function evaluatePermissions", "export function maskFields"]) {
 	if (!permissionEngine.includes(required)) {
 		console.error(`V1 invariant failed: permission engine entrypoint missing: ${required}`);
 		process.exit(1);
 	}
 }
 const workEngine = await readFile("packages/core/src/work-object.ts", "utf8");
-for (const required of ["export function prepareWorkObjectCreate(", "export function validateCustomFields(", "export function transitionStatus(", "export function generateHumanId("]) {
+for (const required of ["export function prepareWorkObjectCreate", "export function validateCustomFields", "export function transitionStatus", "export function generateHumanId"]) {
 	if (!workEngine.includes(required)) {
 		console.error(`V1 invariant failed: work object engine entrypoint missing: ${required}`);
 		process.exit(1);
