@@ -13,7 +13,7 @@ const resource: PermissionResource = {
 	classification: "internal",
 };
 
-const subject = { id: "usr_1", type: "MEMBER" as const, email: "member@example.com", teamIds: ["team_1"], channelIds: ["chn_1"] };
+const subject = { id: "usr_1", type: "MEMBER" as const, email: "member@example.com", teamIds: ["team_1"], channelIds: ["chn_1"], meetingIds: ["meeting_1"] };
 const base: PermissionPolicyContext = { orgId: "org_1", subject, roles: [], grants: [], classification: null };
 const now = new Date("2026-01-01T00:00:00.000Z");
 
@@ -54,6 +54,12 @@ describe("permission engine", () => {
 		expect(can(base, channel, "read", now).allowed).toBe(true);
 		expect(can(base, channel, "comment", now).allowed).toBe(true);
 		expect(can({ ...base, subject: { ...subject, channelIds: [] } }, channel, "read", now).allowed).toBe(false);
+	});
+
+	it("uses meeting membership inside can", () => {
+		const meeting: PermissionResource = { orgId: "org_1", type: "meeting", id: "meeting_1", workspaceId: null, projectId: null, ownerId: null, teamId: null, classification: null };
+		expect(can(base, meeting, "read", now).allowed).toBe(true);
+		expect(can({ ...base, subject: { ...subject, meetingIds: [] } }, meeting, "read", now).allowed).toBe(false);
 	});
 
 	it("rejects cross-organization resources", () => {
