@@ -1,0 +1,191 @@
+import { z } from "zod";
+
+export const AgentStatusSchema = z.enum(["DRAFT", "ACTIVE", "PAUSED", "ARCHIVED"]);
+export const RunStateSchema = z.enum(["RUNNING", "WAITING", "SUCCEEDED", "FAILED", "CANCELLED", "ROLLED_BACK"]);
+export const TriggerTypeSchema = z.enum(["EVENT", "SCHEDULE", "MANUAL", "MENTION", "WEBHOOK", "FORM"]);
+export const CheckpointStateSchema = z.enum(["WAITING", "APPROVED", "REJECTED"]);
+export const CheckpointPolicySchema = z.enum(["NEVER", "SENSITIVE_ONLY", "ALWAYS"]);
+
+export const AgentToolDefinitionSchema = z.object({
+	key: z.string().regex(/^[a-z0-9_.-]{2,80}$/),
+	description: z.string().min(1).max(500),
+	sensitive: z.boolean().default(false),
+	inputSchema: z.record(z.string(), z.unknown()).default({}),
+});
+
+export const AgentKnowledgeScopeSchema = z.object({
+	workspaces: z.array(z.string()).default([]),
+	types: z.array(z.string()).default([]),
+	includeDocs: z.boolean().default(true),
+	includeMessages: z.boolean().default(false),
+}).default({ workspaces: [], types: [], includeDocs: true, includeMessages: false });
+
+export const AgentCreateInputSchema = z.object({
+	key: z.string().regex(/^[a-z0-9_.-]{2,80}$/),
+	name: z.string().trim().min(1).max(120),
+	description: z.string().trim().max(500).optional(),
+	principalUserId: z.string().min(1).optional(),
+	systemPrompt: z.string().trim().min(1).max(20000),
+	modelPolicyId: z.string().min(1).nullable().optional(),
+	knowledgeScope: AgentKnowledgeScopeSchema,
+	tools: z.array(AgentToolDefinitionSchema).max(50),
+	triggers: z.array(z.record(z.string(), z.unknown())).max(50).default([]),
+	schedule: z.string().trim().max(200).nullable().optional(),
+	checkpointPolicy: CheckpointPolicySchema.default("SENSITIVE_ONLY"),
+	budgetCapCents: z.string().regex(/^\d+$/).nullable().optional(),
+});
+
+export const AgentPatchInputSchema = AgentCreateInputSchema.partial();
+
+export const AgentSummarySchema = z.object({
+	id: z.string(),
+	key: z.string(),
+	name: z.string(),
+	description: z.string().nullable(),
+	principalId: z.string(),
+	modelPolicyId: z.string().nullable(),
+	knowledgeScope: z.unknown(),
+	tools: z.array(AgentToolDefinitionSchema),
+	triggers: z.array(z.record(z.string(), z.unknown())),
+	schedule: z.string().nullable(),
+	checkpointPolicy: CheckpointPolicySchema,
+	budgetCapCents: z.string().nullable(),
+	status: AgentStatusSchema,
+	createdAt: z.string(),
+	updatedAt: z.string(),
+});
+
+export const AgentRunInputSchema = z.object({
+	input: z.record(z.string(), z.unknown()).default({}),
+	triggerType: TriggerTypeSchema.default("MANUAL"),
+	preferredModel: z.string().trim().max(200).optional(),
+});
+
+export const AgentRunStepSchema = z.object({
+	index: z.number().int().nonnegative(),
+	kind: z.enum(["PLAN", "TOOL", "CHECKPOINT", "OUTPUT", "ERROR"]),
+	toolKey: z.string().nullable().optional(),
+	status: z.enum(["STARTED", "SUCCEEDED", "FAILED", "WAITING"]),
+	startedAt: z.string(),
+	finishedAt: z.string().nullable(),
+	input: z.unknown().optional(),
+	output: z.unknown().optional(),
+	error: z.string().nullable().optional(),
+});
+
+export const AgentToolCallSchema = z.object({
+	id: z.string(),
+	toolKey: z.string(),
+	status: z.enum(["PLANNED", "WAITING_APPROVAL", "RUNNING", "SUCCEEDED", "FAILED", "ROLLED_BACK"]),
+	sensitive: z.boolean(),
+	input: z.unknown(),
+	output: z.unknown().nullable(),
+	startedAt: z.string().nullable(),
+	finishedAt: z.string().nullable(),
+	error: z.string().nullable(),
+});
+
+export const AgentRunResponseSchema = z.object({
+	id: z.string(),
+	agentId: z.string(),
+	triggeredBy: z.string().nullable(),
+	triggerType: TriggerTypeSchema,
+	state: RunStateSchema,
+	checkpointState: CheckpointStateSchema.nullable(),
+	checkpointApproverId: z.string().nullable(),
+	modelKey: z.string().nullable(),
+	inputTokens: z.number().int().nullable(),
+	outputTokens: z.number().int().nullable(),
+	costCents: z.string().nullable(),
+	rollbackToken: z.string().nullable(),
+	rolledBackAt: z.string().nullable(),
+	steps: z.array(AgentRunStepSchema),
+	toolCalls: z.array(AgentToolCallSchema),
+	readResources: z.array(z.unknown()),
+	writtenResources: z.array(z.unknown()),
+	output: z.unknown().nullable(),
+	startedAt: z.string(),
+	finishedAt: z.string().nullable(),
+});
+
+export const CheckpointDecisionSchema = z.object({
+	decision: z.enum(["APPROVE", "REJECT"]),
+	comment: z.string().trim().max(2000).optional(),
+});
+
+export const WorkflowTriggerSchema = z.discriminatedUnion("kind", [
+	z.object({ kind: z.literal("MANUAL") }),
+	z.object({ kind: z.literal("EVENT"), eventName: z.string().min(1).max(200) }),
+	z.object({ kind: z.literal("SCHEDULE"), cron: z.string().min(1).max(200) }),
+]);
+
+export const WorkflowConditionSchema = z.object({
+	path: z.string().min(1).max(200),
+	operator: z.enum(["exists", "eq", "neq", "contains", "gt", "gte", "lt", "lte"]),
+	value: z.unknown().optional(),
+});
+
+export const WorkflowStepSchema = z.object({
+	id: z.string().regex(/^[a-zA-Z0-9_.-]{2,80}$/),
+	name: z.string().trim().min(1).max(120),
+	type: z.enum(["CONDITION", "ACTION", "AGENT", "APPROVAL"]),
+	condition: WorkflowConditionSchema.optional(),
+	action: z.object({
+		toolKey: z.string().min(1).max(120),
+		input: z.record(z.string(), z.unknown()).default({}),
+		sensitive: z.boolean().default(false),
+	}).optional(),
+	agentId: z.string().optional(),
+	checkpoint: z.boolean().default(false),
+});
+
+export const WorkflowCreateInputSchema = z.object({
+	key: z.string().regex(/^[a-z0-9_.-]{2,80}$/),
+	name: z.string().trim().min(1).max(120),
+	description: z.string().trim().max(500).optional(),
+	trigger: WorkflowTriggerSchema,
+	steps: z.array(WorkflowStepSchema).min(1).max(100),
+});
+
+export const WorkflowSummarySchema = z.object({
+	id: z.string(),
+	key: z.string(),
+	name: z.string(),
+	description: z.string().nullable(),
+	trigger: WorkflowTriggerSchema,
+	steps: z.array(WorkflowStepSchema),
+	state: z.enum(["DRAFT", "ACTIVE", "PAUSED", "ARCHIVED"]),
+	version: z.number().int(),
+	createdBy: z.string(),
+	createdAt: z.string(),
+	updatedAt: z.string(),
+});
+
+export const WorkflowRunResponseSchema = z.object({
+	id: z.string(),
+	workflowId: z.string(),
+	triggerEventId: z.string().nullable(),
+	state: RunStateSchema,
+	input: z.unknown(),
+	stepLog: z.array(z.unknown()),
+	error: z.unknown().nullable(),
+	waitingOnApprovalId: z.string().nullable(),
+	startedAt: z.string(),
+	finishedAt: z.string().nullable(),
+});
+
+export const WorkflowRunInputSchema = z.object({
+	input: z.record(z.string(), z.unknown()).default({}),
+	triggerEventId: z.string().nullable().optional(),
+});
+
+export type AgentToolDefinition = z.infer<typeof AgentToolDefinitionSchema>;
+export type AgentCreateInput = z.infer<typeof AgentCreateInputSchema>;
+export type AgentPatchInput = z.infer<typeof AgentPatchInputSchema>;
+export type AgentRunInput = z.infer<typeof AgentRunInputSchema>;
+export type AgentRunStep = z.infer<typeof AgentRunStepSchema>;
+export type AgentToolCall = z.infer<typeof AgentToolCallSchema>;
+export type AgentRunResponse = z.infer<typeof AgentRunResponseSchema>;
+export type WorkflowCreateInput = z.infer<typeof WorkflowCreateInputSchema>;
+export type WorkflowStep = z.infer<typeof WorkflowStepSchema>;
+export type WorkflowRunInput = z.infer<typeof WorkflowRunInputSchema>;
