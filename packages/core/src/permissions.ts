@@ -56,7 +56,7 @@ function grantAllows(grants: PermissionGrant[], resource: PermissionResource, su
 		if (!grantMatches(grant, resource, subject, now)) continue;
 		if (action === "use_external" && grant.externalEmail !== null) return { allowed: true, matchedBy: "grant:external_email" };
 		if (action === "use_ai" && (grant.level === "MANAGE" || grant.level === "OWNER")) return { allowed: true, matchedBy: `grant:${grant.level.toLowerCase()}` };
-		if (LEVEL_ACTIONS[grant.level].includes(action)) return { allowed: true, matchedBy: `grant:${grant.level.toLowerCase()}` };
+		if ((LEVEL_ACTIONS[grant.level] ?? []).includes(action)) return { allowed: true, matchedBy: `grant:${grant.level.toLowerCase()}` };
 	}
 	return { allowed: false, matchedBy: null as string | null };
 }
@@ -104,11 +104,7 @@ export function evaluatePermissions(context: PermissionPolicyContext, input: Per
 	const exportDecision = can(context, resource, "export", now);
 	return {
 		resource,
-		permissions: {
-			read: permissions.read, create: permissions.create, update: permissions.update, delete: permissions.delete,
-			comment: permissions.comment, manage: permissions.manage, share: permissions.share, export: permissions.export,
-			use_ai: permissions.use_ai, use_external: permissions.use_external, view_as: permissions.view_as,
-		},
+		permissions: { read: permissions.read, create: permissions.create, update: permissions.update, delete: permissions.delete, comment: permissions.comment, manage: permissions.manage, share: permissions.share, export: permissions.export, use_ai: permissions.use_ai, use_external: permissions.use_external, view_as: permissions.view_as },
 		decisions,
 		exposure: {
 			external: { allowed: input.external && external.allowed, reason: input.external ? external.reason : "not_requested" },
