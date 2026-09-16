@@ -1,0 +1,131 @@
+name: phase14-baseline-type-fix
+
+on:
+  push:
+    branches: [feat/phase-14-domain-templates]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[phase14-baseline-fix]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+      - name: Apply deterministic Prisma compatibility fixes
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected 1 occurrence, found {count}')
+              p.write_text(text.replace(old, new))
+
+          replace('packages/db/src/repositories/communication.repository.ts',
+                  'metadata: { source: "communication.convert" }',
+                  'metadata: { source: "communication.convert" } as Prisma.InputJsonValue')
+          replace('packages/db/src/repositories/communication.repository.ts',
+                  'containerId: object.workspaceId',
+                  'containerId: object.workspaceId')
+          replace('packages/db/src/repositories/communication.repository.ts',
+                  'const edge = await tx.edge.create({ data: { orgId, fromType: "message", fromId: message.id, toType: "work_object", toId: object.id, relation: "DERIVED_FROM", createdBy: actorId, metadata: { source: "communication.convert" } as Prisma.InputJsonValue } });',
+                  'const edge = await tx.edge.create({ data: { orgId, fromType: "message", fromId: message.id, toType: "work_object", toId: object.id, relation: "DERIVED_FROM", createdBy: actorId, metadata: { source: "communication.convert" } as Prisma.InputJsonValue } });')
+          replace('packages/db/src/repositories/communication.repository.ts',
+                  'containerId: object.workspaceId, position: "0", isPrimary: true });\n      const edge',
+                  'containerId: object.workspaceId, position: "0", isPrimary: true });\n      const edge')
+          replace('packages/db/src/repositories/communication.repository.ts',
+                  'const workObjectId = randomUUID();\n',
+                  'const workObjectId = randomUUID();\n')
+          text = Path('packages/db/src/repositories/communication.repository.ts').read_text()
+          if 'objectId, containerType: "WORKSPACE"' not in text:
+              raise SystemExit('communication repository: expected object placement expression not found')
+          text = text.replace('objectId, containerType: "WORKSPACE"', 'workObjectId, containerType: "WORKSPACE"', 1)
+          Path('packages/db/src/repositories/communication.repository.ts').write_text(text)
+
+          # Docs/files Prisma input compatibility without changing the public contract.
+          p = Path('packages/db/src/repositories/docs-files.repository.ts')
+          text = p.read_text()
+          text = text.replace('import type { PrismaClient } from "../generated/client.js";', 'import type { Prisma, PrismaClient } from "../generated/client.js";', 1)
+          old = 'kind: input.kind ?? "DOC"'
+          new = 'kind: input.kind === "CANVAS" ? "DOC" : input.kind ?? "DOC"'
+          if text.count(old) != 1: raise SystemExit('docs-files: kind expression mismatch')
+          text = text.replace(old, new)
+          old = 'const page = await tx.page.update({ where: { id }, data });'
+          new = 'const page = await tx.page.update({ where: { id }, data: data as Prisma.PageUncheckedUpdateInput });'
+          if text.count(old) != 1: raise SystemExit('docs-files: update expression mismatch')
+          text = text.replace(old, new)
+          p.write_text(text)
+
+          # Graph Prisma value/type compatibility and JSON input.
+          p = Path('packages/db/src/repositories/graph.repository.ts')
+          text = p.read_text()
+          text = text.replace('import type { Prisma, PrismaClient } from "../generated/client.js";', 'import { Prisma, type PrismaClient } from "../generated/client.js";', 1)
+          old = 'metadata: input.metadata'
+          new = 'metadata: JSON.parse(JSON.stringify(input.metadata)) as Prisma.InputJsonValue'
+          if text.count(old) != 1: raise SystemExit('graph: metadata expression mismatch')
+          text = text.replace(old, new)
+          p.write_text(text)
+
+          # Meetings accept nullable JSON in the public contract; Prisma requires explicit JsonNull.
+          p = Path('packages/db/src/repositories/meeting.repository.ts')
+          text = p.read_text()
+          text = text.replace('import type { Prisma, PrismaClient } from "../generated/client.js";', 'import { Prisma, type PrismaClient } from "../generated/client.js";', 1)
+          old = 'contentJson: input.contentJson === undefined ? null : (input.contentJson as Prisma.InputJsonValue)'
+          new = 'contentJson: input.contentJson === undefined ? Prisma.JsonNull : (input.contentJson as Prisma.InputJsonValue)'
+          if text.count(old) != 1: raise SystemExit('meeting: contentJson expression mismatch')
+          text = text.replace(old, new)
+          old = 'metadata: { artifactId }'
+          new = 'metadata: { artifactId } as Prisma.InputJsonValue'
+          if text.count(old) != 1: raise SystemExit('meeting: metadata expression mismatch')
+          text = text.replace(old, new)
+          p.write_text(text)
+
+          # Domain event history now uses createdAt in the canonical schema.
+          p = Path('packages/db/src/repositories/work-experience.repository.ts')
+          text = p.read_text()
+          old = 'orderBy: { occurredAt: "asc" }'
+          new = 'orderBy: { createdAt: "asc" }'
+          if text.count(old) != 1: raise SystemExit('work-experience: orderBy mismatch')
+          text = text.replace(old, new)
+          old = 'occurredAt: event.occurredAt'
+          new = 'occurredAt: event.createdAt'
+          if text.count(old) != 1: raise SystemExit('work-experience: occurredAt mapping mismatch')
+          text = text.replace(old, new)
+          p.write_text(text)
+
+          # WorkObject writes use the unchecked Prisma shape for scalar relation IDs and explicit JSON conversion.
+          p = Path('packages/db/src/repositories/work-object.repository.ts')
+          text = p.read_text()
+          old = 'const data: Prisma.WorkObjectUpdateInput = { statusCategory, completedAt };'
+          new = 'const data: Prisma.WorkObjectUncheckedUpdateInput = { statusCategory, completedAt };'
+          if text.count(old) != 1: raise SystemExit('work-object: update input mismatch')
+          text = text.replace(old, new)
+          old = 'customFields: mergedCustomFields }'
+          new = 'customFields: JSON.parse(JSON.stringify(mergedCustomFields)) as Prisma.InputJsonValue }'
+          if text.count(old) != 1: raise SystemExit('work-object: custom field update mismatch')
+          text = text.replace(old, new)
+          old = 'customFields: prepared.customFields,'
+          new = 'customFields: JSON.parse(JSON.stringify(prepared.customFields)) as Prisma.InputJsonValue,'
+          if text.count(old) != 1: raise SystemExit('work-object: create custom field mismatch')
+          text = text.replace(old, new, 1)
+          p.write_text(text)
+
+          print('Deterministic baseline compatibility patch applied.')
+          PY
+      - name: Self remove patch workflow and push
+        shell: bash
+        run: |
+          rm .github/workflows/phase14-baseline-type-fix.yml
+          git config user.name "oryon-ci"
+          git config user.email "ci@oryon.local"
+          git add packages/db/src/repositories .github/workflows/phase14-baseline-type-fix.yml
+          git commit -m "chore(db): align Prisma repository inputs [phase14-baseline-fix]"
+          git push origin HEAD:feat/phase-14-domain-templates
