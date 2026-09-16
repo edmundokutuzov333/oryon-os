@@ -14,6 +14,7 @@ import {
 	verifyMagicLink,
 } from "./auth.js";
 import { registerPermissionRoutes } from "./permissions.js";
+import { registerWorkObjectRoutes } from "./work-objects.js";
 
 const app = Fastify({ logger: true });
 
@@ -106,9 +107,7 @@ app.post("/v1/auth/verify-link", async (request, reply) => {
 		const orgId = getOrg(request);
 		const result = await verifyMagicLink(orgId, request.body);
 		setSessionCookie(reply, result.sessionToken);
-		return reply.send(
-			envelope(request, AuthVerifyLinkResponseSchema.parse({ accessToken: result.accessToken, expiresAt: result.expiresAt })),
-		);
+		return reply.send(envelope(request, AuthVerifyLinkResponseSchema.parse({ accessToken: result.accessToken, expiresAt: result.expiresAt })));
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "Unable to verify sign-in link";
 		const status = message.includes("Organization mismatch") || message.includes("Invalid") || message.includes("expired") ? 401 : 400;
@@ -121,14 +120,10 @@ app.get("/v1/auth/session", async (request, reply) => {
 		const orgId = getOrg(request);
 		const bearer = bearerToken(request);
 		const cookie = getCookie(request, AUTH_COOKIE_NAME);
-		if (!bearer && !cookie) {
-			return reply.code(401).send(errorEnvelope(request, "UNAUTHENTICATED", 401, "Authentication required"));
-		}
-		const session = bearer ? await authenticate(bearer, "bearer") : await authenticate(cookie as string, "session");
-		if (session.orgId !== orgId) {
-			return reply.code(401).send(errorEnvelope(request, "UNAUTHENTICATED", 401, "Organization mismatch"));
-		}
-		const identity = await identityForSession(session);
+		if (!bearer && !cookie) return reply.code(401).send(errorEnvelope(request, "UNAUTHENTICATED", 401, "Authentication required"));
+		const currentSession = bearer ? await authenticate(bearer, "bearer") : await authenticate(cookie as string, "session");
+		if (currentSession.orgId !== orgId) return reply.code(401).send(errorEnvelope(request, "UNAUTHENTICATED", 401, "Organization mismatch"));
+		const identity = await identityForSession(currentSession);
 		return reply.send(envelope(request, identity));
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "Authentication required";
@@ -152,6 +147,7 @@ app.post("/v1/auth/logout", async (request, reply) => {
 });
 
 await registerPermissionRoutes(app);
+await registerWorkObjectRoutes(app);
 
 try {
 	await getPrisma().$queryRawUnsafe("SELECT 1");
