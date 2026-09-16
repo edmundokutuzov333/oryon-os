@@ -18,7 +18,7 @@ function nodePoint(index: number, total: number): Point {
 }
 
 function labelForRelation(relation: GraphRelation): string {
-	return relation.replaceAll("_", " ");
+	return relation.replaceAll("_", " ").toLocaleLowerCase("pt-PT");
 }
 
 function displayOwner(object: WorkObjectResponse | undefined): string {
@@ -120,15 +120,15 @@ export function GraphStudio() {
 
 	const positions = useMemo(() => new Map(graphObjects.map((node, index) => [node.id, nodePoint(index, graphObjects.length)])), [graphObjects]);
 
-	if (busy && objects.length === 0) return <section className="graph-studio"><div className="graph-empty">{graphCopy.loading}</div></section>;
+	if (busy && objects.length === 0) return <section className="graph-studio"><div className="graph-empty" role="status" aria-live="polite">{graphCopy.loading}</div></section>;
 
 	return (
 		<section className="graph-studio" aria-label={graphCopy.title}>
 			<header className="graph-header">
 				<div>
-					<p className="panel-kicker">{graphCopy.eyebrow}</p>
+					<p className="graph-kicker">{graphCopy.eyebrow.toLocaleLowerCase("pt-PT")}</p>
 					<h1>{graphCopy.title}</h1>
-					<p>{graphCopy.subtitle}</p>
+					<p className="graph-subtitle">{graphCopy.subtitle}</p>
 				</div>
 				<div className="graph-header-actions">
 					<button type="button" className="ghost-button" onClick={() => void refresh()} disabled={busy}>{graphCopy.refresh}</button>
@@ -141,18 +141,18 @@ export function GraphStudio() {
 			</div>
 
 			<div className="graph-controls">
-				<label><span>{graphCopy.object}</span><select value={rootId} onChange={(event) => setRootId(event.target.value)}>{objects.map((object) => <option key={object.id} value={object.id}>{object.humanId} · {object.title}</option>)}</select></label>
-				<label><span>{graphCopy.direction}</span><select value={direction} onChange={(event) => setDirection(event.target.value as "out" | "in" | "both")}><option value="both">{graphCopy.both}</option><option value="out">{graphCopy.outgoing}</option><option value="in">{graphCopy.incoming}</option></select></label>
+				<label><span>{graphCopy.object}</span><select value={rootId} onChange={(event) => setRootId(event.target.value)} disabled={objects.length === 0}>{objects.map((object) => <option key={object.id} value={object.id}>{object.humanId} · {object.title}</option>)}</select></label>
+				<label><span>{graphCopy.direction}</span><select value={direction} onChange={(event) => setDirection(event.target.value as "out" | "in" | "both") }><option value="both">{graphCopy.both}</option><option value="out">{graphCopy.outgoing}</option><option value="in">{graphCopy.incoming}</option></select></label>
 				<label><span>{graphCopy.depth}</span><select value={depth} onChange={(event) => setDepth(Number(event.target.value))}><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label>
 				<label><span>{graphCopy.relations}</span><select value={relation} onChange={(event) => setRelation(event.target.value as GraphRelation | "*")}><option value="*">{graphCopy.allRelations}</option>{graphRelations.map((item) => <option key={item} value={item}>{labelForRelation(item)}</option>)}</select></label>
 			</div>
 
 			{error ? <p className="graph-error" role="alert">{error}</p> : null}
-			{message ? <p className="graph-success" role="status">{message}</p> : null}
+			{message ? <p className="graph-success" role="status" aria-live="polite">{message}</p> : null}
 
 			<div className="graph-layout">
-				<section className="graph-canvas-panel" aria-label={graphCopy.network}>
-					<div className="graph-canvas-meta"><span>{graph?.meta.visibleNodeCount ?? 0} {graphCopy.nodeCount}</span><span>{graph?.edges.length ?? 0} {graphCopy.edgeCount}</span>{graph?.meta.truncated ? <span>{graphCopy.truncated}</span> : null}</div>
+				<section className="graph-canvas-panel" aria-label={graphCopy.network} aria-busy={busy}>
+					<div className="graph-canvas-meta"><span>{graph?.meta.visibleNodeCount ?? 0} {graphCopy.nodeCount}</span><span>{graph?.edges.length ?? 0} {graphCopy.edgeCount}</span>{graph?.meta.truncated ? <span>{graphCopy.truncated}</span> : null}{busy ? <span>{graphCopy.loading}</span> : null}</div>
 					{graph && graph.nodes.length > 0 ? <svg className="graph-canvas" viewBox="0 0 900 620" role="img" aria-label={graphCopy.network}>
 						{graph.edges.map((edge) => {
 							const from = positions.get(edge.from.id);
@@ -164,7 +164,7 @@ export function GraphStudio() {
 							const point = positions.get(node.id);
 							if (!point) return null;
 							const active = node.id === rootId;
-							return <g key={node.id} className={active ? "graph-node active" : "graph-node"} onClick={() => setRootId(node.id)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") setRootId(node.id); }}>
+							return <g key={node.id} className={active ? "graph-node active" : "graph-node"} onClick={() => setRootId(node.id)} role="button" tabIndex={0} aria-label={`${node.humanId} ${node.title}`} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") setRootId(node.id); }}>
 								<circle cx={point.x} cy={point.y} r={index === 0 ? 58 : 48} />
 								<text x={point.x} y={point.y - 6} textAnchor="middle" className="graph-node-id">{node.humanId}</text>
 								<text x={point.x} y={point.y + 14} textAnchor="middle" className="graph-node-title">{node.title.length > 23 ? `${node.title.slice(0, 20)}…` : node.title}</text>
@@ -174,11 +174,16 @@ export function GraphStudio() {
 				</section>
 
 				<aside className="graph-side-panel">
-					<section className="graph-card"><p className="panel-kicker">{graphCopy.selected}</p><h2>{rootObject?.title ?? graphCopy.chooseObject}</h2><div className="graph-facts"><span>{rootObject?.humanId ?? ""}</span><span>{rootObject?.status ?? ""}</span><span>{rootObject?.priority ?? ""}</span></div><dl><div><dt>{graphCopy.owner}</dt><dd>{displayOwner(rootObject)}</dd></div><div><dt>{graphCopy.workspace}</dt><dd>{rootObject?.workspaceId ?? ""}</dd></div><div><dt>{graphCopy.relationshipCount}</dt><dd>{graph?.edges.length ?? 0}</dd></div></dl></section>
+					<section className="graph-card">
+						<p className="graph-kicker">{graphCopy.selected}</p>
+						<h2>{rootObject?.title ?? graphCopy.chooseObject}</h2>
+						<div className="graph-facts"><span>{rootObject?.humanId ?? ""}</span><span>{rootObject?.status ?? ""}</span><span>{rootObject?.priority ?? ""}</span></div>
+						<dl><div><dt>{graphCopy.owner}</dt><dd>{displayOwner(rootObject)}</dd></div><div><dt>{graphCopy.workspace}</dt><dd>{rootObject?.workspaceId ?? ""}</dd></div><div><dt>{graphCopy.relationshipCount}</dt><dd>{graph?.edges.length ?? 0}</dd></div></dl>
+					</section>
 
-					<section className="graph-card"><p className="panel-kicker">{graphCopy.connect}</p><h2>{graphCopy.createRelation}</h2><label><span>{graphCopy.to}</span><select value={targetId} onChange={(event) => setTargetId(event.target.value)}>{objects.filter((object) => object.id !== rootId).map((object) => <option key={object.id} value={object.id}>{object.humanId} · {object.title}</option>)}</select></label><label><span>{graphCopy.relation}</span><select value={newRelation} onChange={(event) => setNewRelation(event.target.value as GraphRelation)}>{graphRelations.map((item) => <option key={item} value={item}>{labelForRelation(item)}</option>)}</select></label><button type="button" className="graph-primary-button" onClick={() => void connect()} disabled={saving || !targetId}>{saving ? graphCopy.newRelation : graphCopy.connect}</button></section>
+					<section className="graph-card"><p className="graph-kicker">{graphCopy.connect}</p><h2>{graphCopy.createRelation}</h2><label><span>{graphCopy.to}</span><select value={targetId} onChange={(event) => setTargetId(event.target.value)} disabled={!objects.some((object) => object.id !== rootId)}>{objects.filter((object) => object.id !== rootId).map((object) => <option key={object.id} value={object.id}>{object.humanId} · {object.title}</option>)}</select></label><label><span>{graphCopy.relation}</span><select value={newRelation} onChange={(event) => setNewRelation(event.target.value as GraphRelation)}>{graphRelations.map((item) => <option key={item} value={item}>{labelForRelation(item)}</option>)}</select></label><button type="button" className="graph-primary-button" onClick={() => void connect()} disabled={saving || !targetId || !rootId}>{saving ? graphCopy.newRelation : graphCopy.connect}</button></section>
 
-					<section className="graph-card graph-timeline"><p className="panel-kicker">{mode === "customer360" ? graphCopy.customerContext : graphCopy.timeline}</p>{graph?.timeline.length ? <div className="graph-timeline-list">{graph.timeline.slice(0, 18).map((event) => <button type="button" key={event.id} className="graph-timeline-row" onClick={() => setRootId(event.node.id)}><span className="graph-timeline-time">{new Date(event.occurredAt).toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "short" })}</span><strong>{event.name}</strong><span>{event.fromStatus && event.toStatus ? `${event.fromStatus} → ${event.toStatus}` : graphCopy.journey}</span></button>)}</div> : <div className="graph-empty">{graphCopy.noTimeline}</div>}</section>
+					<section className="graph-card graph-timeline"><p className="graph-kicker">{mode === "customer360" ? graphCopy.customerContext : graphCopy.timeline}</p>{graph?.timeline.length ? <div className="graph-timeline-list">{graph.timeline.slice(0, 18).map((event) => <button type="button" key={event.id} className="graph-timeline-row" onClick={() => setRootId(event.node.id)}><span className="graph-timeline-time">{new Date(event.occurredAt).toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "short" })}</span><strong>{event.name}</strong><span>{event.fromStatus && event.toStatus ? `${event.fromStatus} → ${event.toStatus}` : graphCopy.journey}</span></button>)}</div> : <div className="graph-empty">{graphCopy.noTimeline}</div>}</section>
 				</aside>
 			</div>
 		</section>
