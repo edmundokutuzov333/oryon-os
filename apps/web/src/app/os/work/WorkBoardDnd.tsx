@@ -5,6 +5,15 @@ import { StatusChip } from "@oryon/ui";
 import type { WorkObjectResponse } from "@oryon/contracts/work-object";
 
 type Column = { key: string; label: string; items: WorkObjectResponse[] };
+const columnDefaults: Array<Pick<Column, "key" | "label">> = [
+  { key: "BACKLOG", label: "Backlog" },
+  { key: "TODO", label: "A fazer" },
+  { key: "IN_PROGRESS", label: "Em progresso" },
+  { key: "BLOCKED", label: "Bloqueado" },
+  { key: "IN_REVIEW", label: "Em revisão" },
+  { key: "DONE", label: "Concluído" },
+  { key: "CANCELLED", label: "Cancelado" },
+];
 
 function tone(category: WorkObjectResponse["statusCategory"]): "positive" | "warning" | "danger" | "neutral" | "info" {
   if (category === "DONE") return "positive";
@@ -27,12 +36,13 @@ function DropColumn({ column, selectedId, onSelect }: { column: Column; selected
 
 export function WorkBoardDnd({ columns, selectedId, onSelect, onMove }: { columns: Column[]; selectedId?: string; onSelect: (id: string) => void; onMove: (objectId: string, statusCategory: string) => Promise<void> }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const completeColumns = columnDefaults.map((base) => ({ ...base, items: columns.find((column) => column.key === base.key)?.items ?? [] }));
   async function handleDragEnd(event: DragEndEvent) {
     const destination = typeof event.over?.id === "string" ? event.over.id : undefined;
     if (!destination || typeof event.active.id !== "string") return;
-    const source = columns.find((column) => column.items.some((item) => item.id === event.active.id));
+    const source = completeColumns.find((column) => column.items.some((item) => item.id === event.active.id));
     if (!source || source.key === destination) return;
     await onMove(event.active.id, destination);
   }
-  return <DndContext sensors={sensors} onDragEnd={(event) => void handleDragEnd(event)}>{columns.map((column) => <DropColumn key={column.key} column={column} selectedId={selectedId} onSelect={onSelect} />)}</DndContext>;
+  return <DndContext sensors={sensors} onDragEnd={(event) => void handleDragEnd(event)}>{completeColumns.map((column) => <DropColumn key={column.key} column={column} selectedId={selectedId} onSelect={onSelect} />)}</DndContext>;
 }
