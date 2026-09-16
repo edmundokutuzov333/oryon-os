@@ -1,8 +1,8 @@
 import {
 	ObjectStatusModelSchema,
-	ObjectTypeSchemaConfig,
 	type ObjectFieldDef,
 	type ObjectTypeDefContract,
+	type ObjectTypeSchemaConfig,
 	type WorkObjectCreateInput,
 	type WorkObjectStatusInput,
 	type WorkObjectUpdateInput,
