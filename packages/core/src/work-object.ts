@@ -1,12 +1,12 @@
 import {
 	ObjectStatusModelSchema,
 	ObjectTypeSchemaConfig,
+	type ObjectFieldDef,
 	type ObjectTypeDefContract,
 	type WorkObjectCreateInput,
 	type WorkObjectStatusInput,
 	type WorkObjectUpdateInput,
 } from "@oryon/contracts/work-object";
-import { z } from "zod";
 
 export class WorkObjectDomainError extends Error {
 	readonly code: "INVALID_CUSTOM_FIELDS" | "INVALID_STATUS" | "INVALID_TRANSITION" | "INVALID_DATES" | "INVALID_PROGRESS" | "INVALID_MONEY" | "INVALID_PARENT";
@@ -27,33 +27,21 @@ export function validateStatusModel(input: ObjectTypeDefContract["statusModel"])
 	}
 	if (!stateKeys.has(model.initial)) throw new WorkObjectDomainError("INVALID_STATUS", `Initial status does not exist: ${model.initial}`);
 	for (const transition of model.transitions) {
-		if (!stateKeys.has(transition.from) || !stateKeys.has(transition.to)) {
-			throw new WorkObjectDomainError("INVALID_TRANSITION", `Transition references an unknown status: ${transition.from} -> ${transition.to}`);
-		}
+		if (!stateKeys.has(transition.from) || !stateKeys.has(transition.to)) throw new WorkObjectDomainError("INVALID_TRANSITION", `Transition references an unknown status: ${transition.from} -> ${transition.to}`);
 	}
 	return model;
 }
 
-function fieldSchema(definition: z.infer<typeof ObjectTypeSchemaConfig>['fields'][number]): z.ZodType {
+function validFieldValue(definition: ObjectFieldDef, value: unknown): boolean {
 	switch (definition.type) {
-		case "TEXT":
-			return z.string();
-		case "NUMBER":
-			return z.number();
-		case "BOOLEAN":
-			return z.boolean();
-		case "DATE":
-			return z.string().datetime({ offset: true });
-		case "SELECT":
-			return definition.options?.length ? z.enum(definition.options.map((option) => option.key) as [string, ...string[]]) : z.string();
-		case "MULTI_SELECT":
-			return (definition.options?.length
-				? z.array(z.enum(definition.options.map((option) => option.key) as [string, ...string[]]))
-				: z.array(z.string()));
+		case "TEXT": return typeof value === "string";
+		case "NUMBER": return typeof value === "number" && Number.isFinite(value);
+		case "BOOLEAN": return typeof value === "boolean";
+		case "DATE": return typeof value === "string" && !Number.isNaN(Date.parse(value));
+		case "SELECT": return typeof value === "string" && (definition.options?.length ? definition.options.some((option) => option.key === value) : true);
+		case "MULTI_SELECT": return Array.isArray(value) && value.every((item) => typeof item === "string") && (definition.options?.length ? value.every((item) => definition.options?.some((option) => option.key === item)) : true);
 		case "USER":
-			return z.string().min(1);
-		case "OBJECT":
-			return z.string().min(1);
+		case "OBJECT": return typeof value === "string" && value.length > 0;
 	}
 }
 
@@ -69,9 +57,8 @@ export function validateCustomFields(config: ObjectTypeSchemaConfig, customField
 			if (field.required) throw new WorkObjectDomainError("INVALID_CUSTOM_FIELDS", `Required custom field missing: ${field.key}`);
 			continue;
 		}
-		const parsed = fieldSchema(field).safeParse(value);
-		if (!parsed.success) throw new WorkObjectDomainError("INVALID_CUSTOM_FIELDS", `Invalid custom field: ${field.key}`);
-		output[field.key] = parsed.data;
+		if (!validFieldValue(field, value)) throw new WorkObjectDomainError("INVALID_CUSTOM_FIELDS", `Invalid custom field: ${field.key}`);
+		output[field.key] = value;
 	}
 	return output;
 }
@@ -81,24 +68,18 @@ export function transitionStatus(modelInput: ObjectTypeDefContract["statusModel"
 	const current = model.states.find((state) => state.key === currentStatus);
 	const target = model.states.find((state) => state.key === input.status);
 	if (!current || !target) throw new WorkObjectDomainError("INVALID_STATUS", `Unknown status: ${currentStatus} -> ${input.status}`);
-	if (current.key !== target.key && !model.transitions.some((transition) => transition.from === current.key && transition.to === target.key)) {
-		throw new WorkObjectDomainError("INVALID_TRANSITION", `Transition not allowed: ${current.key} -> ${target.key}`);
-	}
+	if (current.key !== target.key && !model.transitions.some((transition) => transition.from === current.key && transition.to === target.key)) throw new WorkObjectDomainError("INVALID_TRANSITION", `Transition not allowed: ${current.key} -> ${target.key}`);
 	return { status: target.key, statusCategory: target.category };
 }
 
 export function validateWorkObjectDates(startAt: string | null | undefined, dueAt: string | null | undefined): void {
 	if (!startAt || !dueAt) return;
-	if (new Date(startAt).getTime() > new Date(dueAt).getTime()) {
-		throw new WorkObjectDomainError("INVALID_DATES", "startAt cannot be after dueAt");
-	}
+	if (new Date(startAt).getTime() > new Date(dueAt).getTime()) throw new WorkObjectDomainError("INVALID_DATES", "startAt cannot be after dueAt");
 }
 
 export function validateProgress(progress: number | null | undefined): void {
 	if (progress === undefined || progress === null) return;
-	if (!Number.isInteger(progress) || progress < 0 || progress > 100) {
-		throw new WorkObjectDomainError("INVALID_PROGRESS", "progress must be an integer between 0 and 100");
-	}
+	if (!Number.isInteger(progress) || progress < 0 || progress > 100) throw new WorkObjectDomainError("INVALID_PROGRESS", "progress must be an integer between 0 and 100");
 }
 
 export function validateMoney(amount: string | null | undefined, currency: string | null | undefined): void {
@@ -106,9 +87,7 @@ export function validateMoney(amount: string | null | undefined, currency: strin
 		if (currency) throw new WorkObjectDomainError("INVALID_MONEY", "moneyCurrency requires moneyAmount");
 		return;
 	}
-	if (!/^\d+(\.\d{1,4})?$/.test(amount) || !currency || !/^[A-Z]{3}$/.test(currency)) {
-		throw new WorkObjectDomainError("INVALID_MONEY", "moneyAmount and moneyCurrency are invalid");
-	}
+	if (!/^\d+(\.\d{1,4})?$/.test(amount) || !currency || !/^[A-Z]{3}$/.test(currency)) throw new WorkObjectDomainError("INVALID_MONEY", "moneyAmount and moneyCurrency are invalid");
 }
 
 export function validateParent(id: string, parentObjectId: string | null | undefined): void {
@@ -118,8 +97,7 @@ export function validateParent(id: string, parentObjectId: string | null | undef
 export function prepareWorkObjectCreate(input: WorkObjectCreateInput, typeDef: ObjectTypeDefContract): WorkObjectCreateInput & { status: string } {
 	validateStatusModel(typeDef.statusModel);
 	const status = input.status ?? typeDef.statusModel.initial;
-	const state = typeDef.statusModel.states.find((candidate) => candidate.key === status);
-	if (!state) throw new WorkObjectDomainError("INVALID_STATUS", `Unknown initial status: ${status}`);
+	if (!typeDef.statusModel.states.some((candidate) => candidate.key === status)) throw new WorkObjectDomainError("INVALID_STATUS", `Unknown initial status: ${status}`);
 	validateCustomFields(typeDef.schema, input.customFields);
 	validateWorkObjectDates(input.startAt, input.dueAt);
 	validateProgress(input.progress);
