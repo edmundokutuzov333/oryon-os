@@ -121,13 +121,52 @@ A Fase 9 usa `Page` como entidade documental universal. `Page.contentYjs` é o e
 
 Classificação é persistida em `Page.classification` e `FileAsset.classification`; downloads de ficheiros passam por `can(..., "export")`, permitindo que `ClassificationLabel.blocksDownload` impeça exposição.
 
-Yjs é persistido no servidor mas não introduz nesta fase um provider realtime independente. A sincronização realtime transversal será integrada na camada de colaboração/comunicação das fases posteriores sem mudar o modelo de dados documental.
+## Communication
 
-## Comunicação
+A Fase 10 usa `Channel`, `ChannelMember`, `Message`, `Reaction` e `Notification` como entidades canónicas. DMs 1:1 e grupos usam o mesmo `Channel` com `kind` `DM` ou `GROUP_DM`; não existe um modelo separado de mensagens privadas.
 
-`POST /v1/channels/{channelId}/messages`, `POST /v1/messages/{id}/convert` e `GET /v1/channels/{id}/catch-up`.
+`GET /v1/channels` lista apenas os canais onde o principal autenticado é membro e devolve `memberCount`, `unreadCount` e permissões explícitas.
+`POST /v1/channels` cria um canal organizacional e adiciona automaticamente o actor como `OWNER`; requer `create` no recurso `channel` de colecção.
+`POST /v1/channels/direct` cria ou recupera uma DM/grupo directo para os utilizadores indicados; requer `create` no recurso de colecção `channel`.
+`GET /v1/people` devolve utilizadores activos pesquisáveis da organização para construção de DMs e menções.
 
-Resposta de IA sem `citations` não é aceite pela UI.
+`GET /v1/channels/{channelId}/messages` devolve mensagens paginadas por cursor e pode receber `parentId` para uma thread.
+`POST /v1/channels/{channelId}/messages` cria uma mensagem, aceita `bodyText`, `parentId`, `mentions`, `kind` e `mediaFileId`, requer `comment` sobre o canal e emite `communication.message.created`.
+`PATCH /v1/messages/{id}` edita a mensagem pelo respectivo autor e persiste `editedAt`.
+`DELETE /v1/messages/{id}` executa soft delete da mensagem pelo respectivo autor.
+
+`POST /v1/messages/{id}/reactions` adiciona uma reacção por utilizador e emoji.
+`DELETE /v1/messages/{id}/reactions/{emoji}` remove a reacção do utilizador autenticado.
+
+Threads são mensagens filhas com `parentId`. A resposta principal mantém `replyCount` para acesso rápido à thread sem criar uma segunda tabela de threads.
+
+Menções são guardadas em `Message.mentions` como IDs de utilizador. O backend cria `Notification` para membros efectivamente mencionados e a UI resolve os nomes através de `/v1/people`.
+
+`GET /v1/notifications` lista a inbox do utilizador; `?unreadOnly=true` limita a notificações não lidas.
+`POST /v1/notifications/{id}/read` marca uma notificação como lida.
+`POST /v1/notifications/read-all` marca todas as notificações do principal como lidas.
+`POST /v1/channels/{channelId}/read` persiste `ChannelMember.lastReadAt` e faz o `unreadCount` do canal voltar a zero para esse principal.
+
+`GET /v1/channels/{channelId}/catch-up` aceita `since` e `limit` e devolve todas as mensagens posteriores ao timestamp do cliente para recuperação após perda de ligação.
+
+`POST /v1/messages/{id}/convert` cria um `WorkObject` universal a partir da mensagem e uma relação Graph `DERIVED_FROM` entre `message` e `work_object`, sem copiar o sistema de trabalho para uma entidade específica de comunicação. A criação exige `create` sobre a colecção de WorkObjects.
+
+### Realtime
+
+A aplicação publica eventos através de Socket.IO em `/socket.io`. O handshake valida a sessão existente e `orgId`; o socket entra em rooms `org:{orgId}`, `user:{userId}` e nos canais dos quais o principal é membro.
+
+Eventos suportados pelo contrato realtime:
+
+`message.created`
+`message.updated`
+`message.deleted`
+`reaction.updated`
+`notification.created`
+`channel.updated`
+
+A UI trata o realtime como aceleração de entrega, não como fonte única de verdade. Depois de reconectar, o cliente chama `catch-up` para recuperar mensagens que possam ter sido perdidas entre a última mensagem conhecida e a nova ligação.
+
+A sincronização realtime não altera a segurança do recurso: as operações continuam a passar pelo mesmo contexto de organização, membership e `can()` usados pela API REST.
 
 ## IA e Agentes
 
