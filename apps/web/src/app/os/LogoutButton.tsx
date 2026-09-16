@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { authCopy } from "../lib/auth-copy";
+import { authCopy } from "../../lib/auth-copy";
 
 export function LogoutButton() {
 	const [busy, setBusy] = useState(false);
