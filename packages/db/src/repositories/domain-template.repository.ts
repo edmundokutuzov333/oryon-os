@@ -26,7 +26,7 @@ function nextSettings(settings: unknown, templates: InstalledTemplateMap): Recor
   return base;
 }
 
-function inputJson(value: Record<string, unknown>): Prisma.InputJsonValue {
+function inputJson(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
@@ -104,7 +104,7 @@ export class DomainTemplateRepository {
               idPrefix: type.idPrefix,
               schema: inputJson(type.schema),
               statusModel: inputJson(type.statusModel),
-              defaultViews: inputJson({ views: type.defaultViews }),
+              defaultViews: inputJson(type.defaultViews),
             },
           });
           typeDefIds.push(currentType.id);
@@ -122,7 +122,7 @@ export class DomainTemplateRepository {
               idPrefix: type.idPrefix,
               schema: inputJson(type.schema),
               statusModel: inputJson(type.statusModel),
-              defaultViews: inputJson({ views: type.defaultViews }),
+              defaultViews: inputJson(type.defaultViews),
             },
           });
           typeDefIds.push(row.id);
