@@ -3,9 +3,7 @@
 	"private": true,
 	"version": "0.1.0",
 	"packageManager": "pnpm@10.15.0",
-	"engines": {
-		"node": ">=24.0.0 <25"
-	},
+	"engines": { "node": ">=24.0.0 <25" },
 	"scripts": {
 		"dev": "turbo run dev --parallel --filter=./apps/* --filter=./packages/*",
 		"build": "turbo run build --filter=./apps/* --filter=./packages/*",
@@ -26,16 +24,11 @@
 		"db:rls:verify": "pnpm --filter @oryon/db db:rls:verify",
 		"gen:openapi": "pnpm --filter @oryon/api gen:openapi",
 		"infra:config": "docker compose -f infra/docker/docker-compose.yml config --quiet",
-		"infra:up": "docker compose -f infra/docker/docker-compose.yml up -d --build --wait --remove-orphans postgres redis nats typesense minio livekit && docker compose -f infra/docker/docker-compose.yml run --rm minio-init",
+		"infra:up": "docker compose -f infra/docker/docker-compose.yml up -d --build --wait --remove-orphans postgres redis nats typesense minio livekit temporal && docker compose -f infra/docker/docker-compose.yml run --rm minio-init",
 		"infra:down": "docker compose -f infra/docker/docker-compose.yml down --remove-orphans",
 		"infra:logs": "docker compose -f infra/docker/docker-compose.yml logs -f",
 		"infra:status": "docker compose -f infra/docker/docker-compose.yml ps",
 		"infra:doctor": "node scripts/infra-doctor.mjs"
 	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.2.0",
-		"lefthook": "^1.11.0",
-		"turbo": "^2.5.6",
-		"typescript": "^5.9.2"
-	}
+	"devDependencies": { "@biomejs/biome": "^2.2.0", "lefthook": "^1.11.0", "turbo": "^2.5.6", "typescript": "^5.9.2" }
 }
