@@ -7,6 +7,10 @@
 		"./health": {
 			"types": "./src/health.schema.ts",
 			"default": "./src/health.schema.ts"
+		},
+		"./identity": {
+			"types": "./src/identity.schema.ts",
+			"default": "./src/identity.schema.ts"
 		}
 	},
 	"scripts": {
