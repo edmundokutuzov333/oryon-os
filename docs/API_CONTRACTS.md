@@ -23,6 +23,20 @@ Contratos normativos da API. Schemas Zod vivem em `packages/contracts`; OpenAPI 
 
 Erros usam `{ error: { code, httpStatus, message, requestId } }`. Códigos canónicos incluem `VALIDATION_FAILED`, `ORG_HEADER_MISSING`, `UNAUTHENTICATED`, `PERMISSION_DENIED`, `CLASSIFICATION_BLOCKED`, `NOT_FOUND`, `CONFLICT`, `CYCLE_DETECTED`, `IDEMPOTENCY_MISMATCH`, `RATE_LIMITED`, `AI_BUDGET_EXCEEDED`, `CHECKPOINT_REQUIRED` e `INTERNAL`.
 
+## Identity e Auth
+
+A identidade canónica é `User` dentro de `Organization`. `Workspace`, `Team` e `TeamMember` compõem o contexto empresarial devolvido à aplicação. Sessões web são tokens opacos HttpOnly e revogáveis; a API aceita o JWT de curta duração emitido no exchange da sessão.
+
+`POST /v1/auth/request-link` pede um magic link. O body é `{ "email": "user@example.com" }` e requer `X-Oryon-Org` e `Idempotency-Key`. O sistema responde `{ "delivered": true }`; em `ORYON_AUTH_DEV_MODE=true` pode incluir `debugToken`.
+
+`POST /v1/auth/verify-link` recebe `{ "token": "..." }`, requer `X-Oryon-Org` e `Idempotency-Key`, valida o token de uso único, cria sessão e devolve `{ "accessToken": "...", "expiresAt": "..." }`. A aplicação web recebe adicionalmente a sessão através de cookie HttpOnly.
+
+`GET /v1/auth/session` requer `X-Oryon-Org` e autenticação por Bearer JWT ou cookie de sessão. Devolve `IdentityContext` com `user`, `organization`, `workspaces`, `teams` e `session`.
+
+`POST /v1/auth/logout` requer `X-Oryon-Org` e `Idempotency-Key`. Revoga a sessão web e limpa o cookie. O access token de curta duração deixa de resolver porque a sessão a que está ligado foi revogada.
+
+Identidade externa futura deve mapear para `User.externalId`, preservando um único principal por pessoa.
+
 ## Work Objects
 
 `POST /v1/work-objects`, `PATCH /v1/work-objects/{id}`, `GET /v1/work-objects`, `POST /v1/work-objects/bulk` e `POST /v1/work-objects/{id}/convert`.
