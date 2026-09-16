@@ -1,0 +1,39 @@
+name: phase15-prisma-type-fix
+on:
+  push:
+    branches: [feat/phase-15-platform-release]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[phase15-prisma-fix]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Patch Prisma compatibility issues
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          def replace_once(path: str, old: str, new: str) -> None:
+              p = Path(path); text = p.read_text(); count = text.count(old)
+              if count != 1: raise SystemExit(f'{path}: expected one occurrence, found {count} for {old!r}')
+              p.write_text(text.replace(old, new))
+
+          replace_once('packages/db/src/repositories/communication.repository.ts', 'customFields: prepared.customFields,', 'customFields: JSON.parse(JSON.stringify(prepared.customFields)) as Prisma.InputJsonValue,')
+          replace_once('packages/db/src/repositories/communication.repository.ts', 'orgId, workObjectId, containerType: "WORKSPACE"', 'orgId, objectId: workObjectId, containerType: "WORKSPACE"')
+
+          replace_once('packages/db/src/repositories/docs-files.repository.ts', 'kind: input.kind === "CANVAS" ? "DOC" : input.kind ?? "DOC",', 'kind: input.kind === "CANVAS" || input.kind === "DATABASE_VIEW" ? "DOC" : input.kind ?? "DOC",')
+
+          replace_once('packages/db/src/repositories/domain-template.repository.ts', 'import { getDomainTemplate, type DomainTemplateManifest } from "@oryon/contracts/domain-template-data";', 'import { getDomainTemplate } from "@oryon/contracts/domain-template-data";\nimport type { DomainTemplateManifest } from "@oryon/contracts/domain-templates";')
+
+          replace_once('packages/db/src/repositories/meeting.repository.ts', 'customFields: prepared.customFields, createdBy: actorId } });', 'customFields: JSON.parse(JSON.stringify(prepared.customFields)) as Prisma.InputJsonValue, createdBy: actorId } });')
+
+          replace_once('packages/db/src/repositories/work-object.repository.ts', 'customFields: JSON.parse(JSON.stringify(mergedCustomFields)) as Prisma.InputJsonValue } : input;', 'customFields: mergedCustomFields } : input;')
+          replace_once('packages/db/src/repositories/work-object.repository.ts', 'if (mergedCustomFields !== undefined) data.customFields = mergedCustomFields;', 'if (mergedCustomFields !== undefined) data.customFields = JSON.parse(JSON.stringify(mergedCustomFields)) as Prisma.InputJsonValue;')
+          PY
+          rm .github/workflows/phase15-prisma-type-fix.yml
+          git config user.name "oryon-ci"
+          git config user.email "ci@oryon.local"
+          git add packages/db/src/repositories .github/workflows/phase15-prisma-type-fix.yml
+          git commit -m "fix(db): repair Prisma baseline compatibility [phase15-prisma-fix]"
+          git push origin HEAD:feat/phase-15-platform-release
