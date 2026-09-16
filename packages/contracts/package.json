@@ -15,6 +15,10 @@
 		"./permissions": {
 			"types": "./src/permissions.schema.ts",
 			"default": "./src/permissions.schema.ts"
+		},
+		"./work-object": {
+			"types": "./src/work-object.schema.ts",
+			"default": "./src/work-object.schema.ts"
 		}
 	},
 	"scripts": {
