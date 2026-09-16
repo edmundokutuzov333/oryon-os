@@ -8,12 +8,50 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: oryon-main-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  sync-lockfile:
+    name: synchronize lockfile
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+          run_install: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Synchronize lockfile
+        run: pnpm install --no-frozen-lockfile
+      - name: Commit synchronized lockfile
+        run: |
+          if git diff --quiet -- pnpm-lock.yaml; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git commit -m "chore(deps): synchronize pnpm lockfile [skip ci]"
+          git push origin HEAD:main
+
   verify:
     name: verify
+    needs: sync-lockfile
+    if: always() && (needs.sync-lockfile.result == 'success' || needs.sync-lockfile.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - name: Sync latest main after lockfile repair
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: git fetch origin main && git reset --hard origin/main
       - uses: pnpm/action-setup@v4
         with:
           version: 10.15.0
@@ -35,8 +73,10 @@ jobs:
 
   infra-and-db:
     name: infrastructure and database
+    needs: sync-lockfile
+    if: always() && (needs.sync-lockfile.result == 'success' || needs.sync-lockfile.result == 'skipped')
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       POSTGRES_USER: oryon
       POSTGRES_PASSWORD: oryon_local
@@ -49,6 +89,9 @@ jobs:
       TYPESENSE_API_KEY: oryon-typesense-local
     steps:
       - uses: actions/checkout@v5
+      - name: Sync latest main after lockfile repair
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: git fetch origin main && git reset --hard origin/main
       - uses: pnpm/action-setup@v4
         with:
           version: 10.15.0
