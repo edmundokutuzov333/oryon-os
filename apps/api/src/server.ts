@@ -5,6 +5,7 @@ import {
 import { HealthResponseSchema } from "@oryon/contracts/health";
 import { closePrisma, getPrisma } from "@oryon/db";
 import Fastify from "fastify";
+import { registerAgentAutomationRoutes } from "./agents.js";
 import { registerCommunicationRoutesV2 } from "./communication-v2.js";
 import { registerDocsFilesRoutesV2 } from "./docs-files-v2.js";
 import { registerGraphRoutes } from "./graph.js";
@@ -41,6 +42,7 @@ await registerPageAttachmentRoutes(app);
 await registerCommunicationRoutesV2(app, { to: (room) => ({ emit: (event, payload) => io.to(room).emit(event, payload) }) });
 await registerMeetingRoutesV2(app);
 await registerGraphRoutes(app);
+await registerAgentAutomationRoutes(app);
 try { await getPrisma().$queryRawUnsafe("SELECT 1"); await app.listen({ port: 4000, host: "0.0.0.0" }); } catch (error) { app.log.error(error); await io.close(); await closePrisma(); process.exitCode = 1; }
 process.on("SIGTERM", async () => { await io.close(); await app.close(); await closePrisma(); });
 process.on("SIGINT", async () => { await io.close(); await app.close(); await closePrisma(); });
