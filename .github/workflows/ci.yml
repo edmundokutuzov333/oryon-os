@@ -158,11 +158,54 @@ jobs:
             --header 'Idempotency-Key: ci-verify-link-1' \
             --cookie-jar /tmp/oryon-cookies.txt \
             --data "{\"token\":\"$token\"}")
+          access=$(printf '%s' "$verify" | jq -r '.data.accessToken')
+          test -n "$access"
           printf '%s' "$verify" | jq -e '.data.accessToken and .data.expiresAt' >/dev/null
           curl --fail --silent http://127.0.0.1:4000/v1/auth/session \
             --header 'X-Oryon-Org: org_demo_0001' \
             --cookie /tmp/oryon-cookies.txt \
             | jq -e '.data.user.email == "admin@oryon.local" and .data.organization.id == "org_demo_0001" and (.data.workspaces | length) >= 1 and (.data.teams | length) >= 1' >/dev/null
+      - name: Exercise work object engine
+        run: |
+          type_key="vehicle"
+          curl --fail --silent --request POST http://127.0.0.1:4000/v1/object-types \
+            --header "Authorization: Bearer $access" \
+            --header 'Content-Type: application/json' \
+            --header 'X-Oryon-Org: org_demo_0001' \
+            --header 'Idempotency-Key: ci-object-type-1' \
+            --data '{"key":"vehicle","name":"Viatura","pluralName":"Viaturas","idPrefix":"VTR","schema":{"fields":[{"key":"plate","label":"Matrícula","type":"TEXT","required":true}]},"statusModel":{"initial":"available","states":[{"key":"available","label":"Disponível","category":"TODO","order":0},{"key":"maintenance","label":"Manutenção","category":"IN_PROGRESS","order":1},{"key":"retired","label":"Retirada","category":"CANCELLED","order":2}],"transitions":[{"from":"available","to":"maintenance"},{"from":"maintenance","to":"available"},{"from":"maintenance","to":"retired"}]}}' \
+            | jq -e '.data.id' >/tmp/oryon-vehicle-type.txt
+          object=$(curl --fail --silent --request POST http://127.0.0.1:4000/v1/work-objects \
+            --header "Authorization: Bearer $access" \
+            --header 'Content-Type: application/json' \
+            --header 'X-Oryon-Org: org_demo_0001' \
+            --header 'Idempotency-Key: ci-work-object-1' \
+            --data '{"typeKey":"vehicle","workspaceId":"ws_demo_0001","title":"Viatura CI","priority":"HIGH","customFields":{"plate":"MZ-01-AA"}}')
+          object_id=$(printf '%s' "$object" | jq -r '.data.id')
+          test -n "$object_id"
+          printf '%s' "$object" | jq -e '.data.humanId and .data.permissions.read == true and .data.permissions.update == true and .data.customFields.plate == "MZ-01-AA" and (.data.placements | length) >= 1' >/dev/null
+          curl --fail --silent http://127.0.0.1:4000/v1/work-objects/$object_id \
+            --header "Authorization: Bearer $access" \
+            --header 'X-Oryon-Org: org_demo_0001' \
+            | jq -e '.data.id == "'"$object_id"'" and .data.customFields.plate == "MZ-01-AA"' >/dev/null
+          curl --fail --silent --request POST http://127.0.0.1:4000/v1/work-objects/$object_id/status \
+            --header "Authorization: Bearer $access" \
+            --header 'Content-Type: application/json' \
+            --header 'X-Oryon-Org: org_demo_0001' \
+            --header 'Idempotency-Key: ci-work-status-1' \
+            --data '{"status":"maintenance","comment":"CI transition"}' \
+            | jq -e '.data.status == "maintenance" and .data.statusCategory == "IN_PROGRESS"' >/dev/null
+          curl --fail --silent --request PATCH http://127.0.0.1:4000/v1/work-objects/$object_id \
+            --header "Authorization: Bearer $access" \
+            --header 'Content-Type: application/json' \
+            --header 'X-Oryon-Org: org_demo_0001' \
+            --header 'Idempotency-Key: ci-work-patch-1' \
+            --data '{"customFields":{"plate":"MZ-02-BB"}}' \
+            | jq -e '.data.customFields.plate == "MZ-02-BB" and .data.permissions.update == true' >/dev/null
+          list=$(curl --fail --silent "http://127.0.0.1:4000/v1/work-objects?workspaceId=ws_demo_0001&typeKey=$type_key" \
+            --header "Authorization: Bearer $access" \
+            --header 'X-Oryon-Org: org_demo_0001')
+          printf '%s' "$list" | jq -e '.data | map(select(.id == "'"$object_id"'")) | length == 1' >/dev/null
       - name: Exercise cross-organization session rejection
         run: |
           status=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:4000/v1/auth/session \
