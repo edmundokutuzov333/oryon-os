@@ -4,20 +4,31 @@ const prisma = new PrismaClient();
 
 const IDS = {
 	org: "org_demo_0001",
+	orgB: "org_demo_0002",
 	workspace: "ws_demo_0001",
+	workspaceB: "ws_demo_0002",
 	admin: "usr_demo_admin",
 	member: "usr_demo_member",
+	userB: "usr_demo_external",
 	team: "team_demo_0001",
 	role: "role_demo_admin",
 	type: "type_demo_task",
+	typeB: "type_demo_task_b",
 	object: "obj_demo_task_0001",
+	objectB: "obj_demo_task_0002",
 	event: "evt_demo_seed_0001",
 } as const;
 
 const timestamp = new Date("2026-01-01T00:00:00.000Z");
 
+async function setTenantContext(tx: PrismaClient["$transaction"] extends (...args: infer _Args) => unknown ? never : never): Promise<void> {
+	void tx;
+}
+
 async function main(): Promise<void> {
 	await prisma.$transaction(async (tx) => {
+		await tx.$executeRawUnsafe("SELECT set_config('app.org_id', $1, true)", IDS.org);
+
 		const org = await tx.organization.upsert({
 			where: { id: IDS.org },
 			update: {
@@ -246,6 +257,97 @@ async function main(): Promise<void> {
 				payload: { source: "seed", version: 1 },
 				correlationId: "seed-phase-2",
 				createdAt: timestamp,
+			},
+		});
+
+		await tx.$executeRawUnsafe("SELECT set_config('app.org_id', $1, true)", IDS.orgB);
+		const orgB = await tx.organization.upsert({
+			where: { id: IDS.orgB },
+			update: { name: "Oryon External Demo" },
+			create: {
+				id: IDS.orgB,
+				slug: "oryon-external-demo",
+				name: "Oryon External Demo",
+				dataRegion: "AFRICA",
+				reportingCurrency: "MZN",
+				defaultLocale: "pt-MZ",
+				defaultTimezone: "Africa/Maputo",
+				plan: "TRIAL",
+				settings: {},
+				createdAt: timestamp,
+				updatedAt: timestamp,
+			},
+		});
+
+		await tx.workspace.upsert({
+			where: { id: IDS.workspaceB },
+			update: { name: "External" },
+			create: {
+				id: IDS.workspaceB,
+				orgId: orgB.id,
+				key: "external",
+				name: "External",
+				visibility: "ORG",
+				createdAt: timestamp,
+				updatedAt: timestamp,
+			},
+		});
+
+		await tx.user.upsert({
+			where: { id: IDS.userB },
+			update: { name: "External User", status: "ACTIVE" },
+			create: {
+				id: IDS.userB,
+				orgId: orgB.id,
+				email: "external@oryon.local",
+				name: "External User",
+				type: "MEMBER",
+				status: "ACTIVE",
+				locale: "pt-MZ",
+				timezone: "Africa/Maputo",
+				createdAt: timestamp,
+				updatedAt: timestamp,
+			},
+		});
+
+		await tx.objectTypeDef.upsert({
+			where: { id: IDS.typeB },
+			update: { name: "Task", pluralName: "Tasks" },
+			create: {
+				id: IDS.typeB,
+				orgId: orgB.id,
+				key: "task",
+				name: "Task",
+				pluralName: "Tasks",
+				isSystem: true,
+				idPrefix: "TASK",
+				schema: { fields: [] },
+				statusModel: { statuses: ["open", "done"], transitions: [["open", "done"]] },
+				defaultViews: ["LIST"],
+				createdAt: timestamp,
+				updatedAt: timestamp,
+			},
+		});
+
+		await tx.workObject.upsert({
+			where: { id: IDS.objectB },
+			update: { title: "External tenant object", updatedAt: timestamp },
+			create: {
+				id: IDS.objectB,
+				orgId: orgB.id,
+				workspaceId: IDS.workspaceB,
+				typeKey: "task",
+				typeDefId: IDS.typeB,
+				humanId: "TASK-0001",
+				title: "External tenant object",
+				status: "open",
+				statusCategory: "TODO",
+				priority: "NORMAL",
+				tags: ["rls"],
+				customFields: {},
+				createdBy: IDS.userB,
+				createdAt: timestamp,
+				updatedAt: timestamp,
 			},
 		});
 	});
