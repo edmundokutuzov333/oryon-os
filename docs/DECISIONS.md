@@ -102,27 +102,47 @@ O schema canónico define `Edge` como a representação única das relações en
 
 O Work Graph passa a ser a camada de relação transversal da V1. As futuras fases podem ligar comunicação, documentos, reuniões e artefactos ao mesmo grafo quando esses nodes forem suportados, sem mudar o modelo de relações.
 
-## ADR-0005: Design System + App Shell da Fase 7
+## ADR-0005: Design System e App Shell da Fase 7
 
 - Estado: aceite para implementação da Fase 7
 - Data: 2026-09-16
 
 ### Contexto
 
-A Fase 7 transforma os tokens normativos de UI num sistema utilizável pelo produto. O pacote `@oryon/ui` estava apenas com a versão e os tokens mínimos, enquanto o `/os` mantinha chrome local em cada página.
+A experiência da OryonOS deve ter uma única linguagem visual, com tokens semânticos, chrome flutuante, hierarquia de raios, acento lima parcimonioso e superfícies em camadas. O frontend precisa de um shell partilhado antes de as vistas de trabalho evoluírem para experiências compostas.
 
 ### Decisão
 
-1. `@oryon/ui` é a fonte única dos primitives visuais e do AppShell.
-2. Tokens permanecem semânticos e são expostos em CSS e TypeScript.
-3. O chrome principal é um FloatingTopBar partilhado por todo o segmento `/os`.
-4. A navegação activa é resolvida pela aplicação web, através de `usePathname`, sem fazer o pacote `ui` depender de Next.js.
-5. `CommandPalette` funciona como superfície transversal de comandos e navegação nesta fase. O retrieval híbrido completo permanece na Fase 12.
-6. O layout `/os` autentica e carrega a identidade uma única vez e injecta-a no AppShell.
-7. O tema claro é derivado por papéis semânticos, mantendo o mesmo acento lima.
-8. Movimento é implementado com Motion na linha 12, respeitando `prefers-reduced-motion`.
-9. Os primitives não conhecem `core`, `db` ou `contracts`.
+1. `packages/ui` é a fonte única dos tokens, primitives, overlays e chrome da aplicação.
+2. `AppShell`, `FloatingTopBar`, `SegmentedNav`, `AppLauncher`, `IconButtonRail`, `PageHeader` e `CommandPalette` são primitives de produto partilhadas, não implementações específicas de `/os`.
+3. As cores da interface são consumidas por papéis semânticos; a escala de cor directa fica confinada ao token layer.
+4. `⌘K`/`Ctrl+K` é o ponto de entrada transversal para comandos e navegação. Retrieval híbrido de conteúdo continua responsabilidade da Fase 12.
+5. `/os` adopta o AppShell como chrome único e as páginas não criam shells paralelos.
+6. A biblioteca UI não conhece `core`, `contracts` ou `db`; a aplicação web liga identidade e dados aos primitives através de contratos.
 
 ### Consequências
 
-Work, Graph, Permissions e páginas futuras passam a partilhar o mesmo chrome, navegação, command surface e linguagem visual. A migração de experiências específicas de domínio continua na Fase 8 em diante.
+Todas as experiências posteriores podem reutilizar a mesma linguagem visual e de interação. O Work Experience não precisa de inventar novos controlos para List, Board, Calendar ou Detail, e o futuro Search + AI pode ligar-se à superfície `CommandPalette` sem alterar a shell.
+
+## ADR-0006: Work Experience da Fase 8
+
+- Estado: aceite para implementação da Fase 8
+- Data: 2026-09-16
+
+### Contexto
+
+O `WorkObject` já fornece os dados universais e as operações de base. A Fase 8 precisa de transformar esse motor numa experiência de trabalho contínua sem criar modelos paralelos para cada vista.
+
+### Decisão
+
+1. `List`, `Board`, `Calendar` e `Timeline` são composições da mesma colecção autorizada de `WorkObject`; nenhuma vista mantém uma cópia de estado persistido.
+2. Criação, edição e mudança de estado usam os endpoints do WorkObject Engine e continuam protegidos por `can()` e RLS.
+3. `Comment` é usado para colaboração contextual; comentários têm endpoint próprio, parent/replies e `DomainEvent` na mesma transacção.
+4. `Attachment` liga `FileAsset` existente ao WorkObject. Upload físico e storage S3 continuam na Fase 9.
+5. O histórico da experiência é derivado de `DomainEvent` e `StatusTransition`, sem criar uma tabela de histórico paralela.
+6. A pesquisa desta fase é filtragem local sobre o conjunto já autorizado; o índice/retrieval transversal permanece na Fase 12.
+7. A UI recebe permissões explícitas do backend e esconde acções não autorizadas; ela não deduz capacidade a partir de roles.
+
+### Consequências
+
+O mesmo WorkObject pode ser visto, alterado, atribuído e acompanhado em diferentes representações sem perder identidade ou histórico. As fases seguintes podem acrescentar conteúdo, comunicação, documentos e IA ao mesmo objecto sem migração para outro modelo de trabalho.
