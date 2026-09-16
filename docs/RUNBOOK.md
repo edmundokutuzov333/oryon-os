@@ -34,7 +34,9 @@ pnpm infra:doctor
 
 ## URLs e credenciais locais
 
-Os valores normais estão em `.env.example`. O LiveKit em modo `--dev` usa `devkey` / `secret`, conforme a configuração de desenvolvimento documentada pelo fornecedor. citeturn224132search0
+Os valores normais estão em `.env.example`. O LiveKit em modo `--dev` usa `devkey` / `secret` e aceita bind explícito a `0.0.0.0` para desenvolvimento local. citeturn224132search0
+
+A imagem do servidor MinIO usa o registry oficial `quay.io/minio/minio` com tag fixa, evitando a dependência de uma tag antiga do Docker Hub que deixou de ser utilizável neste ambiente. citeturn943006search0turn943006search2
 
 ## Diagnóstico
 
@@ -44,7 +46,7 @@ pnpm infra:doctor
 pnpm infra:logs
 ```
 
-`infra:doctor` valida a configuração Compose, estado dos containers, portas públicas e endpoints HTTP de Typesense e MinIO. Também exige que o bootstrap `minio-init` termine com código zero.
+`infra:doctor` valida a configuração Compose, estado dos containers, portas públicas e endpoints HTTP de Typesense e MinIO. Também verifica a acessibilidade do bucket configurado.
 
 ## Paragem
 
