@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../generated/client.js";
+import type { Prisma, PrismaClient } from "../generated/client.js";
 
 export interface WorkObjectListInput {
 	readonly orgId: string;
@@ -16,7 +16,7 @@ export class WorkObjectRepository {
 
 	async list(input: WorkObjectListInput) {
 		const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
-		const where: Parameters<typeof this.db.workObject.findMany>[0]["where"] = {
+		const where: Prisma.WorkObjectWhereInput = {
 			orgId: input.orgId,
 			deletedAt: null,
 		};
