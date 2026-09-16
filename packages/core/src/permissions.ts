@@ -66,6 +66,8 @@ function baseDecision(context: PermissionPolicyContext, resource: PermissionReso
 	if (context.classification?.blocksExternal && action === "use_external") return { allowed: false, effect: "deny", action, reason: "classification_blocks_external", matchedBy: `classification:${context.classification.key}` };
 	if (context.classification?.blocksAi && action === "use_ai") return { allowed: false, effect: "deny", action, reason: "classification_blocks_ai", matchedBy: `classification:${context.classification.key}` };
 	if (context.classification?.blocksDownload && action === "export") return { allowed: false, effect: "deny", action, reason: "classification_blocks_download", matchedBy: `classification:${context.classification.key}` };
+	if (resource.type === "channel" && context.subject.channelIds.includes(resource.id) && ["read", "comment"].includes(action)) return { allowed: true, effect: "allow", action, reason: "channel_membership", matchedBy: "channel_membership" };
+	if (resource.type === "notification" && resource.ownerId === context.subject.id && ["read", "update", "delete"].includes(action)) return { allowed: true, effect: "allow", action, reason: "notification_owner", matchedBy: "notification_owner" };
 	if (action === "use_external" || action === "use_ai") {
 		const grant = grantAllows(context.grants, resource, context.subject, action, now);
 		if (grant.allowed) return { allowed: true, effect: "allow", action, reason: "explicit_grant", matchedBy: grant.matchedBy };
