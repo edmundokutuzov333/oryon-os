@@ -38,9 +38,10 @@ function bearerValue(request: FastifyRequest): string | undefined {
 }
 
 async function actor(request: FastifyRequest, orgId: string) {
-	const token = bearerValue(request) ?? cookieValue(request);
+	const bearer = bearerValue(request);
+	const token = bearer ?? cookieValue(request);
 	if (!token) throw new Error("UNAUTHENTICATED");
-	const session = await authenticate(token, bearerValue(request) ? "bearer" : "session");
+	const session = await authenticate(token, bearer ? "bearer" : "session");
 	if (session.orgId !== orgId) throw new Error("UNAUTHENTICATED");
 	return session;
 }
@@ -51,16 +52,7 @@ function idempotency(request: FastifyRequest): void {
 }
 
 function orgResource(orgId: string) {
-	return {
-		orgId,
-		type: "organization",
-		id: orgId,
-		workspaceId: null,
-		projectId: null,
-		ownerId: null,
-		teamId: null,
-		classification: null,
-	};
+	return { orgId, type: "organization", id: orgId, workspaceId: null, projectId: null, ownerId: null, teamId: null, classification: null };
 }
 
 function envelope(request: FastifyRequest, data: unknown) {
@@ -80,7 +72,7 @@ function statusFor(error: unknown): { code: string; status: number; message: str
 	return { code: "VALIDATION_FAILED", status: 400, message };
 }
 
-function denyUnless(request: FastifyRequest, orgId: string, session: { userId: string }, action: "manage" | "view_as") {
+function denyUnless(orgId: string, session: { userId: string }, action: "manage" | "view_as") {
 	return permissions.getSnapshot(orgId, session.userId, "organization", orgId).then((snapshot) => {
 		const decision = can({ orgId, ...snapshot }, orgResource(orgId), action);
 		if (!decision.allowed) throw new Error("permission_denied");
@@ -109,13 +101,12 @@ export async function registerPermissionRoutes(app: FastifyInstance): Promise<vo
 			idempotency(request);
 			const orgId = orgIdOf(request);
 			const session = await actor(request, orgId);
-			await denyUnless(request, orgId, session, "view_as");
+			await denyUnless(orgId, session, "view_as");
 			const input = PermissionViewAsInputSchema.parse(request.body);
 			if (input.resource.orgId !== orgId) throw new Error("permission_denied");
 			const snapshot = await permissions.getSnapshot(orgId, input.targetUserId, input.resource.type, input.resource.id, input.resource.classification);
 			const result = PermissionEvaluationSchema.parse(evaluatePermissions({ orgId, ...snapshot }, {
 				resource: input.resource,
-				action: input.action,
 				external: input.external,
 				ai: input.ai,
 				fields: input.fields,
@@ -131,7 +122,7 @@ export async function registerPermissionRoutes(app: FastifyInstance): Promise<vo
 		try {
 			const orgId = orgIdOf(request);
 			const session = await actor(request, orgId);
-			await denyUnless(request, orgId, session, "manage");
+			await denyUnless(orgId, session, "manage");
 			const rows = await permissions.listExternalExposure(orgId);
 			const result = PermissionExposureReportSchema.parse({
 				generatedAt: new Date().toISOString(),
@@ -158,7 +149,7 @@ export async function registerPermissionRoutes(app: FastifyInstance): Promise<vo
 			idempotency(request);
 			const orgId = orgIdOf(request);
 			const session = await actor(request, orgId);
-			await denyUnless(request, orgId, session, "manage");
+			await denyUnless(orgId, session, "manage");
 			const input = PermissionRoleCreateInputSchema.parse(request.body);
 			const result = await permissions.createRole(orgId, input);
 			return reply.send(envelope(request, result));
@@ -173,7 +164,7 @@ export async function registerPermissionRoutes(app: FastifyInstance): Promise<vo
 			idempotency(request);
 			const orgId = orgIdOf(request);
 			const session = await actor(request, orgId);
-			await denyUnless(request, orgId, session, "manage");
+			await denyUnless(orgId, session, "manage");
 			const input = PermissionRoleBindingCreateInputSchema.parse(request.body);
 			const result = await permissions.bindRole(orgId, session.userId, input);
 			return reply.send(envelope(request, result));
@@ -188,7 +179,7 @@ export async function registerPermissionRoutes(app: FastifyInstance): Promise<vo
 			idempotency(request);
 			const orgId = orgIdOf(request);
 			const session = await actor(request, orgId);
-			await denyUnless(request, orgId, session, "manage");
+			await denyUnless(orgId, session, "manage");
 			const input = PermissionGrantCreateInputSchema.parse(request.body);
 			const result = await permissions.createGrant(orgId, session.userId, input);
 			return reply.send(envelope(request, result));
