@@ -1,11 +1,11 @@
-import { assertNoProtectedCycle, graphNodeKey, validateGraphSelfEdge } from "@oryon/core";
-import type { GraphDirection, GraphEdgeCreateInput, GraphNodeRef, GraphRelation, GraphTimelineEvent, GraphTraverseQuery } from "@oryon/contracts/graph";
+import { graphNodeKey, validateGraphSelfEdge } from "@oryon/core";
+import type { GraphEdgeCreateInput, GraphNodeRef, GraphRelation, GraphTimelineEvent, GraphTraverseQuery } from "@oryon/contracts/graph";
 import type { Prisma, PrismaClient } from "../generated/client.js";
 import { appendDomainEvent } from "../outbox.js";
 import { withOrgContext } from "../tenant.js";
 
 export interface GraphNodeRecord {
-	readonly type: string;
+	readonly type: "work_object";
 	readonly id: string;
 	readonly humanId: string;
 	readonly title: string;
@@ -37,20 +37,6 @@ export interface GraphTraverseResult {
 	readonly truncated: boolean;
 }
 
-type RawNode = { type: string; id: string; depth: number };
-type RawEdge = {
-	id: string;
-	org_id: string;
-	from_type: string;
-	from_id: string;
-	to_type: string;
-	to_id: string;
-	relation: GraphRelation;
-	lag_days: number | null;
-	metadata: Prisma.JsonValue;
-	created_at: Date;
-};
-
 type RawReachability = { type: string; id: string; depth: number };
 
 const graphRelations = new Set<GraphRelation>([
@@ -81,7 +67,7 @@ function keyPair(type: string, id: string): string {
 	return `${type}:${id}`;
 }
 
-function groupValues(values: readonly string[]): string[] {
+function unique(values: readonly string[]): string[] {
 	return [...new Set(values)];
 }
 
@@ -90,14 +76,6 @@ export class GraphRepository {
 
 	constructor(db: PrismaClient) {
 		this.db = db;
-	}
-
-	async getWorkObject(orgId: string, id: string): Promise<GraphNodeRecord | null> {
-		return withOrgContext(this.db, orgId, async (tx) => {
-			const object = await tx.workObject.findFirst({ where: { orgId, id, deletedAt: null }, select: { id: true, humanId: true, title: true, status: true, statusCategory: true, priority: true, typeKey: true, ownerId: true, workspaceId: true } });
-			if (!object) return null;
-			return { type: "work_object", ...object, statusCategory: object.statusCategory, priority: object.priority };
-		});
 	}
 
 	async createEdge(orgId: string, actorId: string, input: GraphEdgeCreateInput): Promise<{ id: string }> {
@@ -113,13 +91,7 @@ export class GraphRepository {
 			if (input.relation === "BLOCKS" || input.relation === "PARENT_OF") {
 				const rows = await tx.$queryRaw<RawReachability[]>`
 					WITH RECURSIVE reach(node_type, node_id) AS (
-						SELECT e.to_type, e.to_id
-						FROM edges e
-						WHERE e.org_id = ${orgId}
-						  AND e.from_type = ${input.from.type}
-						  AND e.from_id = ${input.from.id}
-						  AND e.relation = ${input.relation}::"EdgeRelation"
-						  AND e.deleted_at IS NULL
+						SELECT ${input.to.type}, ${input.to.id}
 						UNION
 						SELECT e.to_type, e.to_id
 						FROM edges e
@@ -130,17 +102,16 @@ export class GraphRepository {
 					)
 					SELECT node_type AS type, node_id AS id, 0 AS depth
 					FROM reach
-					WHERE node_type = ${input.to.type} AND node_id = ${input.to.id}
+					WHERE node_type = ${input.from.type} AND node_id = ${input.from.id}
 					LIMIT 1
 				`;
 				if (rows.length > 0) throw new Error("CYCLE_DETECTED");
 			}
 
-			const relation = input.relation;
-			const edges = await tx.edge.findFirst({ where: { orgId, fromType: input.from.type, fromId: input.from.id, toType: input.to.type, toId: input.to.id, relation, deletedAt: null }, select: { id: true } });
-			if (edges) throw new Error("CONFLICT");
-			const row = await tx.edge.create({ data: { orgId, fromType: input.from.type, fromId: input.from.id, toType: input.to.type, toId: input.to.id, relation, lagDays: input.lagDays ?? null, metadata: input.metadata, createdBy: actorId } });
-			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "Edge", subjectId: row.id, name: "graph.edge.created", payload: { from: input.from, to: input.to, relation } });
+			const existing = await tx.edge.findFirst({ where: { orgId, fromType: input.from.type, fromId: input.from.id, toType: input.to.type, toId: input.to.id, relation: input.relation, deletedAt: null }, select: { id: true } });
+			if (existing) throw new Error("CONFLICT");
+			const row = await tx.edge.create({ data: { orgId, fromType: input.from.type, fromId: input.from.id, toType: input.to.type, toId: input.to.id, relation: input.relation, lagDays: input.lagDays ?? null, metadata: input.metadata, createdBy: actorId } });
+			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "Edge", subjectId: row.id, name: "graph.edge.created", payload: { from: input.from, to: input.to, relation: input.relation } });
 			return { id: row.id };
 		});
 	}
@@ -167,8 +138,7 @@ export class GraphRepository {
 						OR (${query.direction}::text IN ('in', 'both') AND e.to_type = w.node_type AND e.to_id = w.node_id)
 					)
 					AND NOT (
-						(CASE WHEN ${query.direction}::text = 'in' OR (${query.direction}::text = 'both' AND e.to_type = w.node_type AND e.to_id = w.node_id) THEN e.from_type || ':' || e.from_id ELSE e.to_type || ':' || e.to_id END)
-						= ANY(w.path)
+						(CASE WHEN ${query.direction}::text = 'in' OR (${query.direction}::text = 'both' AND e.to_type = w.node_type AND e.to_id = w.node_id) THEN e.from_type || ':' || e.from_id ELSE e.to_type || ':' || e.to_id END) = ANY(w.path)
 					)
 				)
 				SELECT node_type AS type, node_id AS id, min(depth) AS depth
@@ -177,20 +147,29 @@ export class GraphRepository {
 			`);
 
 			const nodeRefs = rows.map((row) => ({ type: row.type, id: row.id }));
-			const visibleWorkObjectIds = groupValues(nodeRefs.filter((node) => node.type === "work_object").map((node) => node.id));
-			const workObjects = visibleWorkObjectIds.length === 0
+			const workObjectIds = unique(nodeRefs.filter((node) => node.type === "work_object").map((node) => node.id));
+			const workObjects = workObjectIds.length === 0
 				? []
-				: await tx.workObject.findMany({ where: { orgId, id: { in: visibleWorkObjectIds }, deletedAt: null }, select: { id: true, humanId: true, title: true, status: true, statusCategory: true, priority: true, typeKey: true, ownerId: true, workspaceId: true } });
+				: await tx.workObject.findMany({ where: { orgId, id: { in: workObjectIds }, deletedAt: null }, select: { id: true, humanId: true, title: true, status: true, statusCategory: true, priority: true, typeKey: true, ownerId: true, workspaceId: true } });
 
-			const allReachableKeys = new Set(nodeRefs.map((node) => keyPair(node.type, node.id)));
-			const rawEdges = await tx.edge.findMany({ where: { orgId, deletedAt: null, ...(relation === null ? {} : { relation }), OR: visibleWorkObjectIds.length > 0 ? [{ fromType: "work_object", fromId: { in: visibleWorkObjectIds } }, { toType: "work_object", toId: { in: visibleWorkObjectIds } }] : [{ id: "__none__" }] }, orderBy: { createdAt: "asc" } });
-			const edges = rawEdges.filter((edge) => allReachableKeys.has(keyPair(edge.fromType, edge.fromId)) && allReachableKeys.has(keyPair(edge.toType, edge.toId))).map((edge) => ({ id: edge.id, orgId: edge.orgId, from: { type: edge.fromType, id: edge.fromId }, to: { type: edge.toType, id: edge.toId }, relation: edge.relation, lagDays: edge.lagDays, metadata: edge.metadata, createdAt: edge.createdAt }));
+			const reachableKeys = new Set(nodeRefs.map((node) => keyPair(node.type, node.id)));
+			const edgeWhere: Prisma.EdgeWhereInput = {
+				orgId,
+				deletedAt: null,
+				...(relation === null ? {} : { relation }),
+				OR: [
+					{ fromType: "work_object", fromId: { in: workObjectIds } },
+					{ toType: "work_object", toId: { in: workObjectIds } },
+				],
+			};
+			const rawEdges = workObjectIds.length === 0 ? [] : await tx.edge.findMany({ where: edgeWhere, orderBy: { createdAt: "asc" } });
+			const edges = rawEdges.filter((edge) => reachableKeys.has(keyPair(edge.fromType, edge.fromId)) && reachableKeys.has(keyPair(edge.toType, edge.toId))).map((edge) => ({ id: edge.id, orgId: edge.orgId, from: { type: edge.fromType, id: edge.fromId }, to: { type: edge.toType, id: edge.toId }, relation: edge.relation, lagDays: edge.lagDays, metadata: edge.metadata, createdAt: edge.createdAt }));
 
 			let timeline: GraphTimelineEvent[] = [];
-			if (query.includeTimeline && visibleWorkObjectIds.length > 0) {
+			if (query.includeTimeline && workObjectIds.length > 0) {
 				const [events, transitions] = await Promise.all([
-					tx.domainEvent.findMany({ where: { orgId, subjectType: "WorkObject", subjectId: { in: visibleWorkObjectIds } }, orderBy: { createdAt: "desc" }, take: 200 }),
-					tx.statusTransition.findMany({ where: { orgId, objectId: { in: visibleWorkObjectIds } }, orderBy: { createdAt: "desc" }, take: 200 }),
+					tx.domainEvent.findMany({ where: { orgId, subjectType: "WorkObject", subjectId: { in: workObjectIds } }, orderBy: { createdAt: "desc" }, take: 200 }),
+					tx.statusTransition.findMany({ where: { orgId, objectId: { in: workObjectIds } }, orderBy: { createdAt: "desc" }, take: 200 }),
 				]);
 				timeline = [
 					...events.map((event) => ({ id: event.id, kind: "DOMAIN_EVENT" as const, node: { type: "work_object", id: event.subjectId }, name: event.name, fromStatus: null, toStatus: null, comment: null, actorId: event.actorId, occurredAt: event.createdAt.toISOString() })),
@@ -198,7 +177,14 @@ export class GraphRepository {
 				].sort((left, right) => right.occurredAt.localeCompare(left.occurredAt)).slice(0, 300);
 			}
 
-			return { root, nodeRefs, edges, workObjects: workObjects.map((object) => ({ type: "work_object", ...object, statusCategory: object.statusCategory, priority: object.priority })), timeline, truncated: rows.some((row) => row.depth === query.depth) };
+			return {
+				root,
+				nodeRefs,
+				edges,
+				workObjects: workObjects.map((object) => ({ type: "work_object" as const, ...object })),
+				timeline,
+				truncated: rows.some((row) => row.depth === query.depth),
+			};
 		});
 	}
 }
