@@ -3,11 +3,7 @@ import { redirect } from "next/navigation";
 import { PermissionsPanel } from "./PermissionsPanel";
 
 export default async function PermissionsPage() {
-	const organizationId = (await cookies()).get("oryon_org")?.value;
-	if (!organizationId) redirect("/login");
-	return (
-		<main className="os-shell">
-			<PermissionsPanel organizationId={organizationId} />
-		</main>
-	);
+  const organizationId = (await cookies()).get("oryon_org")?.value;
+  if (!organizationId) redirect("/login");
+  return <PermissionsPanel organizationId={organizationId} />;
 }
