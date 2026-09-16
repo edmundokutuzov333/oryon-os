@@ -13,6 +13,7 @@
 	},
 	"dependencies": {
 		"@oryon/contracts": "workspace:*",
+		"@oryon/core": "workspace:*",
 		"@oryon/db": "workspace:*",
 		"fastify": "^5.5.0",
 		"redis": "^5.8.0"
