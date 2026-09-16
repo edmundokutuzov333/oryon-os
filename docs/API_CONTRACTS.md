@@ -168,6 +168,36 @@ A UI trata o realtime como aceleração de entrega, não como fonte única de ve
 
 A sincronização realtime não altera a segurança do recurso: as operações continuam a passar pelo mesmo contexto de organização, membership e `can()` usados pela API REST.
 
+## Meetings
+
+A Fase 11 usa `Meeting`, `MeetingParticipant`, `MeetingArtifact` e `Room` como entidades canónicas. `Meeting` é o evento universal de calendário e a participação interna continua ligada ao `User`.
+
+`GET /v1/meetings` lista reuniões visíveis no tenant e aceita `from`, `to`, `state` e `limit`. A resposta inclui participantes, artefactos e permissões explícitas.
+`POST /v1/meetings` cria uma reunião e adiciona o actor como `ORGANIZER`; requer `create` no recurso `meeting` de colecção.
+`GET /v1/meetings/{id}` obtém uma reunião visível com participantes e artefactos.
+`PATCH /v1/meetings/{id}` actualiza título, agenda, horário, timezone, sala, recorrência e AI; requer `update`.
+`POST /v1/meetings/{id}/state` muda o estado para `LIVE`, `ENDED` ou `CANCELLED`; requer `manage`.
+`DELETE /v1/meetings/{id}` cancela a reunião através de soft state `CANCELLED`; requer `manage`.
+
+`POST /v1/meetings/{id}/participants` adiciona um participante interno por `userId` ou um convidado por email; requer `manage`.
+`PATCH /v1/meetings/{id}/participants/{participantId}` actualiza papel ou RSVP; o próprio participante pode actualizar o seu RSVP e o organizador pode gerir qualquer participante.
+`POST /v1/meetings/{id}/join` valida a membership, regista `joinedAt` e devolve um token efémero LiveKit com `meetingId`, `roomName`, `wsUrl`, `token` e `participantId`.
+`POST /v1/meetings/{id}/leave` regista `leftAt` para o participante autenticado.
+
+`GET /v1/rooms` lista salas bookable do tenant para escolha no calendário.
+
+`GET /v1/meetings/{id}/artifacts` lista artefactos da reunião.
+`POST /v1/meetings/{id}/artifacts` cria `RECORDING`, `TRANSCRIPT`, `NOTES`, `SUMMARY`, `DECISIONS`, `TASKS`, `DOCUMENT`, `WHITEBOARD`, `CHAT_LOG`, `AI_REPORT` ou `CLIP`.
+`POST /v1/meetings/{id}/artifacts/{artifactId}/convert` converte um artefacto elegível em `WorkObject` universal e cria a relação Graph `DECIDED_IN` ou `RESULTED_IN`.
+
+A criação e alteração de horários verificam conflitos de sala para reuniões `SCHEDULED` e `LIVE`. Datas continuam em ISO 8601 com offset e são persistidas em UTC.
+
+### Realtime e media
+
+LiveKit fornece media de áudio/vídeo e presença durante a sessão. O token é emitido no backend e a API secret nunca é enviada para o browser.
+
+O estado persistido da reunião, RSVP, participantes e artefactos permanece no PostgreSQL. A desconexão do browser não encerra nem altera a reunião por si só; a entrada e saída são explicitamente persistidas nos endpoints de join/leave.
+
 ## IA e Agentes
 
 `POST /v1/agents/{id}/runs`, `GET /v1/agent-runs/{id}`, `POST /v1/agent-runs/{id}/rollback` e `POST /v1/ai/search`.
