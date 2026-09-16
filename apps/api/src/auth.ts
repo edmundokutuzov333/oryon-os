@@ -17,6 +17,7 @@ const devMode = process.env.ORYON_AUTH_DEV_MODE === "true";
 const webUrl = process.env.ORYON_WEB_URL ?? "http://localhost:3000";
 const fromAddress = process.env.ORYON_AUTH_FROM ?? "OryonOS <auth@oryon.os>";
 const resendApiKey = process.env.RESEND_API_KEY;
+const magicRateLimitPerHour = 5;
 
 if (!jwtSecret || jwtSecret.length < 32) {
 	throw new Error("ORYON_AUTH_JWT_SECRET must contain at least 32 characters");
@@ -61,6 +62,8 @@ function verifyJwt(token: string): { sub: string; orgId: string; sid: string; ex
 	const payload = JSON.parse(Buffer.from(encodedBody, "base64url").toString("utf8")) as Record<string, unknown>;
 	const now = Math.floor(Date.now() / 1000);
 	if (
+		payload.iss !== "oryon-api" ||
+		payload.aud !== "oryon" ||
 		typeof payload.sub !== "string" ||
 		typeof payload.orgId !== "string" ||
 		typeof payload.sid !== "string" ||
@@ -80,8 +83,13 @@ export async function requestMagicLink(
 	const user = await identities.findActiveUserByEmail(orgId, input.email);
 	if (!user) return { delivered: true };
 
-	const token = randomBytes(32).toString("base64url");
 	const redisClient = await getRedis();
+	const rateKey = `oryon:magic-rate:${orgId}:${sha256(input.email.toLowerCase())}`;
+	const rate = await redisClient.incr(rateKey);
+	if (rate === 1) await redisClient.expire(rateKey, 3600);
+	if (rate > magicRateLimitPerHour) throw new Error("Authentication rate limit exceeded");
+
+	const token = randomBytes(32).toString("base64url");
 	await redisClient.set(
 		`oryon:magic:${sha256(token)}`,
 		JSON.stringify({ orgId, userId: user.id, email: user.email }),
@@ -118,21 +126,22 @@ export async function verifyMagicLink(
 	const input = AuthVerifyLinkInputSchema.parse(rawInput);
 	const redisClient = await getRedis();
 	const verificationKey = `oryon:magic:${sha256(input.token)}`;
-	const record = await redisClient.get(verificationKey);
+	const record = await redisClient.getDel(verificationKey);
 	if (!record) throw new Error("Invalid or expired verification token");
 	const parsed = JSON.parse(record) as { orgId: string; userId: string; email: string };
 	if (parsed.orgId !== orgId) throw new Error("Organization mismatch");
-	await redisClient.del(verificationKey);
 
 	const now = Math.floor(Date.now() / 1000);
 	const accessExpiresAt = new Date((now + accessTtlSeconds) * 1000);
 	const sessionToken = randomBytes(32).toString("base64url");
 	const sessionId = randomBytes(16).toString("hex");
-	const sessionKey = `oryon:session:${sha256(sessionToken)}`;
-	const sessionIndexKey = `oryon:session-id:${sessionId}`;
-	const sessionRecord = JSON.stringify({ sessionId, orgId, userId: parsed.userId, createdAt: now, lastSeenAt: now });
-	await redisClient.set(sessionKey, sessionRecord, { EX: sessionTtlSeconds });
-	await redisClient.set(sessionIndexKey, sha256(sessionToken), { EX: sessionTtlSeconds });
+	const sessionHash = sha256(sessionToken);
+	await redisClient.set(
+		`oryon:session:${sessionHash}`,
+		JSON.stringify({ sessionId, orgId, userId: parsed.userId, createdAt: now, lastSeenAt: now }),
+		{ EX: sessionTtlSeconds },
+	);
+	await redisClient.set(`oryon:session-id:${sessionId}`, sessionHash, { EX: sessionTtlSeconds });
 	await identities.markAuthenticated(orgId, parsed.userId, sessionId);
 
 	const accessToken = signJwt({
