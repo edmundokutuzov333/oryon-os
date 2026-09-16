@@ -12,6 +12,7 @@ const navItems: NavItem[] = [
   { href: "/os/graph", label: "Graph" },
   { href: "/os/permissions", label: "Permissions" },
   { href: "/os/templates", label: "Templates" },
+  { href: "/os/platform", label: "Platform" },
 ];
 
 export function OryonAppShell({ userName, userInitials, children }: { userName: string; userInitials: string; children: ReactNode }) {
