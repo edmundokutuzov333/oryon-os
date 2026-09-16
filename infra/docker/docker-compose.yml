@@ -73,7 +73,7 @@ services:
     volumes:
       - oryon_typesense_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8108/health >/dev/null 2>&1"]
+      test: ["CMD", "/bin/bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8108"]
       interval: 5s
       timeout: 3s
       retries: 20
