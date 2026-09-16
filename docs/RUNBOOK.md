@@ -34,9 +34,9 @@ pnpm infra:doctor
 
 ## URLs e credenciais locais
 
-Os valores normais estão em `.env.example`. O LiveKit em modo `--dev` usa `devkey` / `secret` e aceita bind explícito a `0.0.0.0` para desenvolvimento local. citeturn224132search0
+Os valores normais estão em `.env.example`. O LiveKit em modo `--dev` usa `devkey` / `secret` e aceita bind explícito a `0.0.0.0` para desenvolvimento local.
 
-A imagem do servidor MinIO usa o registry oficial `quay.io/minio/minio` com tag fixa. citeturn943006search0turn943006search2
+A imagem do servidor MinIO usa o registry oficial `quay.io/minio/minio` com tag fixa.
 
 ## Diagnóstico
 
@@ -67,3 +67,5 @@ A infraestrutura é transversal: não cria domínio de produto nem tabelas espec
 A Fase 1 só é aceite quando o CI conseguir instalar com `--frozen-lockfile`, validar o Compose, construir a imagem PostgreSQL, iniciar PostgreSQL, Redis, NATS JetStream, Typesense, MinIO e LiveKit, executar o bootstrap do bucket e concluir `infra:doctor` com todos os serviços saudáveis.
 
 O mesmo gate também valida os checks de arquitectura e de invariantes V1, typecheck, lint, testes e build, evitando que a infraestrutura seja considerada pronta quando a base do monorepo está inconsistente.
+
+Antes do primeiro gate congelado após alterações de workspace, o CI pode materializar o `pnpm-lock.yaml` uma única vez. Depois dessa sincronização, o pipeline definitivo deve usar exclusivamente `pnpm install --frozen-lockfile`.
