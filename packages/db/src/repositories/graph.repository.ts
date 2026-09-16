@@ -183,7 +183,7 @@ export class GraphRepository {
 				edges,
 				workObjects: workObjects.map((object) => ({ type: "work_object" as const, ...object })),
 				timeline,
-				truncated: rows.some((row) => row.depth === query.depth),
+				truncated: query.depth > 0 && rows.some((row) => row.depth === query.depth),
 			};
 		});
 	}
