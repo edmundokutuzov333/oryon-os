@@ -77,9 +77,13 @@ Toda resposta de WorkObject inclui `permissions`. Recursos invisíveis são trat
 
 ## Work Graph
 
-`POST /v1/edges` e `GET /v1/graph/traverse`.
+`POST /v1/edges` cria uma relação entre dois WorkObjects existentes. O body usa `{ "from": { "type": "work_object", "id": "..." }, "to": { "type": "work_object", "id": "..." }, "relation": "RELATES_TO", "lagDays": 0, "metadata": {} }`. A criação exige `update` no objecto de origem e leitura nos dois endpoints. Relações suportadas são os valores de `EdgeRelation` do schema canónico.
 
-Ciclos em `BLOCKS` ou `PARENT_OF` devolvem `CYCLE_DETECTED`. Traversals filtram por permissão.
+`GET /v1/graph/traverse` recebe `rootType`, `rootId`, `depth` máximo 10, `direction` (`out`, `in`, `both`), `relation` (`*` ou uma relação) e `includeTimeline`. O retorno contém `root`, `nodes`, `edges`, `timeline` e metadados de truncamento. O root e todos os WorkObjects retornados são filtrados com o mesmo `can()` da Fase 4; nodes e edges invisíveis são removidos sem revelar a sua existência.
+
+Ciclos em `BLOCKS` ou `PARENT_OF` devolvem `CYCLE_DETECTED`. Self-edge devolve `VALIDATION_FAILED`. A relação `CONVERTED_TO` representa conversão por ligação entre objectos existentes, sem copiar o conteúdo do objecto de origem.
+
+A timeline é derivada de `DomainEvent` e `StatusTransition` dos nodes visíveis. Customer 360 é uma composição de traversal bidireccional com maior profundidade e a mesma filtragem por permissão, não uma segunda fonte de dados.
 
 ## Comunicação
 
