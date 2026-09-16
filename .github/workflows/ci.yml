@@ -26,17 +26,19 @@ jobs:
           cache: pnpm
       - name: Install dependencies and synchronize lockfile
         run: pnpm install --no-frozen-lockfile
+      - name: Normalize canonical Prisma enum syntax
+        run: node scripts/normalize-prisma-enums.mjs
       - name: Generate initial migration when absent
         run: node scripts/generate-phase2-migration.mjs
       - name: Commit synchronized database foundation
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          if git diff --quiet -- packages/db/prisma/migrations pnpm-lock.yaml; then
+          if git diff --quiet -- packages/db/prisma/migrations packages/db/prisma/schema.prisma pnpm-lock.yaml; then
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add packages/db/prisma/migrations pnpm-lock.yaml
+          git add packages/db/prisma/migrations packages/db/prisma/schema.prisma pnpm-lock.yaml
           git commit -m "chore(db): materialize phase 2 database foundation [skip ci]"
           git push origin HEAD:main
 
