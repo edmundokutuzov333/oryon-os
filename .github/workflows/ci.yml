@@ -165,10 +165,6 @@ jobs:
             | jq -e '.data.user.email == "admin@oryon.local" and .data.organization.id == "org_demo_0001" and (.data.workspaces | length) >= 1 and (.data.teams | length) >= 1' >/dev/null
       - name: Exercise cross-organization session rejection
         run: |
-          curl --silent --show-error --request POST http://127.0.0.1:4000/v1/auth/session \
-            --header 'X-Oryon-Org: org_demo_0002' \
-            --cookie /tmp/oryon-cookies.txt \
-            --data '{}' || true
           status=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:4000/v1/auth/session \
             --header 'X-Oryon-Org: org_demo_0002' \
             --cookie /tmp/oryon-cookies.txt)
