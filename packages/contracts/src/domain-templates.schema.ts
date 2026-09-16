@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EdgeRelationSchema } from "./graph.schema.js";
+import { GraphRelationSchema } from "./graph.schema.js";
 import { ObjectFieldDefSchema, ObjectStatusModelSchema } from "./work-object.schema.js";
 
 export const DomainKeySchema = z.enum(["crm", "support", "product_engineering"]);
@@ -19,7 +19,7 @@ export const DomainTemplateTypeSchema = z.object({
 export const DomainTemplateRelationSchema = z.object({
   fromTypeKey: z.string().min(1),
   toTypeKey: z.string().min(1),
-  relation: EdgeRelationSchema,
+  relation: GraphRelationSchema,
   label: z.string().min(1).max(120),
 });
 
