@@ -1,1 +1,3 @@
-export const ORYON_AI_VERSION = "0.1.0" as const;
+export const ORYON_AI_VERSION = "0.2.0" as const;
+export { executeAgentRun, rollbackAgentRun, validateAgentBudget } from "./agent-runtime.js";
+export type { AgentExecutionResult } from "./agent-runtime.js";
