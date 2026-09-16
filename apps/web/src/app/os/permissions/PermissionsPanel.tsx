@@ -29,16 +29,7 @@ export function PermissionsPanel({ organizationId }: { organizationId: string })
 	const [error, setError] = useState<string>();
 
 	function resource() {
-		return {
-			orgId: organizationId,
-			type: resourceType.trim(),
-			id: resourceId.trim(),
-			workspaceId: workspaceId.trim() || null,
-			projectId: projectId.trim() || null,
-			ownerId: ownerId.trim() || null,
-			teamId: teamId.trim() || null,
-			classification: classification.trim() || null,
-		};
+		return { orgId: organizationId, type: resourceType.trim(), id: resourceId.trim(), workspaceId: workspaceId.trim() || null, projectId: projectId.trim() || null, ownerId: ownerId.trim() || null, teamId: teamId.trim() || null, classification: classification.trim() || null };
 	}
 
 	async function runEvaluation(path: string, body: unknown) {
@@ -84,43 +75,34 @@ export function PermissionsPanel({ organizationId }: { organizationId: string })
 	return (
 		<section className="permissions-layout" aria-label={copy.title}>
 			<header className="permissions-header">
-				<div>
-					<p className="panel-kicker">{copy.eyebrow}</p>
-					<h1>{copy.title}</h1>
-					<p className="permissions-subtitle">{copy.subtitle}</p>
-				</div>
+				<div><p className="panel-kicker">{copy.eyebrow}</p><h1>{copy.title}</h1><p className="permissions-subtitle">{copy.subtitle}</p></div>
 				<a className="quiet-link" href="/os">{copy.back}</a>
 			</header>
-
 			<nav className="permissions-tabs" aria-label={copy.title}>
 				<button type="button" className={mode === "evaluate" ? "permission-tab active" : "permission-tab"} onClick={() => setMode("evaluate")}>{copy.evaluate}</button>
 				<button type="button" className={mode === "view-as" ? "permission-tab active" : "permission-tab"} onClick={() => setMode("view-as")}>{copy.viewAs}</button>
 				<button type="button" className={mode === "exposure" ? "permission-tab active" : "permission-tab"} onClick={() => { setMode("exposure"); void loadExposure(); }}>{copy.exposure}</button>
 			</nav>
-
 			{mode !== "exposure" ? (
 				<div className="permission-workbench">
 					<form className="permission-form" onSubmit={(event) => { event.preventDefault(); void evaluate(); }}>
 						<label><span>{copy.resourceType}</span><input value={resourceType} onChange={(event) => setResourceType(event.target.value)} required /></label>
 						<label><span>{copy.resourceId}</span><input value={resourceId} onChange={(event) => setResourceId(event.target.value)} required /></label>
 						<label><span>{copy.workspaceId}</span><input value={workspaceId} onChange={(event) => setWorkspaceId(event.target.value)} /></label>
-						<label><span>{copy.projectId} · {copy.optional}</span><input value={projectId} onChange={(event) => setProjectId(event.target.value)} /></label>
-						<label><span>{copy.ownerId} · {copy.optional}</span><input value={ownerId} onChange={(event) => setOwnerId(event.target.value)} /></label>
-						<label><span>{copy.teamId} · {copy.optional}</span><input value={teamId} onChange={(event) => setTeamId(event.target.value)} /></label>
+						<label><span>{copy.projectId} <small>({copy.optional})</small></span><input value={projectId} onChange={(event) => setProjectId(event.target.value)} /></label>
+						<label><span>{copy.ownerId} <small>({copy.optional})</small></span><input value={ownerId} onChange={(event) => setOwnerId(event.target.value)} /></label>
+						<label><span>{copy.teamId} <small>({copy.optional})</small></span><input value={teamId} onChange={(event) => setTeamId(event.target.value)} /></label>
 						<label><span>{copy.classification}</span><input value={classification} onChange={(event) => setClassification(event.target.value)} /></label>
 						<label><span>{copy.fields}</span><input value={fields} onChange={(event) => setFields(event.target.value)} /></label>
 						{mode === "view-as" ? <label><span>{copy.targetUser}</span><input value={targetUserId} onChange={(event) => setTargetUserId(event.target.value)} required /></label> : null}
 						<button type="submit" disabled={busy}>{busy ? copy.busy : mode === "view-as" ? copy.simulate : copy.run}</button>
 					</form>
-
 					<div className="permission-result" aria-live="polite">
 						{error ? <p className="permission-error" role="alert">{error}</p> : null}
 						{evaluation ? (
 							<>
 								<div className="permission-principal"><span>{copy.principal}</span><strong>{evaluation.principal.email}</strong><code>{evaluation.principal.id}</code></div>
-								<div className="permission-action-grid">
-									{Object.entries(evaluation.permissions).map(([action, allowed]) => <div className={allowed ? "permission-state allow" : "permission-state deny"} key={action}><span>{action}</span><strong>{allowed ? copy.allowed : copy.denied}</strong></div>)}
-								</div>
+								<div className="permission-action-grid">{Object.entries(evaluation.permissions).map(([action, allowed]) => <div className={allowed ? "permission-state allow" : "permission-state deny"} key={action}><span>{action}</span><strong>{allowed ? copy.allowed : copy.denied}</strong></div>)}</div>
 								<div className="exposure-strip">
 									<div><span>{copy.external}</span><strong>{evaluation.exposure.external.allowed ? copy.allowed : copy.denied}</strong><small>{evaluation.exposure.external.reason}</small></div>
 									<div><span>{copy.ai}</span><strong>{evaluation.exposure.ai.allowed ? copy.allowed : copy.denied}</strong><small>{evaluation.exposure.ai.reason}</small></div>
