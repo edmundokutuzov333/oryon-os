@@ -160,6 +160,7 @@ export type PermissionResource = z.infer<typeof PermissionResourceSchema>;
 export type PermissionRoleBinding = z.infer<typeof PermissionRoleBindingSchema>;
 export type PermissionGrant = z.infer<typeof PermissionGrantSchema>;
 export type PermissionClassification = z.infer<typeof PermissionClassificationSchema>;
+export type PermissionDecision = z.infer<typeof PermissionDecisionSchema>;
 export type PermissionEvaluation = z.infer<typeof PermissionEvaluationSchema>;
 export type PermissionEvaluateInput = z.infer<typeof PermissionEvaluateInputSchema>;
 export type PermissionViewAsInput = z.infer<typeof PermissionViewAsInputSchema>;
