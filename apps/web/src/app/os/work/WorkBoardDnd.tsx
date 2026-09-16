@@ -1,7 +1,7 @@
 "use client";
 
 import { DndContext, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
-import { StatusChip, type } from "@oryon/ui";
+import { StatusChip } from "@oryon/ui";
 import type { WorkObjectResponse } from "@oryon/contracts/work-object";
 
 type Column = { key: string; label: string; items: WorkObjectResponse[] };
