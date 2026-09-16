@@ -20,7 +20,7 @@
 		"check:phase14": "node scripts/check-phase14.mjs",
 		"check:phase15": "node scripts/check-phase15.mjs",
 		"gen:openapi": "pnpm --filter @oryon/api gen:openapi",
-		"gen:sdk": "cd sdk && pnpm build",
+		"gen:sdk": "pnpm exec tsc --strict --target ES2022 --module NodeNext --moduleResolution NodeNext --declaration --outDir sdk/dist sdk/src/index.ts",
 		"analyze:bundle": "node scripts/analyze-bundle.mjs",
 		"audit:security": "node scripts/audit-security.mjs",
 		"performance:gate": "node scripts/performance-gate.mjs",
