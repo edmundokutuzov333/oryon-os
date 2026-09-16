@@ -1,4 +1,4 @@
-import { PrismaClient } from "./generated/client.js";
+import type { Prisma } from "./generated/client.js";
 
 export interface DomainEventInput {
 	readonly orgId: string;
@@ -14,7 +14,7 @@ export interface DomainEventInput {
 }
 
 export async function appendDomainEvent(
-	tx: PrismaClient,
+	tx: Prisma.TransactionClient,
 	input: DomainEventInput,
 ): Promise<{ readonly id: string }> {
 	const event = await tx.domainEvent.create({
