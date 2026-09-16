@@ -5,6 +5,7 @@ import {
 	transitionStatus,
 	validateMoney,
 	validateParent,
+	validateStatusModel,
 	validateWorkObjectDates,
 	validateWorkObjectUpdate,
 } from "@oryon/core";
@@ -54,6 +55,7 @@ export class WorkObjectRepository {
 	}
 
 	async createTypeDef(orgId: string, actorId: string, input: WorkObjectTypeCreateInput): Promise<{ id: string }> {
+		validateStatusModel(input.statusModel);
 		return withOrgContext(this.db, orgId, async (tx) => {
 			const row = await tx.objectTypeDef.create({ data: { orgId, key: input.key, name: input.name, pluralName: input.pluralName, icon: input.icon ?? null, isSystem: false, idPrefix: input.idPrefix, schema: input.schema, statusModel: input.statusModel, defaultViews: [] } });
 			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "ObjectTypeDef", subjectId: row.id, name: "work_object.type.created", payload: { key: input.key, name: input.name } });
@@ -80,7 +82,8 @@ export class WorkObjectRepository {
 			const state = typeDef.statusModel.states.find((candidate) => candidate.key === prepared.status);
 			if (!state) throw new Error("INVALID_STATUS");
 			const object = await tx.workObject.create({ data: { id, orgId, workspaceId: prepared.workspaceId ?? null, typeKey: prepared.typeKey, typeDefId: typeRow.id, humanId: generateHumanId(id, typeRow.idPrefix), title: prepared.title, description: prepared.description ?? null, status: prepared.status, statusCategory: state.category, priority: prepared.priority ?? "NORMAL", ownerId: prepared.ownerId ?? null, parentObjectId: prepared.parentObjectId ?? null, startAt: prepared.startAt ? new Date(prepared.startAt) : null, dueAt: prepared.dueAt ? new Date(prepared.dueAt) : null, progress: prepared.progress ?? 0, moneyAmount: prepared.moneyAmount, moneyCurrency: prepared.moneyCurrency, probability: prepared.probability, secondaryDate: prepared.secondaryDate ? new Date(prepared.secondaryDate) : null, externalRef: prepared.externalRef, severity: prepared.severity, classification: prepared.classification, tags: prepared.tags, customFields: prepared.customFields, createdBy: actorId } });
-			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "WorkObject", subjectId: object.id, name: "work_object.created", payload: { typeKey: object.typeKey, humanId: object.humanId, title: object.title } });
+			if (object.workspaceId) await tx.objectPlacement.create({ data: { orgId, objectId: object.id, containerType: "WORKSPACE", containerId: object.workspaceId, position: "0", isPrimary: true } });
+			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "WorkObject", subjectId: object.id, name: "work_object.created", payload: { typeKey: object.typeKey, humanId: object.humanId, title: object.title, primaryWorkspaceId: object.workspaceId } });
 			return object.id;
 		});
 	}
@@ -121,6 +124,7 @@ export class WorkObjectRepository {
 			if (input.priority !== undefined) data.priority = input.priority;
 			if (input.ownerId !== undefined) data.ownerId = input.ownerId;
 			if (input.parentObjectId !== undefined) data.parentObjectId = input.parentObjectId;
+			if (input.workspaceId !== undefined) data.workspaceId = input.workspaceId;
 			if (input.startAt !== undefined) data.startAt = input.startAt ? new Date(input.startAt) : null;
 			if (input.dueAt !== undefined) data.dueAt = input.dueAt ? new Date(input.dueAt) : null;
 			if (input.progress !== undefined) data.progress = input.progress;
@@ -134,6 +138,10 @@ export class WorkObjectRepository {
 			if (input.tags !== undefined) data.tags = input.tags;
 			if (mergedCustomFields !== undefined) data.customFields = mergedCustomFields;
 			const updated = await tx.workObject.update({ where: { id }, data, include: { assignments: true, placements: true, typeDef: true } });
+			if (input.workspaceId !== undefined && input.workspaceId !== current.workspaceId) {
+				await tx.objectPlacement.updateMany({ where: { orgId, objectId: id, containerType: "WORKSPACE" }, data: { isPrimary: false } });
+				if (input.workspaceId) await tx.objectPlacement.upsert({ where: { objectId_containerType_containerId: { objectId: id, containerType: "WORKSPACE", containerId: input.workspaceId } }, create: { orgId, objectId: id, containerType: "WORKSPACE", containerId: input.workspaceId, position: "0", isPrimary: true }, update: { isPrimary: true } });
+			}
 			if (transition && transition.status !== current.status) await tx.statusTransition.create({ data: { orgId, objectId: id, fromStatus: current.status, toStatus: transition.status, actorId, actorType: "MEMBER" } });
 			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "WorkObject", subjectId: id, name: "work_object.updated", payload: { changed: Object.keys(data), status: updated.status } });
 			return updated;
