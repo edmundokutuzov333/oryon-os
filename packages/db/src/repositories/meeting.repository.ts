@@ -166,7 +166,7 @@ export class MeetingRepository {
 			const object = await tx.workObject.create({ data: { id: objectId, orgId, workspaceId: prepared.workspaceId ?? null, typeKey: prepared.typeKey, typeDefId: typeRow.id, humanId: generateHumanId(objectId, typeRow.idPrefix), title: prepared.title, description: prepared.description ?? null, status: prepared.status, statusCategory: initial.category, priority: prepared.priority ?? "NORMAL", ownerId: actorId, parentObjectId: null, startAt: null, dueAt: null, progress: 0, moneyAmount: null, moneyCurrency: null, probability: null, secondaryDate: null, externalRef: null, severity: null, classification: null, tags: prepared.tags, customFields: prepared.customFields, createdBy: actorId } });
 			if (object.workspaceId) await tx.objectPlacement.create({ data: { orgId, objectId: object.id, containerType: "WORKSPACE", containerId: object.workspaceId, position: "0", isPrimary: true } });
 			const relation = artifact.kind === "DECISIONS" ? "DECIDED_IN" : "RESULTED_IN";
-			const edge = await tx.edge.create({ data: { orgId, fromType: "work_object", fromId: object.id, toType: "meeting", toId: meetingId, relation, metadata: { artifactId } as Prisma.InputJsonValue, createdBy: actorId } });
+			const edge = await tx.edge.create({ data: { orgId, fromType: "work_object", fromId: object.id, toType: "meeting", toId: meetingId, relation, metadata: { artifactId } as unknown as Prisma.InputJsonValue, createdBy: actorId } });
 			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "WorkObject", subjectId: object.id, name: "meeting.artifact.converted", payload: { meetingId, artifactId, workObjectId: object.id, relation } });
 			return { artifactId, workObjectId: object.id, edgeId: edge.id };
 		});
