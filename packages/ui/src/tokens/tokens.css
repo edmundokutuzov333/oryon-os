@@ -1,0 +1,46 @@
+:root {
+  --color-acid-500: #C3F53C;
+  --color-ink-950: #0B0B0C;
+  --color-ink-900: #111113;
+  --color-ink-850: #17181A;
+  --color-ink-800: #1E2023;
+  --color-ink-750: #26282C;
+  --color-ink-700: #2F3236;
+  --color-ink-600: #3C4045;
+  --color-ink-500: #5B6067;
+  --color-ink-400: #80858D;
+  --color-ink-300: #A5AAB2;
+  --color-ink-200: #C9CDD3;
+  --color-ink-100: #E7E9EC;
+  --color-ink-050: #F4F5F7;
+  --color-ink-000: #FFFFFF;
+  --color-warning: #F5A524;
+  --color-danger: #FF4D5E;
+  --color-info: #4D9FFF;
+  --bg-canvas: var(--color-ink-950);
+  --bg-chrome: var(--color-ink-900);
+  --bg-surface: var(--color-ink-850);
+  --bg-surface-raise: var(--color-ink-800);
+  --bg-surface-hover: var(--color-ink-750);
+  --bg-inverted: var(--color-ink-000);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-focus: var(--color-acid-500);
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-2xl: 36px;
+  --radius-full: 9999px;
+}
+
+.oryon-inverted {
+  --bg-surface: var(--color-ink-000);
+  --bg-surface-raise: var(--color-ink-050);
+  --bg-surface-hover: #EEF0F3;
+  --border-subtle: rgba(11, 11, 12, 0.06);
+  --border-default: rgba(11, 11, 12, 0.10);
+  --border-strong: rgba(11, 11, 12, 0.16);
+}

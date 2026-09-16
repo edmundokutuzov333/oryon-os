@@ -1,0 +1,75 @@
+# CLAUDE.md — Manual de Arquitectura OryonOS
+
+Documento normativo. Precedência sobre qualquer instrução conversacional.
+Alterações só por ADR aprovado em `/docs/DECISIONS.md`.
+
+A stack, árvore, nomenclatura, scripts, convenções de código e CI deste ficheiro seguem a especificação fornecida para a OryonOS V1. Em caso de conflito, deve ser consultado o documento normativo original fornecido para esta sessão antes de implementar a alteração.
+
+## Stack
+
+Node.js 24 LTS, pnpm 10.x, Turborepo 2.5+, TypeScript 5.9+ strict, Biome 2.x, Lefthook 1.x.
+
+Frontend: Next.js 16 App Router, React 19.2+, Tailwind 4, Radix, Motion 12, Zustand 5, TanStack Query/Table/Virtual, dnd-kit, React Hook Form, Zod 4, Lucide, Temporal/date-fns, TipTap 3, Yjs 13, tldraw 3, Visx/Recharts, next-intl, Storybook 9.
+
+Backend: tRPC 11, Fastify 5 + OpenAPI 3.1, Prisma 6, PostgreSQL 17, pgvector/pg_trgm/pgcrypto/uuid-ossp/pg_partman, Redis 7.4+, BullMQ 5, NATS JetStream 2.11+, Typesense 28, S3 compatível, Socket.IO/uWebSockets, LiveKit 1.9+, Temporal 1.28+, WorkOS, Auth.js 5, Resend/React Email, React PDF/Gotenberg, Vercel AI SDK 5, OpenTelemetry/Grafana LGTM, Sentry 9, OpenFeature/Flagsmith.
+
+Node 24 é obrigatório para CI. Bun não é runtime de produção. npm e yarn não são usados.
+
+## Fronteiras
+
+```text
+apps/*        → podem importar packages/*
+packages/ui   → só packages/config. Nunca db, core ou contracts.
+packages/core → só packages/contracts. Domínio puro, zero I/O, zero Prisma.
+packages/db   → importa core e contracts. Único pacote que conhece Prisma.
+packages/ai   → importa core, contracts, db. Nunca é importado por core.
+```
+
+Violação de fronteira falha o build e CI.
+
+## Regras não negociáveis
+
+TypeScript strict, zero `any`, zero `@ts-ignore`. Toda entrada e saída pública passa por Zod. Nenhum componente ou rota acede Prisma directamente. Toda query é precedida por `can()` e protegida por RLS. Toda mutação emite DomainEvent na mesma transacção via outbox. Dinheiro usa Decimal/minor units + currency. Datas são UTC na base. Zero strings literais em JSX. E2E inclui acessibilidade. LCP < 1.8s, INP < 200ms, first load JS `/os` < 180 kB gzip, query P95 < 120ms.
+
+## Scripts
+
+```bash
+pnpm install
+pnpm dev
+pnpm dev --filter=web
+pnpm dev --filter=api
+pnpm dev --filter=worker
+pnpm storybook
+pnpm infra:up
+pnpm infra:down
+pnpm db:generate
+pnpm db:migrate:dev --name <slug>
+pnpm db:migrate:deploy
+pnpm db:migrate:status
+pnpm db:seed
+pnpm db:studio
+pnpm db:rls:verify
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm test:coverage
+pnpm test:e2e
+pnpm test:visual
+pnpm build
+pnpm verify
+pnpm gen:openapi
+pnpm gen:sdk
+pnpm gen:events
+pnpm gen:i18n
+pnpm gen:tokens
+pnpm analyze:bundle
+pnpm analyze:deps
+pnpm analyze:unused
+pnpm audit:security
+```
+
+`prisma db push`, `git push --force`, `git commit --no-verify` e `pnpm db:reset` fora de local são proibidos.
+
+## CI
+
+PRs passam por install/cache, typecheck, lint, testes, validação/migração de DB, RLS, build, E2E, visual regression, bundle analysis, security audit e preview deploy. Merge apenas com squash e portões verdes. `main` deve estar protegido.

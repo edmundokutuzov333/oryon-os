@@ -1,0 +1,1 @@
+{"name":"@oryon/realtime","private":true,"version":"0.1.0","type":"module","scripts":{"dev":"tsx watch src/index.ts","build":"tsc --outDir dist","typecheck":"tsc --noEmit","lint":"biome check .","test":"vitest run"},"devDependencies":{"tsx":"^4.20.0","typescript":"workspace:*","vitest":"^3.2.0","@biomejs/biome":"workspace:*"}}
