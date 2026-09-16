@@ -100,6 +100,29 @@ A UI pode filtrar localmente o conjunto autorizado de WorkObjects por texto, tip
 
 Comentários, anexos e alterações de estado obedecem às mesmas permissões e tenancy do WorkObject. Anexos físicos e upload para S3 permanecem responsabilidade da Fase 9; a Fase 8 apenas associa `FileAsset` já existente.
 
+## Docs + Files
+
+A Fase 9 usa `Page` como entidade documental universal. `Page.contentYjs` é o estado persistido da colaboração, `contentJson` é a representação estruturada para rendering/exportação e `contentText` é a representação textual para pesquisa. `PageVersion` guarda snapshots imutáveis de conteúdo.
+
+`GET /v1/pages` lista páginas visíveis na organização e aceita `workspaceId` e `limit`.
+`POST /v1/pages` cria uma página e usa o mesmo `Page` para DOC, WIKI, CANVAS, DATABASE_VIEW, BRIEF ou NOTE.
+`GET /v1/pages/{id}` devolve a página com `contentYjsBase64` e `permissions`.
+`PATCH /v1/pages/{id}` actualiza metadados ou conteúdo. Alterações de conteúdo criam automaticamente uma nova `PageVersion` na mesma transacção.
+`GET /v1/pages/{id}/versions` devolve os snapshots versionados mais recentes.
+`POST /v1/pages/{id}/publish` publica ou retira a publicação usando `publishedSlug` e `publishedAt` e requer `manage`.
+`GET /v1/pages/{id}/attachments` lista `FileAsset` associados à página.
+`POST /v1/pages/{id}/attachments` associa um `FileAsset` existente à página e requer `update`.
+
+`POST /v1/files/upload-intent` cria uma intenção de upload com `fileId`, `storageKey` e URL PUT pré-assinada para S3/MinIO. O browser envia o conteúdo directamente para storage.
+`POST /v1/files/complete` valida `fileId`, `storageKey`, tamanho e MIME do objecto no storage antes de criar `FileAsset`.
+`GET /v1/files/{id}` devolve metadados e uma URL GET pré-assinada quando `export` é permitido.
+
+`GET /v1/search/text` pesquisa `Page.title`, `Page.contentText`, `FileAsset.name` e `FileAsset.ocrText` dentro da organização, filtrando novamente cada resultado com o permission engine. Typesense e retrieval híbrido continuam reservados para Search + AI.
+
+Classificação é persistida em `Page.classification` e `FileAsset.classification`; downloads de ficheiros passam por `can(..., "export")`, permitindo que `ClassificationLabel.blocksDownload` impeça exposição.
+
+Yjs é persistido no servidor mas não introduz nesta fase um provider realtime independente. A sincronização realtime transversal será integrada na camada de colaboração/comunicação das fases posteriores sem mudar o modelo de dados documental.
+
 ## Comunicação
 
 `POST /v1/channels/{channelId}/messages`, `POST /v1/messages/{id}/convert` e `GET /v1/channels/{id}/catch-up`.
