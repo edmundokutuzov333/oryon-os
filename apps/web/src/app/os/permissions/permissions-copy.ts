@@ -1,8 +1,7 @@
 export const permissionsCopy = {
 	eyebrow: "CONTROLO DE ACESSO",
 	title: "Permissões",
-	subtitle: "Veja exactamente o que uma pessoa pode fazer, o que fica mascarado e o que pode sair da organização.",
-	evaluate: "Avaliar acesso",
+	subtitle: "Veja exactamente o que uma pessoa pode fazer, o que fica mascarado e o que pode sair da organização.",	evaluate: "Avaliar acesso",
 	viewAs: "Ver como",
 	exposure: "Exposição",
 	resourceType: "Tipo de recurso",
@@ -35,4 +34,8 @@ export const permissionsCopy = {
 	signInRequired: "É necessário iniciar sessão para consultar permissões.",
 	executionError: "Não foi possível avaliar as permissões.",
 	back: "Voltar ao workspace",
+	masked: "Mascarado",
+	unmasked: "Sem máscara",
+	classificationSource: "classificação",
+	busy: "A processar...",
 };
