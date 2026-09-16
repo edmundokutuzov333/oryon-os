@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { IdentityContextSchema } from "@oryon/contracts/identity";
 import { LogoutButton } from "./LogoutButton";
-import { authCopy } from "../lib/auth-copy";
+import { authCopy } from "../../lib/auth-copy";
 
 const apiUrl = process.env.ORYON_API_URL ?? "http://localhost:4000";
 const cookieName = process.env.ORYON_AUTH_COOKIE_NAME ?? "oryon_session";
