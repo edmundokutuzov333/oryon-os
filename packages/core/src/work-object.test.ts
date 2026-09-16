@@ -54,6 +54,6 @@ describe("work object domain", () => {
 	});
 
 	it("generates stable human ids from universal object ids", () => {
-		expect(generateHumanId("clxyz123456789", "TASK")).toBe("TASK-3456789");
+		expect(generateHumanId("clxyz123456789", "TASK")).toBe("TASK-23456789");
 	});
 });
