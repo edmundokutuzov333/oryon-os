@@ -51,3 +51,28 @@ A V1 exige um único motor de autorização para UI, API, agentes e integraçõe
 ### Consequências
 
 A autorização deixa de ser lógica duplicada entre frontend, rotas e integrações. O backend torna-se a fonte única da verdade, a UI pode renderizar estados exactos e futuras fases, incluindo Work Objects, Graph, AI e Agents, podem reutilizar o mesmo engine sem criar sistemas de permissão paralelos.
+
+## ADR-0003: WorkObject Engine universal da Fase 5
+
+- Estado: aceite para implementação da Fase 5
+- Data: 2026-09-16
+
+### Contexto
+
+A V1 define `WorkObject` como o motor universal de trabalho. O schema canónico já fornece `WorkObject`, `ObjectTypeDef`, `ObjectPlacement`, `Assignment` e `StatusTransition`. Criar tabelas de tipo específico nesta fase recriaria a arquitectura que o modelo universal procura evitar.
+
+### Decisão
+
+1. Todo o trabalho continua em `WorkObject`; tipos nativos e tipos criados pelo utilizador usam a mesma tabela.
+2. `ObjectTypeDef` define schema dos custom fields, estados, transições, prefixo de human ID e metadados do tipo.
+3. `packages/core` valida invariantes de domínio sem I/O: status model, transitions, custom fields, datas, progresso, dinheiro, parent e human ID.
+4. `packages/db` é responsável pelo acesso tenant-aware e por transacções. Owner, parent, User/Agent assignment e ObjectPlacement são validados dentro da transacção.
+5. Mudanças de estado persistem `StatusTransition` e todas as mutações escrevem `DomainEvent` na mesma transacção.
+6. `ObjectPlacement` permite multi-homing; quando a criação nasce num workspace, o workspace é o contexto primário do objecto.
+7. A API devolve sempre `permissions` em `WorkObjectResponse` e trata recursos invisíveis como `NOT_FOUND`.
+8. A UI apenas consome contratos Zod e renderiza o contexto devolvido pelo backend. O editor de custom fields é derivado de `ObjectTypeDef`, nunca de regras duplicadas no cliente.
+9. Board, List, Calendar, Timeline, comentários e anexos permanecem responsabilidades da Fase 8; a Fase 5 fornece o motor e as operações primitivas sobre as quais essas vistas serão construídas.
+
+### Consequências
+
+O WorkObject Engine pode alimentar CRM, Support, Product/Engineering e tipos empresariais personalizados sem criar um segundo modelo de trabalho. A mesma identidade de objecto passa pelas futuras fases de Graph, Docs, Comunicação, IA e Agents.
