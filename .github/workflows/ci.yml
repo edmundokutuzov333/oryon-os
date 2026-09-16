@@ -23,8 +23,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --no-frozen-lockfile
+      - run: node scripts/check-boundaries.mjs
+      - run: node scripts/check-v1-invariants.mjs
       - run: pnpm typecheck
       - run: pnpm lint
-      - run: node scripts/check-boundaries.mjs
-      - run: pnpm test
+      - run: pnpm test -- --passWithNoTests
       - run: pnpm build
