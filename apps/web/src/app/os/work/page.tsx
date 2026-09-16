@@ -1,5 +1,5 @@
-import { WorkObjectStudio } from "./WorkObjectStudio";
+import { WorkExperienceStudio } from "./WorkExperienceStudio";
 
 export default function WorkPage() {
-  return <WorkObjectStudio />;
+  return <WorkExperienceStudio />;
 }
