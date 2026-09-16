@@ -8,7 +8,7 @@ import Fastify from "fastify";
 import { registerCommunicationRoutesV2 } from "./communication-v2.js";
 import { registerDocsFilesRoutesV2 } from "./docs-files-v2.js";
 import { registerGraphRoutes } from "./graph.js";
-import { registerMeetingRoutes } from "./meetings.js";
+import { registerMeetingRoutesV2 } from "./meetings-v2.js";
 import { registerPageAttachmentRoutes } from "./page-attachments.js";
 import { registerPermissionRoutes } from "./permissions.js";
 import { registerWorkExperienceRoutes } from "./work-experience.js";
@@ -39,7 +39,7 @@ await registerWorkExperienceRoutes(app);
 await registerDocsFilesRoutesV2(app);
 await registerPageAttachmentRoutes(app);
 await registerCommunicationRoutesV2(app, { to: (room) => ({ emit: (event, payload) => io.to(room).emit(event, payload) }) });
-await registerMeetingRoutes(app);
+await registerMeetingRoutesV2(app);
 await registerGraphRoutes(app);
 try { await getPrisma().$queryRawUnsafe("SELECT 1"); await app.listen({ port: 4000, host: "0.0.0.0" }); } catch (error) { app.log.error(error); await io.close(); await closePrisma(); process.exitCode = 1; }
 process.on("SIGTERM", async () => { await io.close(); await app.close(); await closePrisma(); });
