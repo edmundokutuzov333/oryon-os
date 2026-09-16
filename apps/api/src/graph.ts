@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { GraphEdgeCreateInputSchema, GraphEdgeResponseSchema, GraphTraverseQuerySchema, GraphTraverseResponseSchema, type GraphEdgeCreateInput, type GraphNodeRef } from "@oryon/contracts/graph";
+import { GraphEdgeCreateInputSchema, GraphEdgeResponseSchema, GraphTraverseQuerySchema, GraphTraverseResponseSchema, type GraphEdgeCreateInput } from "@oryon/contracts/graph";
 import { can } from "@oryon/core";
 import { GraphRepository, PermissionRepository } from "@oryon/db/repositories";
 import { getPrisma } from "@oryon/db";
@@ -70,9 +70,9 @@ function objectResource(object: { orgId: string; id: string; workspaceId: string
 }
 
 async function canRead(orgId: string, userId: string, objectId: string): Promise<boolean> {
-	const snapshot = await permissions.getSnapshot(orgId, userId, "work_object", objectId);
 	const object = await graph.getWorkObject(orgId, objectId);
 	if (!object) return false;
+	const snapshot = await permissions.getSnapshot(orgId, userId, "work_object", objectId, object.classification);
 	return can({ orgId, ...snapshot }, objectResource(object), "read").allowed;
 }
 
@@ -144,6 +144,7 @@ export async function registerGraphRoutes(app: FastifyInstance): Promise<void> {
 			const current = await session(request, orgId);
 			const query = GraphTraverseQuerySchema.parse(request.query);
 			if (query.rootType !== "work_object") throw new Error("GRAPH_NODE_TYPE_UNSUPPORTED");
+			if (!(await canRead(orgId, current.userId, query.rootId))) throw new Error("NOT_FOUND");
 			const raw = await graph.traverse(orgId, query);
 			const filtered = await filterTraversal(orgId, current.userId, raw);
 			return reply.send(envelope(request, GraphTraverseResponseSchema.parse({ ...filtered, meta: { ...filtered.meta, depth: query.depth, direction: query.direction } })));
