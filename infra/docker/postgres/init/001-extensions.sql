@@ -1,5 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE EXTENSION IF NOT EXISTS vector;
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS pg_partman;
+-- Prisma owns database extensions in the canonical init migration.
+-- Keep this directory present for the postgres image, but do not mutate the
+-- public schema before `prisma migrate deploy` runs.
