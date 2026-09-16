@@ -4,10 +4,17 @@ import { readFileSync, writeFileSync } from "node:fs";
 const path = "packages/db/prisma/schema.prisma";
 let source = readFileSync(path, "utf8");
 
-source = source.replace(/^enum ([A-Za-z_][A-Za-z0-9_]*) \{ ([^{}\n]+) \}$/gm, (_match, name, values) => {
-	const members = values.trim().split(/\s+/).map((value) => `\t${value}`).join("\n");
-	return `enum ${name} {\n${members}\n}`;
-});
+source = source.replace(
+	/^enum ([A-Za-z_][A-Za-z0-9_]*) \{ ([^{}\n]+) \}$/gm,
+	(_match, name, values) => {
+		const members = values
+			.trim()
+			.split(/\s+/)
+			.map((value) => `\t${value}`)
+			.join("\n");
+		return `enum ${name} {\n${members}\n}`;
+	},
+);
 
 const organizationRelations = [
 	"edges Edge[]",
@@ -26,11 +33,16 @@ const organizationRelations = [
 	"savedViews SavedView[]",
 	"workflowRuns WorkflowRun[]",
 ];
-const missingOrganizationRelations = organizationRelations.filter((relation) => !source.includes(`\n  ${relation}`));
+const missingOrganizationRelations = organizationRelations.filter(
+	(relation) => !source.includes(`\n  ${relation}`),
+);
 if (missingOrganizationRelations.length > 0) {
 	const anchor = "  meetings   Meeting[]\n";
 	if (!source.includes(anchor)) throw new Error("Organization relation anchor not found");
-	source = source.replace(anchor, `${anchor}${missingOrganizationRelations.map((relation) => `  ${relation}\n`).join("")}`);
+	source = source.replace(
+		anchor,
+		`${anchor}${missingOrganizationRelations.map((relation) => `  ${relation}\n`).join("")}`,
+	);
 }
 
 const userRelations = [
@@ -40,13 +52,22 @@ const userRelations = [
 	"meetingParticipants MeetingParticipant[]",
 	"notifications Notification[]",
 ];
-const missingUserRelations = userRelations.filter((relation) => !source.includes(`\n  ${relation}`));
+const missingUserRelations = userRelations.filter(
+	(relation) => !source.includes(`\n  ${relation}`),
+);
 if (missingUserRelations.length > 0) {
 	const anchor = "  auditLogs AuditLog[]\n";
 	if (!source.includes(anchor)) throw new Error("User relation anchor not found");
-	source = source.replace(anchor, `${anchor}${missingUserRelations.map((relation) => `  ${relation}\n`).join("")}`);
+	source = source.replace(
+		anchor,
+		`${anchor}${missingUserRelations.map((relation) => `  ${relation}\n`).join("")}`,
+	);
 }
 
 writeFileSync(path, source);
-execFileSync("pnpm", ["--filter", "@oryon/db", "exec", "prisma", "format", "--schema", "prisma/schema.prisma"], { stdio: "inherit" });
+execFileSync(
+	"pnpm",
+	["--filter", "@oryon/db", "exec", "prisma", "format", "--schema", "prisma/schema.prisma"],
+	{ stdio: "inherit" },
+);
 console.log(`Normalized Prisma schema syntax and relation metadata in ${path}`);
