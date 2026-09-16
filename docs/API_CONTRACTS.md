@@ -85,6 +85,21 @@ Ciclos em `BLOCKS` ou `PARENT_OF` devolvem `CYCLE_DETECTED`. Self-edge devolve `
 
 A timeline é derivada de `DomainEvent` e `StatusTransition` dos nodes visíveis. Customer 360 é uma composição de traversal bidireccional com maior profundidade e a mesma filtragem por permissão, não uma segunda fonte de dados.
 
+## Work Experience
+
+A Fase 8 usa o mesmo `WorkObject` para as vistas `List`, `Board`, `Calendar` e `Timeline`.
+
+`GET /v1/work-objects/{id}` devolve o detalhe canónico do objecto com `permissions`.
+`GET /v1/work-objects/{id}/comments` devolve comentários visíveis ordenados por criação.
+`POST /v1/work-objects/{id}/comments` cria um comentário e requer `comment`; o body usa `bodyText`, `parentId`, `mentions` e `isInternal`.
+`GET /v1/work-objects/{id}/attachments` devolve anexos existentes associados ao WorkObject.
+`POST /v1/work-objects/{id}/attachments` associa um `FileAsset` existente ao objecto e requer `update`.
+`GET /v1/work-objects/{id}/history` devolve a linha temporal derivada de `DomainEvent` e `StatusTransition`.
+
+A UI pode filtrar localmente o conjunto autorizado de WorkObjects por texto, tipo e estado; não é introduzido nesta fase um segundo motor de pesquisa, reservado para Search + AI.
+
+Comentários, anexos e alterações de estado obedecem às mesmas permissões e tenancy do WorkObject. Anexos físicos e upload para S3 permanecem responsabilidade da Fase 9; a Fase 8 apenas associa `FileAsset` já existente.
+
 ## Comunicação
 
 `POST /v1/channels/{channelId}/messages`, `POST /v1/messages/{id}/convert` e `GET /v1/channels/{id}/catch-up`.
