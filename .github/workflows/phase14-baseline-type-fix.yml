@@ -1,0 +1,49 @@
+name: phase14-baseline-type-fix
+on:
+  push:
+    branches: [feat/phase-14-domain-templates]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[phase14-baseline-fix]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Align repository code with generated Prisma client
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace_line(path, needle, repl):
+              p = Path(path)
+              lines = p.read_text().splitlines(keepends=True)
+              hits = [i for i, line in enumerate(lines) if needle in line]
+              if len(hits) != 1:
+                  raise SystemExit(f'{path}: expected one line containing {needle!r}, found {len(hits)}')
+              lines[hits[0]] = lines[hits[0]].replace(needle, repl)
+              p.write_text(''.join(lines))
+
+          replace_line('packages/db/src/repositories/communication.repository.ts', 'metadata: { source: "communication.convert" }', 'metadata: { source: "communication.convert" } as Prisma.InputJsonValue')
+          replace_line('packages/db/src/repositories/communication.repository.ts', 'if (object.workspaceId) await tx.objectPlacement.create({ data: { orgId, objectId,', 'if (object.workspaceId) await tx.objectPlacement.create({ data: { orgId, objectId: workObjectId,')
+          replace_line('packages/db/src/repositories/docs-files.repository.ts', 'import type { PrismaClient }', 'import type { Prisma, PrismaClient }')
+          replace_line('packages/db/src/repositories/docs-files.repository.ts', 'kind: input.kind ?? "DOC"', 'kind: input.kind === "CANVAS" ? "DOC" : input.kind ?? "DOC"')
+          replace_line('packages/db/src/repositories/docs-files.repository.ts', 'const page = await tx.page.update({ where: { id }, data });', 'const page = await tx.page.update({ where: { id }, data: data as Prisma.PageUncheckedUpdateInput });')
+          replace_line('packages/db/src/repositories/graph.repository.ts', 'import type { Prisma, PrismaClient }', 'import { Prisma, type PrismaClient }')
+          replace_line('packages/db/src/repositories/graph.repository.ts', 'metadata: input.metadata', 'metadata: JSON.parse(JSON.stringify(input.metadata)) as Prisma.InputJsonValue')
+          replace_line('packages/db/src/repositories/meeting.repository.ts', 'import type { Prisma, PrismaClient }', 'import { Prisma, type PrismaClient }')
+          replace_line('packages/db/src/repositories/meeting.repository.ts', 'contentJson: input.contentJson === undefined ? null : (input.contentJson as Prisma.InputJsonValue)', 'contentJson: input.contentJson === undefined ? Prisma.JsonNull : (input.contentJson as Prisma.InputJsonValue)')
+          replace_line('packages/db/src/repositories/meeting.repository.ts', 'metadata: { artifactId }', 'metadata: { artifactId } as Prisma.InputJsonValue')
+          replace_line('packages/db/src/repositories/work-experience.repository.ts', 'orderBy: { occurredAt: "asc" }', 'orderBy: { createdAt: "asc" }')
+          replace_line('packages/db/src/repositories/work-experience.repository.ts', 'occurredAt: event.occurredAt', 'occurredAt: event.createdAt')
+          replace_line('packages/db/src/repositories/work-object.repository.ts', 'const data: Prisma.WorkObjectUpdateInput = { statusCategory, completedAt };', 'const data: Prisma.WorkObjectUncheckedUpdateInput = { statusCategory, completedAt };')
+          replace_line('packages/db/src/repositories/work-object.repository.ts', 'customFields: mergedCustomFields }', 'customFields: JSON.parse(JSON.stringify(mergedCustomFields)) as Prisma.InputJsonValue }')
+          replace_line('packages/db/src/repositories/work-object.repository.ts', 'customFields: prepared.customFields,', 'customFields: JSON.parse(JSON.stringify(prepared.customFields)) as Prisma.InputJsonValue,')
+          print('Prisma baseline alignment complete.')
+          PY
+          rm .github/workflows/phase14-baseline-type-fix.yml
+          git config user.name "oryon-ci"
+          git config user.email "ci@oryon.local"
+          git add packages/db/src/repositories .github/workflows/phase14-baseline-type-fix.yml
+          git commit -m "chore(db): align Prisma repository inputs [phase14-baseline-fix]"
+          git push origin HEAD:feat/phase-14-domain-templates
