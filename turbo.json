@@ -1,23 +1,23 @@
 {
-  "$schema": "https://turborepo.com/schema.json",
-  "globalPassThroughEnv": ["S3_BUCKET"],
-  "tasks": {
-    "dev": {
-      "cache": false,
-      "persistent": true
-    },
-    "build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**"]
-    },
-    "typecheck": {
-      "dependsOn": ["^typecheck"]
-    },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
-    "test": {
-      "dependsOn": ["^test"]
-    }
-  }
+	"$schema": "https://turborepo.com/schema.json",
+	"globalPassThroughEnv": ["S3_BUCKET"],
+	"tasks": {
+		"dev": {
+			"cache": false,
+			"persistent": true
+		},
+		"build": {
+			"dependsOn": ["^build"],
+			"outputs": ["dist/**", ".next/**"]
+		},
+		"typecheck": {
+			"dependsOn": ["^typecheck"]
+		},
+		"lint": {
+			"dependsOn": ["^lint"]
+		},
+		"test": {
+			"dependsOn": ["^test"]
+		}
+	}
 }
