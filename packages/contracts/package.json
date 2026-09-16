@@ -14,7 +14,8 @@
     "./communication": { "types": "./src/communication.schema.ts", "default": "./src/communication.schema.ts" },
     "./meeting": { "types": "./src/meeting.schema.ts", "default": "./src/meeting.schema.ts" },
     "./domain-templates": { "types": "./src/domain-templates.schema.ts", "default": "./src/domain-templates.schema.ts" },
-    "./domain-template-data": { "types": "./src/domain-templates.ts", "default": "./src/domain-templates.ts" }
+    "./domain-template-data": { "types": "./src/domain-templates.ts", "default": "./src/domain-templates.ts" },
+    "./platform-release": { "types": "./src/platform-release.schema.ts", "default": "./src/platform-release.schema.ts" }
   },
   "scripts": { "typecheck": "tsc --noEmit", "lint": "biome check .", "build": "tsc --noEmit", "test": "vitest run" },
   "dependencies": { "zod": "^4.0.0" },
