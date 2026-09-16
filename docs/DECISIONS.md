@@ -101,3 +101,28 @@ O schema canónico define `Edge` como a representação única das relações en
 ### Consequências
 
 O Work Graph passa a ser a camada de relação transversal da V1. As futuras fases podem ligar comunicação, documentos, reuniões e artefactos ao mesmo grafo quando esses nodes forem suportados, sem mudar o modelo de relações.
+
+## ADR-0005: Design System + App Shell da Fase 7
+
+- Estado: aceite para implementação da Fase 7
+- Data: 2026-09-16
+
+### Contexto
+
+A Fase 7 transforma os tokens normativos de UI num sistema utilizável pelo produto. O pacote `@oryon/ui` estava apenas com a versão e os tokens mínimos, enquanto o `/os` mantinha chrome local em cada página.
+
+### Decisão
+
+1. `@oryon/ui` é a fonte única dos primitives visuais e do AppShell.
+2. Tokens permanecem semânticos e são expostos em CSS e TypeScript.
+3. O chrome principal é um FloatingTopBar partilhado por todo o segmento `/os`.
+4. A navegação activa é resolvida pela aplicação web, através de `usePathname`, sem fazer o pacote `ui` depender de Next.js.
+5. `CommandPalette` funciona como superfície transversal de comandos e navegação nesta fase. O retrieval híbrido completo permanece na Fase 12.
+6. O layout `/os` autentica e carrega a identidade uma única vez e injecta-a no AppShell.
+7. O tema claro é derivado por papéis semânticos, mantendo o mesmo acento lima.
+8. Movimento é implementado com Motion na linha 12, respeitando `prefers-reduced-motion`.
+9. Os primitives não conhecem `core`, `db` ou `contracts`.
+
+### Consequências
+
+Work, Graph, Permissions e páginas futuras passam a partilhar o mesmo chrome, navegação, command surface e linguagem visual. A migração de experiências específicas de domínio continua na Fase 8 em diante.
