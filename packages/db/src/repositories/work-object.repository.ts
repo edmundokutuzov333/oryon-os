@@ -1,4 +1,4 @@
-import { PrismaClient } from "../generated/client.js";
+import type { PrismaClient } from "../generated/client.js";
 
 export interface WorkObjectListInput {
 	readonly orgId: string;
@@ -8,17 +8,23 @@ export interface WorkObjectListInput {
 }
 
 export class WorkObjectRepository {
-	constructor(private readonly db: PrismaClient) {}
+	private readonly db: PrismaClient;
+
+	constructor(db: PrismaClient) {
+		this.db = db;
+	}
 
 	async list(input: WorkObjectListInput) {
 		const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
+		const where: Parameters<typeof this.db.workObject.findMany>[0]["where"] = {
+			orgId: input.orgId,
+			deletedAt: null,
+		};
+		if (input.workspaceId !== undefined) where.workspaceId = input.workspaceId;
+		if (input.typeKey !== undefined) where.typeKey = input.typeKey;
+
 		return this.db.workObject.findMany({
-			where: {
-				orgId: input.orgId,
-				workspaceId: input.workspaceId,
-				typeKey: input.typeKey,
-				deletedAt: null,
-			},
+			where,
 			orderBy: { updatedAt: "desc" },
 			take: limit,
 		});
