@@ -1,3 +1,4 @@
+export { DocsFilesRepository } from "./docs-files.repository.js";
 export { GraphRepository } from "./graph.repository.js";
 export type { GraphEdgeRecord, GraphNodeRecord, GraphTraverseResult } from "./graph.repository.js";
 export { IdentityRepository } from "./identity.repository.js";
