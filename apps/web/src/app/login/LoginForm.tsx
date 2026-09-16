@@ -5,7 +5,7 @@ import { authCopy } from "../../lib/auth-copy";
 
 export function LoginForm() {
 	const [organization, setOrganization] = useState("org_demo_0001");
-	const [email, setEmail] = useState("admin@demo.oryon");
+	const [email, setEmail] = useState("admin@oryon.local");
 	const [message, setMessage] = useState<string>();
 	const [debugToken, setDebugToken] = useState<string>();
 	const [busy, setBusy] = useState(false);
@@ -43,7 +43,7 @@ export function LoginForm() {
 				<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required />
 			</label>
 			<button type="submit" disabled={busy}>
-				{busy ? "A enviar..." : authCopy.continue}
+				{busy ? authCopy.sending : authCopy.continue}
 			</button>
 			{message ? <p className="auth-message" role="status">{message}</p> : null}
 			{debugToken ? (
