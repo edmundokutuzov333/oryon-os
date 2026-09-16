@@ -102,7 +102,7 @@ services:
     networks: [oryon]
 
   minio-init:
-    image: ${ORYON_MINIO_CLIENT_IMAGE:-minio/mc:RELEASE.2025-04-08T15-39-00Z}
+    image: ${ORYON_MINIO_CLIENT_IMAGE:-minio/mc:RELEASE.2025-04-08T15-39-49Z}
     container_name: oryon-minio-init
     depends_on:
       minio:
