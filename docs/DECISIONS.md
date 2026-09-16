@@ -146,3 +146,29 @@ O `WorkObject` já fornece os dados universais e as operações de base. A Fase 
 ### Consequências
 
 O mesmo WorkObject pode ser visto, alterado, atribuído e acompanhado em diferentes representações sem perder identidade ou histórico. As fases seguintes podem acrescentar conteúdo, comunicação, documentos e IA ao mesmo objecto sem migração para outro modelo de trabalho.
+
+## ADR-0007: Docs + Files da Fase 9
+
+- Estado: aceite para implementação da Fase 9
+- Data: 2026-09-16
+
+### Contexto
+
+O schema canónico já fornece `Page`, `PageVersion`, `FileAsset` e `Attachment`. A plataforma precisa de uma experiência documental persistente, versionada e compatível com S3, sem criar um segundo sistema de ficheiros ou um editor proprietário.
+
+### Decisão
+
+1. `Page` é a entidade documental universal. `contentJson` representa a estrutura TipTap, `contentText` alimenta pesquisa textual e `contentYjs` guarda o estado colaborativo binário.
+2. TipTap é o editor de superfície e Yjs é o modelo de colaboração persistido. A sincronização realtime por provider dedicado fica para a infraestrutura de colaboração posterior sem mudar o schema.
+3. Cada alteração de conteúdo cria uma nova `PageVersion` dentro da mesma transacção que actualiza `Page`. O snapshot é imutável e devolvido como base64 pela API.
+4. `FileAsset` é a entidade universal de ficheiro. `Attachment` liga-o a páginas e, como já definido na Fase 8, a WorkObjects.
+5. Upload usa uma intenção autenticada, seguida de PUT directo do browser para S3/MinIO através de URL pré-assinada. A API valida tamanho e MIME com `HeadObject` antes de materializar o `FileAsset`.
+6. O storage é encapsulado em `@oryon/storage`; `db` continua dono exclusivo do Prisma e a API não manipula clientes Prisma directamente.
+7. Publicação é controlada por `publishedSlug`, `publishedAt` e `indexable` e requer `manage` sobre a página. O estado publicado continua sob classificação e autorização.
+8. Downloads são resolvidos por `can(..., "export")`, permitindo `ClassificationLabel.blocksDownload` bloquear a saída do object storage.
+9. Pesquisa textual da Fase 9 usa os campos `title`, `contentText`, `name` e `ocrText` dentro do tenant, filtrando resultados invisíveis. Typesense e retrieval híbrido ficam reservados para a Fase 12.
+10. A UI recebe `permissions` explícitas para páginas e ficheiros e nunca infere permissões através de roles ou estado visual.
+
+### Consequências
+
+Docs, Files e Work permanecem partes do mesmo sistema de identidade, tenancy, permissões e auditoria. A Fase 9 estabelece a base de conteúdo e storage sobre a qual as fases de Comunicação, Meetings, Search + AI e Agents podem actuar sem duplicar documentos ou ficheiros.
