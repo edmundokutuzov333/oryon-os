@@ -10,7 +10,8 @@
     "./work-object": { "types": "./src/work-object.schema.ts", "default": "./src/work-object.schema.ts" },
     "./graph": { "types": "./src/graph.schema.ts", "default": "./src/graph.schema.ts" },
     "./work-experience": { "types": "./src/work-experience.schema.ts", "default": "./src/work-experience.schema.ts" },
-    "./docs-files": { "types": "./src/docs-files.schema.ts", "default": "./src/docs-files.schema.ts" }
+    "./docs-files": { "types": "./src/docs-files.schema.ts", "default": "./src/docs-files.schema.ts" },
+    "./communication": { "types": "./src/communication.schema.ts", "default": "./src/communication.schema.ts" }
   },
   "scripts": { "typecheck": "tsc --noEmit", "lint": "biome check .", "build": "tsc --noEmit", "test": "vitest run" },
   "dependencies": { "zod": "^4.0.0" },
