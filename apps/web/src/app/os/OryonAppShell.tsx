@@ -1,0 +1,17 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+import { AppShell, type NavItem } from "@oryon/ui";
+import type { ReactNode } from "react";
+
+const navItems: NavItem[] = [
+  { href: "/os/work", label: "Work" },
+  { href: "/os/graph", label: "Graph" },
+  { href: "/os/permissions", label: "Permissions" },
+];
+
+export function OryonAppShell({ userName, userInitials, children }: { userName: string; userInitials: string; children: ReactNode }) {
+  const pathname = usePathname();
+  const activeHref = navItems.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))?.href;
+  return <AppShell navItems={navItems} launcherItems={navItems} activeHref={activeHref} userName={userName} userInitials={userInitials}>{children}</AppShell>;
+}
