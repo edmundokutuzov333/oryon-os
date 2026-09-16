@@ -6,11 +6,11 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  verify:
-    name: verify
+  materialize-migration:
+    name: materialize database migration
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -24,6 +24,41 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Generate initial migration when absent
+        run: node scripts/generate-phase2-migration.mjs
+      - name: Commit generated migration
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          if git diff --quiet -- packages/db/prisma/migrations; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/db/prisma/migrations
+          git commit -m "chore(db): materialize initial phase 2 migration [skip ci]"
+          git push origin HEAD:main
+
+  verify:
+    name: verify
+    needs: materialize-migration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Sync latest main after migration materialization
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: git fetch origin main && git reset --hard origin/main
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+          run_install: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: pnpm db:generate
       - run: node scripts/check-boundaries.mjs
       - run: node scripts/check-v1-invariants.mjs
       - run: pnpm typecheck
@@ -31,12 +66,16 @@ jobs:
       - run: pnpm test -- --passWithNoTests
       - run: pnpm build
 
-  infra:
-    name: local infrastructure
+  infra-and-db:
+    name: infrastructure and database
+    needs: materialize-migration
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
+      - name: Sync latest main after migration materialization
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: git fetch origin main && git reset --hard origin/main
       - uses: pnpm/action-setup@v4
         with:
           version: 10.15.0
@@ -47,12 +86,26 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: pnpm db:generate
+      - name: Validate Prisma schema
+        run: pnpm db:validate
       - name: Validate Compose configuration
         run: pnpm infra:config
       - name: Start local infrastructure
         run: pnpm infra:up
       - name: Diagnose local infrastructure
         run: pnpm infra:doctor
+      - name: Check migration status before deploy
+        run: pnpm db:migrate:status
+      - name: Apply database migrations
+        run: pnpm db:migrate:deploy
+      - name: Run deterministic database seed
+        run: pnpm db:seed
+      - name: Run deterministic database seed again
+        run: pnpm db:seed
+      - name: Verify RLS tenant isolation
+        run: pnpm db:rls:verify
       - name: Show service status
         if: always()
         run: pnpm infra:status
