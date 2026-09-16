@@ -13,9 +13,8 @@ function healthPayload() {
 }
 
 app.get("/health", async (_request, reply) => reply.send(healthPayload()));
-app.get(
-	"/v1/health",
-	async (_request, reply) => reply.send({ data: healthPayload() }),
+app.get("/v1/health", async (_request, reply) =>
+	reply.send({ data: healthPayload() }),
 );
 
 try {
