@@ -75,6 +75,16 @@ jobs:
     needs: materialize-migration
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      POSTGRES_USER: oryon
+      POSTGRES_PASSWORD: oryon_local
+      POSTGRES_DB: oryon
+      DATABASE_URL: postgresql://oryon:oryon_local@127.0.0.1:5432/oryon
+      DATABASE_DIRECT_URL: postgresql://oryon:oryon_local@127.0.0.1:5432/oryon
+      S3_BUCKET: oryon-local
+      MINIO_ROOT_USER: oryon
+      MINIO_ROOT_PASSWORD: oryon_local_password
+      TYPESENSE_API_KEY: oryon-typesense-local
     steps:
       - uses: actions/checkout@v5
       - name: Sync latest main after materialization
