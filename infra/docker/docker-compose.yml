@@ -130,6 +130,32 @@ services:
       - "${LIVEKIT_RTC_PORT_RANGE_START:-50000}-${LIVEKIT_RTC_PORT_RANGE_END:-50100}:${LIVEKIT_RTC_PORT_RANGE_START:-50000}-${LIVEKIT_RTC_PORT_RANGE_END:-50100}/udp"
     networks: [oryon]
 
+  temporal:
+    image: ${ORYON_TEMPORAL_IMAGE:-temporalio/auto-setup:1.28.0}
+    container_name: oryon-temporal
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgresql
+      DB_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-oryon}
+      POSTGRES_PWD: ${POSTGRES_PASSWORD:-oryon_local}
+      POSTGRES_SEEDS: postgres
+      DBNAME: temporal
+      DEFAULT_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
+      DEFAULT_NAMESPACE_RETENTION: ${TEMPORAL_RETENTION:-168h}
+    ports:
+      - "${TEMPORAL_PORT:-7233}:7233"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 7233"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+    networks: [oryon]
+
 networks:
   oryon:
     name: oryon-local

@@ -1,0 +1,12 @@
+{
+  "name": "@oryon/sdk",
+  "version": "0.1.0",
+  "description": "Official TypeScript client for OryonOS public REST API",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "scripts": { "build": "tsc --strict --target ES2022 --module NodeNext --moduleResolution NodeNext --declaration --outDir dist src/index.ts" },
+  "files": ["dist"],
+  "engines": { "node": ">=20" }
+}

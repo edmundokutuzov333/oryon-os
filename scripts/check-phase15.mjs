@@ -1,0 +1,14 @@
+import { existsSync, readFileSync } from "node:fs";
+const required = ["apps/api/src/platform.ts", "apps/api/src/openapi.ts", "apps/api/src/security.ts", "packages/db/src/repositories/platform.repository.ts", "packages/contracts/src/platform-release.schema.ts", "sdk/src/index.ts", "sdk/package.json"];
+for (const file of required) if (!existsSync(file)) throw new Error(`Missing Phase 15 file: ${file}`);
+const contracts = readFileSync("packages/contracts/src/platform-release.schema.ts", "utf8");
+for (const token of ["ApiKeyCreatedSchema", "WebhookCreateInputSchema", "ImportWorkObjectsInputSchema", "PlatformHealthSchema", "ReleaseManifestSchema"]) if (!contracts.includes(token)) throw new Error(`Missing contract: ${token}`);
+const server = readFileSync("apps/api/src/server.ts", "utf8");
+for (const token of ["registerPlatformRoutes", "registerOpenApiRoutes", "installSecurityHardening"]) if (!server.includes(token)) throw new Error(`API not wired: ${token}`);
+const openapi = readFileSync("apps/api/src/openapi.ts", "utf8");
+if (!openapi.includes('openapi: "3.1.0"')) throw new Error("OpenAPI 3.1 document missing");
+const design = readFileSync("DESIGN_SYSTEM.md", "utf8");
+if (!design.includes("#C3F53C") || !design.includes("Piso 360px")) throw new Error("Design system contract not detected");
+const scripts = JSON.parse(readFileSync("package.json", "utf8")).scripts;
+for (const key of ["gen:openapi", "gen:sdk", "test:e2e", "test:visual", "analyze:bundle", "audit:security", "performance:gate", "check:phase15"]) if (!scripts[key]) throw new Error(`Missing release script: ${key}`);
+console.log("Phase 15 structural gate: OK");

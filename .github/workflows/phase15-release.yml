@@ -1,0 +1,40 @@
+name: phase15-release
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feat/phase-15-platform-release]
+permissions:
+  contents: read
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      ORYON_MAX_CHUNK_GZIP_BYTES: 184320
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+          run_install: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm check:boundaries
+      - run: pnpm check:v1
+      - run: pnpm check:phase14
+      - run: pnpm check:phase15
+      - run: pnpm gen:openapi
+      - run: pnpm gen:sdk
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test -- --passWithNoTests
+      - run: pnpm build
+      - run: pnpm test:e2e
+      - run: pnpm test:visual
+      - run: pnpm analyze:bundle
+      - run: pnpm performance:gate
+      - run: pnpm audit:security

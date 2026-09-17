@@ -1,19 +1,23 @@
 {
-	"name": "@oryon/worker",
-	"private": true,
-	"version": "0.1.0",
-	"type": "module",
-	"scripts": {
-		"dev": "tsx watch src/index.ts",
-		"build": "tsc --outDir dist",
-		"typecheck": "tsc --noEmit",
-		"lint": "biome check .",
-		"test": "vitest run"
-	},
-	"devDependencies": {
-		"tsx": "^4.20.0",
-		"typescript": "^5.9.2",
-		"vitest": "^3.2.0",
-		"@biomejs/biome": "^2.2.0"
-	}
+  "name": "@oryon/worker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": { "dev": "tsx watch src/index.ts", "build": "tsc --outDir dist", "typecheck": "tsc --noEmit", "lint": "biome check .", "test": "vitest run" },
+  "dependencies": {
+    "@oryon/ai": "workspace:*",
+    "@oryon/contracts": "workspace:*",
+    "@oryon/core": "workspace:*",
+    "@oryon/db": "workspace:*",
+    "@temporalio/client": "^1.13.0",
+    "@temporalio/worker": "^1.13.0",
+    "@temporalio/workflow": "^1.13.0",
+    "bullmq": "^5.58.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.0",
+    "@biomejs/biome": "^2.2.0"
+  }
 }
