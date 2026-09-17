@@ -1,0 +1,227 @@
+name: Centralize OryonOS V1 on main
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  centralize:
+    if: ${{ !contains(github.event.head_commit.message, '[centralize-v1]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Rebuild cumulative V1 tree on main
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main \
+            refs/heads/feat/phase-12-search-ai \
+            refs/heads/feat/phase-13-agents-automation \
+            refs/heads/feat/phase-15-platform-release
+
+          P12=origin/feat/phase-12-search-ai
+          P13=origin/feat/phase-13-agents-automation
+          P15=origin/feat/phase-15-platform-release
+          BASE=14ad4ca34915ed772b7a49ef4989c4c6147a0aa6
+          P12_BASE=df812c3a2fe9fd4a15cbffd4ed5ab1bc2bf4de5f
+
+          git checkout --detach "$P15"
+
+          mapfile -t P15_CHANGED < <(git diff --name-only "$BASE" "$P15")
+          is_p15_changed() {
+            local target="$1"
+            printf '%s\n' "${P15_CHANGED[@]}" | grep -Fxq -- "$target"
+          }
+
+          copy_non_conflicting_changes() {
+            local ref="$1"
+            local base="$2"
+            while IFS=$'\t' read -r status path; do
+              [ -z "${path:-}" ] && continue
+              case "$status" in
+                A)
+                  git checkout "$ref" -- "$path"
+                  ;;
+                M)
+                  if ! is_p15_changed "$path"; then
+                    git checkout "$ref" -- "$path"
+                  fi
+                  ;;
+              esac
+            done < <(git diff --name-status "$base" "$ref")
+          }
+
+          copy_non_conflicting_changes "$P12" "$P12_BASE"
+          copy_non_conflicting_changes "$P13" "$P12_BASE"
+
+          python3 - <<'PY'
+          import json
+          import subprocess
+          from pathlib import Path
+
+          repo = Path('.')
+          refs = ['origin/feat/phase-12-search-ai', 'origin/feat/phase-13-agents-automation']
+
+          def show(ref: str, path: str) -> str:
+              return subprocess.check_output(['git', 'show', f'{ref}:{path}'], text=True)
+
+          def additive_merge_json(path: str):
+              target = repo / path
+              current = json.loads(target.read_text())
+              for ref in refs:
+                  try:
+                      incoming = json.loads(show(ref, path))
+                  except subprocess.CalledProcessError:
+                      continue
+                  def merge_missing(dst, src):
+                      if not isinstance(dst, dict) or not isinstance(src, dict):
+                          return
+                      for key, value in src.items():
+                          if key not in dst:
+                              dst[key] = value
+                          elif isinstance(dst[key], dict) and isinstance(value, dict):
+                              merge_missing(dst[key], value)
+                  merge_missing(current, incoming)
+              target.write_text(json.dumps(current, ensure_ascii=False, indent=2) + '\n')
+
+          for path in [
+              'apps/api/package.json',
+              'apps/worker/package.json',
+              'packages/contracts/package.json',
+          ]:
+              additive_merge_json(path)
+
+          root_path = repo / 'package.json'
+          root = json.loads(root_path.read_text())
+          root['scripts']['check:phase13'] = 'node scripts/check-phase13.mjs'
+          verify = root['scripts']['verify']
+          if 'pnpm check:phase13' not in verify:
+              verify = verify.replace('pnpm check:v1 && ', 'pnpm check:v1 && pnpm check:phase13 && ')
+          root['scripts']['verify'] = verify
+          infra_up = root['scripts'].get('infra:up', '')
+          if ' temporal' not in infra_up:
+              infra_up = infra_up.replace(' livekit', ' livekit temporal')
+          root['scripts']['infra:up'] = infra_up
+          root_path.write_text(json.dumps(root, ensure_ascii=False, indent=2) + '\n')
+
+          env_path = repo / '.env.example'
+          current_env = env_path.read_text().splitlines()
+          present = {line.split('=', 1)[0] for line in current_env if line and not line.lstrip().startswith('#') and '=' in line}
+          additions = []
+          for ref in refs:
+              try:
+                  incoming = show(ref, '.env.example').splitlines()
+              except subprocess.CalledProcessError:
+                  continue
+              for line in incoming:
+                  if '=' not in line or line.lstrip().startswith('#'):
+                      continue
+                  key = line.split('=', 1)[0]
+                  if key.startswith(('ORYON_AI_', 'ORYON_AGENT_', 'ORYON_WORKFLOW_')) and key not in present:
+                      additions.append(line)
+                      present.add(key)
+          if additions:
+              env_path.write_text('\n'.join(current_env).rstrip() + '\n\n' + '\n'.join(additions) + '\n')
+
+          repo_index = repo / 'packages/db/src/repositories/index.ts'
+          index_text = repo_index.read_text().splitlines()
+          existing = set(index_text)
+          for ref in refs:
+              try:
+                  incoming = show(ref, 'packages/db/src/repositories/index.ts').splitlines()
+              except subprocess.CalledProcessError:
+                  continue
+              for line in incoming:
+                  if line.startswith('export ') and line not in existing:
+                      index_text.append(line)
+                      existing.add(line)
+          repo_index.write_text('\n'.join(index_text) + '\n')
+
+          (repo / 'packages/ai/src/index.ts').write_text('''export const ORYON_AI_VERSION = "0.2.0" as const;
+export { answerWithSources, createEmbedding, extractCitationIds, gatewayConfig, resolveModel } from "./gateway.js";
+export type { AiGatewayConfig, AiPolicy, ChatSource } from "./gateway.js";
+export { executeAgentRun, executeAgentTool, rollbackAgentRun, validateAgentBudget } from "./agent-runtime.js";
+export type { AgentExecutionResult } from "./agent-runtime.js";
+''')
+
+          server_path = repo / 'apps/api/src/server.ts'
+          server = server_path.read_text()
+          if 'registerSearchAiRoutes' not in server:
+              marker = 'import { registerPlatformRoutes } from "./platform.js";'
+              if marker in server:
+                  server = server.replace(marker, marker + '\nimport { registerSearchAiRoutes, closeAiSearchResources } from "./search-ai.js";')
+              else:
+                  marker = 'import { registerRealtime } from "./realtime.js";'
+                  server = server.replace(marker, 'import { registerSearchAiRoutes, closeAiSearchResources } from "./search-ai.js";\n' + marker)
+              register_marker = 'await registerPlatformRoutes(app);'
+              if register_marker in server:
+                  server = server.replace(register_marker, register_marker + '\nawait registerSearchAiRoutes(app);')
+              else:
+                  server = server.replace('try { await getPrisma()', 'await registerSearchAiRoutes(app);\ntry { await getPrisma()')
+              server = server.replace('await io.close(); await closePrisma(); process.exitCode = 1;', 'await io.close(); await closeAiSearchResources(); await closePrisma(); process.exitCode = 1;')
+              server = server.replace('await io.close(); await app.close(); await closePrisma(); });', 'await io.close(); await closeAiSearchResources(); await app.close(); await closePrisma(); });')
+          if 'registerAgentAutomationRoutes' not in server:
+              marker = 'import { registerSearchAiRoutes, closeAiSearchResources } from "./search-ai.js";'
+              server = server.replace(marker, marker + '\nimport { registerAgentAutomationRoutes } from "./agents.js";')
+              register_marker = 'await registerSearchAiRoutes(app);'
+              server = server.replace(register_marker, register_marker + '\nawait registerAgentAutomationRoutes(app);')
+          server_path.write_text(server)
+
+          shell_path = repo / 'apps/web/src/app/os/OryonAppShell.tsx'
+          shell = shell_path.read_text()
+          if '/os/search' not in shell:
+              shell = shell.replace('{ href: "/os/work", label: "Work" },', '{ href: "/os/work", label: "Work" },\n  { href: "/os/search", label: "Search + AI" },')
+          if '/os/agents' not in shell:
+              shell = shell.replace('{ href: "/os/search", label: "Search + AI" },', '{ href: "/os/search", label: "Search + AI" },\n  { href: "/os/agents", label: "Agents" },')
+          if '/os/automations' not in shell:
+              shell = shell.replace('{ href: "/os/agents", label: "Agents" },', '{ href: "/os/agents", label: "Agents" },\n  { href: "/os/automations", label: "Automations" },')
+          shell_path.write_text(shell)
+
+          schema = repo / 'packages/db/prisma/schema.prisma'
+          base_file = Path('/tmp/schema.base')
+          p12_file = Path('/tmp/schema.p12')
+          p13_file = Path('/tmp/schema.p13')
+          merged12 = Path('/tmp/schema.merged12')
+          subprocess.run(['git', 'show', f'{P12_BASE}:packages/db/prisma/schema.prisma'], stdout=base_file.open('w'), check=True)
+          subprocess.run(['git', 'show', f'{P12}:packages/db/prisma/schema.prisma'], stdout=p12_file.open('w'), check=True)
+          subprocess.run(['git', 'show', f'{P13}:packages/db/prisma/schema.prisma'], stdout=p13_file.open('w'), check=True)
+          current_file = Path('/tmp/schema.current')
+          current_file.write_text(schema.read_text())
+          with merged12.open('w') as out:
+              result = subprocess.run(['git', 'merge-file', '-p', str(current_file), str(base_file), str(p12_file)], stdout=out, check=False)
+          if '<<<<<<<' in merged12.read_text():
+              raise SystemExit('Schema merge conflict while centralizing Phase 12')
+          current_file.write_text(merged12.read_text())
+          merged13 = Path('/tmp/schema.final')
+          with merged13.open('w') as out:
+              result = subprocess.run(['git', 'merge-file', '-p', str(current_file), str(base_file), str(p13_file)], stdout=out, check=False)
+          final_schema = merged13.read_text()
+          if '<<<<<<<' in final_schema:
+              raise SystemExit('Schema merge conflict while centralizing Phase 13')
+          schema.write_text(final_schema)
+          PY
+
+          corepack enable
+          corepack prepare pnpm@10.15.0 --activate
+          pnpm install --lockfile-only --no-frozen-lockfile
+
+          rm -f .github/workflows/centralize-v1-on-main.yml
+
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No centralization changes detected."
+            exit 0
+          fi
+          git commit -m "chore(main): centralize OryonOS V1 [centralize-v1]"
+          git push origin HEAD:main
