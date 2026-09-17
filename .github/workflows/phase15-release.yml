@@ -1,11 +1,14 @@
 name: phase15-release
+
 on:
   pull_request:
     branches: [main]
   push:
     branches: [main]
+
 permissions:
   contents: read
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -23,8 +26,11 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
+      - run: pnpm --filter @oryon/db db:validate
+      - run: pnpm --filter @oryon/db db:rls:verify
       - run: pnpm check:boundaries
       - run: pnpm check:v1
+      - run: pnpm check:phase13
       - run: pnpm check:phase14
       - run: pnpm check:phase15
       - run: pnpm gen:openapi
