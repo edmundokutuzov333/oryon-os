@@ -142,25 +142,24 @@ export const ReleaseManifestSchema = z.object({
 	sdkVersion: z.string(),
 	generatedAt: z.string(),
 });
-export type ApiKeyCreateInput = z.infer<typeof ApiKeyCreateInputSchema>;
+
+export type ApiKeyCreateInput = z.input<typeof ApiKeyCreateInputSchema>;
 export type ApiKeySummary = z.infer<typeof ApiKeySummarySchema>;
 export type ApiKeyCreated = z.infer<typeof ApiKeyCreatedSchema>;
+export type ApiKeyRevokeInput = z.input<typeof ApiKeyRevokeInputSchema>;
 export type ApiKeyRevokeResponse = z.infer<typeof ApiKeyRevokeResponseSchema>;
-export type WebhookCreateInput = z.infer<typeof WebhookCreateInputSchema>;
-export type WebhookUpdateInput = z.infer<typeof WebhookUpdateInputSchema>;
+export type WebhookCreateInput = z.input<typeof WebhookCreateInputSchema>;
+export type WebhookUpdateInput = z.input<typeof WebhookUpdateInputSchema>;
 export type WebhookSummary = z.infer<typeof WebhookSummarySchema>;
 export type WebhookTestResponse = z.infer<typeof WebhookTestResponseSchema>;
-export type ImportWorkObjectsInput = z.infer<
-	typeof ImportWorkObjectsInputSchema
->;
+export type ImportWorkObjectsInput = z.input<typeof ImportWorkObjectsInputSchema>;
+export type ImportWorkObjectsResponse = z.infer<typeof ImportWorkObjectsResponseSchema>;
 export type ExportWorkObject = z.infer<typeof ExportWorkObjectSchema>;
-export type ExportWorkObjectsInput = z.infer<
-	typeof ExportWorkObjectsInputSchema
->;
+export type ExportWorkObjectsInput = z.input<typeof ExportWorkObjectsInputSchema>;
 export type ExportWorkObjectsResponse = z.infer<
 	typeof ExportWorkObjectsResponseSchema
 >;
-export type AuditQuery = z.infer<typeof AuditQuerySchema>;
+export type AuditQuery = z.input<typeof AuditQuerySchema>;
 export type AuditEntry = z.infer<typeof AuditEntrySchema>;
 export type PlatformHealth = z.infer<typeof PlatformHealthSchema>;
 export type ReleaseManifest = z.infer<typeof ReleaseManifestSchema>;
