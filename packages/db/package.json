@@ -1,50 +1,50 @@
 {
-	"name": "@oryon/db",
-	"private": true,
-	"version": "0.1.0",
-	"type": "module",
-	"exports": {
-		".": {
-			"types": "./src/index.ts",
-			"default": "./src/index.ts"
-		},
-		"./repositories": {
-			"types": "./src/repositories/index.ts",
-			"default": "./src/repositories/index.ts"
-		},
-		"./repositories/meeting-api.repository.js": {
-			"types": "./src/repositories/meeting-api.repository.ts",
-			"default": "./src/repositories/meeting-api.repository.ts"
-		},
-		"./tenant": {
-			"types": "./src/tenant.ts",
-			"default": "./src/tenant.ts"
-		}
-	},
-	"scripts": {
-		"typecheck": "tsc --noEmit",
-		"lint": "biome check .",
-		"build": "tsc --noEmit",
-		"db:generate": "prisma generate --schema prisma/schema.prisma",
-		"db:validate": "prisma validate --schema prisma/schema.prisma",
-		"db:migrate:dev": "prisma migrate dev --schema prisma/schema.prisma",
-		"db:migrate:deploy": "prisma migrate deploy --schema prisma/schema.prisma",
-		"db:migrate:status": "prisma migrate status --schema prisma/schema.prisma",
-		"db:seed": "tsx prisma/seed.ts",
-		"db:rls:verify": "tsx prisma/verify-rls.ts",
-		"test": "vitest run"
-	},
-	"dependencies": {
-		"@oryon/contracts": "workspace:*",
-		"@oryon/core": "workspace:*",
-		"@prisma/client": "^6.15.0"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.2.0",
-		"@types/node": "^24.0.0",
-		"prisma": "^6.15.0",
-		"tsx": "^4.20.0",
-		"typescript": "^5.9.2",
-		"vitest": "^3.2.0"
-	}
+  "name": "@oryon/db",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./repositories": {
+      "types": "./src/repositories/index.ts",
+      "default": "./src/repositories/index.ts"
+    },
+    "./repositories/meeting-api.repository.js": {
+      "types": "./src/repositories/meeting-api.repository.ts",
+      "default": "./src/repositories/meeting-api.repository.ts"
+    },
+    "./tenant": {
+      "types": "./src/tenant.ts",
+      "default": "./src/tenant.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "build": "tsc --noEmit",
+    "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:validate": "tsx scripts/db-validate.ts",
+    "db:migrate:dev": "prisma migrate dev --schema prisma/schema.prisma",
+    "db:migrate:deploy": "prisma migrate deploy --schema prisma/schema.prisma",
+    "db:migrate:status": "prisma migrate status --schema prisma/schema.prisma",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:rls:verify": "tsx prisma/verify-rls.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@oryon/contracts": "workspace:*",
+    "@oryon/core": "workspace:*",
+    "@prisma/client": "^6.15.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.0",
+    "@types/node": "^24.0.0",
+    "prisma": "^6.15.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.0"
+  }
 }
