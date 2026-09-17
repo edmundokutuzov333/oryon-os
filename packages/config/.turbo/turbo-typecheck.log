@@ -1,4 +1,0 @@
-
-> @oryon/config@0.1.0 typecheck /home/runner/work/oryon-os/oryon-os/packages/config
-> tsc --noEmit
-
