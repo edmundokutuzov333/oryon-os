@@ -22,8 +22,11 @@ export type ExternalExposureRow = {
 	expiresAt: Date | null;
 };
 
+type WorkspaceMembershipRow = { workspace_id: string };
+
 export class PermissionRepository {
 	private readonly db = getPrisma();
+
 	async getSnapshot(
 		orgId: string,
 		userId: string,
@@ -44,13 +47,20 @@ export class PermissionRepository {
 				},
 			});
 			if (!user) throw new Error("UNAUTHENTICATED");
-			const [grants, classification] = await Promise.all([
-				tx.accessGrant.findMany({ where: { orgId, resourceType, resourceId } }),
+			const [grants, classification, memberships] = await Promise.all([
+				tx.accessGrant.findMany({
+					where: { orgId, resourceType, resourceId },
+				}),
 				classificationKey
 					? tx.classificationLabel.findFirst({
 							where: { orgId, key: classificationKey },
 						})
 					: Promise.resolve(null),
+				tx.$queryRaw<WorkspaceMembershipRow[]>`
+					SELECT workspace_id
+					FROM workspace_members
+					WHERE org_id = ${orgId} AND user_id = ${userId}
+				`,
 			]);
 			return {
 				subject: {
@@ -58,12 +68,9 @@ export class PermissionRepository {
 					type: user.type,
 					email: user.email,
 					teamIds: user.teamMembers.map((membership) => membership.teamId),
-					channelIds: user.channelMembers.map(
-						(membership) => membership.channelId,
-					),
-					meetingIds: user.meetingParticipants.map(
-						(participant) => participant.meetingId,
-					),
+					workspaceIds: memberships.map((membership) => membership.workspace_id),
+					channelIds: user.channelMembers.map((membership) => membership.channelId),
+					meetingIds: user.meetingParticipants.map((participant) => participant.meetingId),
 				},
 				roles: user.roleBindings.map((binding) => ({
 					permissions: binding.role.permissions,
@@ -95,6 +102,48 @@ export class PermissionRepository {
 			};
 		});
 	}
+
+	async isWorkspaceMember(orgId: string, userId: string, workspaceId: string): Promise<boolean> {
+		return withOrgContext(this.db, orgId, async (tx) => {
+			const row = await tx.$queryRaw<Array<{ exists: boolean }>>`
+				SELECT EXISTS(
+					SELECT 1 FROM workspace_members
+					WHERE org_id = ${orgId} AND workspace_id = ${workspaceId} AND user_id = ${userId}
+				) AS exists
+			`;
+			return row[0]?.exists === true;
+		});
+	}
+
+	async ensureWorkspaceMember(
+		orgId: string,
+		actorId: string,
+		userId: string,
+		workspaceId: string,
+	): Promise<void> {
+		await withOrgContext(this.db, orgId, async (tx) => {
+			const [user, workspace] = await Promise.all([
+				tx.user.findFirst({ where: { id: userId, orgId, deletedAt: null }, select: { id: true } }),
+				tx.workspace.findFirst({ where: { id: workspaceId, orgId, deletedAt: null }, select: { id: true } }),
+			]);
+			if (!user || !workspace) throw new Error("NOT_FOUND");
+			await tx.$executeRaw`
+				INSERT INTO workspace_members (id, org_id, workspace_id, user_id)
+				VALUES (${`wm_${workspaceId}_${userId}`}, ${orgId}, ${workspaceId}, ${userId})
+				ON CONFLICT (workspace_id, user_id) DO NOTHING
+			`;
+			await appendDomainEvent(tx, {
+				orgId,
+				actorId,
+				actorType: "MEMBER",
+				subjectType: "WorkspaceMember",
+				subjectId: `${workspaceId}:${userId}`,
+				name: "permission.workspace_member.created",
+				payload: { workspaceId, userId },
+			});
+		});
+	}
+
 	async listExternalExposure(orgId: string): Promise<ExternalExposureRow[]> {
 		return withOrgContext(this.db, orgId, async (tx) => {
 			const rows = await tx.accessGrant.findMany({
@@ -125,6 +174,7 @@ export class PermissionRepository {
 			return [...grouped.values()];
 		});
 	}
+
 	async createRole(
 		orgId: string,
 		input: {
@@ -140,9 +190,7 @@ export class PermissionRepository {
 					orgId,
 					key: input.key,
 					name: input.name,
-					...(input.description === undefined
-						? {}
-						: { description: input.description }),
+					...(input.description === undefined ? {} : { description: input.description }),
 					permissions: input.permissions,
 					isSystem: false,
 				},
@@ -158,6 +206,7 @@ export class PermissionRepository {
 			return { id: role.id };
 		});
 	}
+
 	async bindRole(
 		orgId: string,
 		actorId: string,
@@ -171,7 +220,7 @@ export class PermissionRepository {
 	): Promise<{ id: string }> {
 		return withOrgContext(this.db, orgId, async (tx) => {
 			const binding = await tx.roleBinding.create({
-				data: {
+			data: {
 					orgId,
 					roleId: input.roleId,
 					principalId: input.principalId,
@@ -179,7 +228,7 @@ export class PermissionRepository {
 					scopeId: input.scopeId ?? null,
 					grantedBy: actorId,
 					expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
-				},
+			},
 			});
 			await appendDomainEvent(tx, {
 				orgId,
@@ -198,11 +247,8 @@ export class PermissionRepository {
 			return { id: binding.id };
 		});
 	}
-	async revokeRoleBinding(
-		orgId: string,
-		actorId: string,
-		id: string,
-	): Promise<{ id: string }> {
+
+	async revokeRoleBinding(orgId: string, actorId: string, id: string): Promise<{ id: string }> {
 		return withOrgContext(this.db, orgId, async (tx) => {
 			const binding = await tx.roleBinding.findFirst({ where: { id, orgId } });
 			if (!binding) throw new Error("NOT_FOUND");
@@ -224,6 +270,7 @@ export class PermissionRepository {
 			return { id };
 		});
 	}
+
 	async createGrant(
 		orgId: string,
 		actorId: string,
@@ -241,7 +288,7 @@ export class PermissionRepository {
 	): Promise<{ id: string }> {
 		return withOrgContext(this.db, orgId, async (tx) => {
 			const grant = await tx.accessGrant.create({
-				data: {
+			data: {
 					orgId,
 					resourceType: input.resourceType,
 					resourceId: input.resourceId,
@@ -253,7 +300,7 @@ export class PermissionRepository {
 					grantedBy: actorId,
 					...(input.reason === undefined ? {} : { reason: input.reason }),
 					expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
-				},
+			},
 			});
 			await appendDomainEvent(tx, {
 				orgId,
@@ -271,11 +318,8 @@ export class PermissionRepository {
 			return { id: grant.id };
 		});
 	}
-	async revokeGrant(
-		orgId: string,
-		actorId: string,
-		id: string,
-	): Promise<{ id: string }> {
+
+	async revokeGrant(orgId: string, actorId: string, id: string): Promise<{ id: string }> {
 		return withOrgContext(this.db, orgId, async (tx) => {
 			const grant = await tx.accessGrant.findFirst({
 				where: { id, orgId, revokedAt: null },
