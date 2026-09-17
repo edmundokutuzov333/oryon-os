@@ -68,6 +68,41 @@ export const ExportWorkObjectsInputSchema = z.object({
 	includeCustomFields: z.boolean().default(true),
 	limit: z.coerce.number().int().min(1).max(200).default(200),
 });
+export const ExportWorkObjectSchema = z.object({
+	id: z.string(),
+	orgId: z.string(),
+	workspaceId: z.string().nullable(),
+	typeKey: z.string(),
+	typeDefId: z.string(),
+	humanId: z.string(),
+	title: z.string(),
+	description: z.string().nullable(),
+	status: z.string(),
+	statusCategory: z.string(),
+	priority: z.enum(["LOWEST", "LOW", "NORMAL", "HIGH", "URGENT"]),
+	ownerId: z.string().nullable(),
+	parentObjectId: z.string().nullable(),
+	startAt: z.string().datetime({ offset: true }).nullable(),
+	dueAt: z.string().datetime({ offset: true }).nullable(),
+	completedAt: z.string().datetime({ offset: true }).nullable(),
+	progress: z.number().nullable(),
+	moneyAmount: z.string().nullable(),
+	moneyCurrency: z.string().nullable(),
+	probability: z.number().nullable(),
+	secondaryDate: z.string().datetime({ offset: true }).nullable(),
+	externalRef: z.string().nullable(),
+	severity: z.string().nullable(),
+	classification: z.string().nullable(),
+	tags: z.array(z.string()),
+	customFields: z.record(z.string(), z.unknown()),
+	createdAt: z.string().datetime({ offset: true }),
+	updatedAt: z.string().datetime({ offset: true }),
+});
+export const ExportWorkObjectsResponseSchema = z.object({
+	exportedBy: z.string(),
+	count: z.number().int().nonnegative(),
+	objects: z.array(ExportWorkObjectSchema),
+});
 export const AuditQuerySchema = z.object({
 	action: z.string().optional(),
 	resourceType: z.string().optional(),
@@ -110,9 +145,18 @@ export type ApiKeyCreated = z.infer<typeof ApiKeyCreatedSchema>;
 export type WebhookCreateInput = z.infer<typeof WebhookCreateInputSchema>;
 export type WebhookUpdateInput = z.infer<typeof WebhookUpdateInputSchema>;
 export type WebhookSummary = z.infer<typeof WebhookSummarySchema>;
+export type WebhookTestResponse = z.infer<typeof WebhookTestResponseSchema>;
 export type ImportWorkObjectsInput = z.infer<
 	typeof ImportWorkObjectsInputSchema
 >;
+export type ExportWorkObject = z.infer<typeof ExportWorkObjectSchema>;
 export type ExportWorkObjectsInput = z.infer<
 	typeof ExportWorkObjectsInputSchema
 >;
+export type ExportWorkObjectsResponse = z.infer<
+	typeof ExportWorkObjectsResponseSchema
+>;
+export type AuditQuery = z.infer<typeof AuditQuerySchema>;
+export type AuditEntry = z.infer<typeof AuditEntrySchema>;
+export type PlatformHealth = z.infer<typeof PlatformHealthSchema>;
+export type ReleaseManifest = z.infer<typeof ReleaseManifestSchema>;
