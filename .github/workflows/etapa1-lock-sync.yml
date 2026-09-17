@@ -24,7 +24,8 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --lockfile-only --no-frozen-lockfile
+      - name: Synchronize workspace lockfile
+        run: pnpm install --lockfile-only --no-frozen-lockfile
       - name: Commit lockfile
         run: |
           if git diff --quiet -- pnpm-lock.yaml; then exit 0; fi
