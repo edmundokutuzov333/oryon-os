@@ -24,14 +24,16 @@ export async function POST(request: Request) {
 	const setCookie = response.headers.get("set-cookie");
 	if (setCookie) {
 		const sessionPart = setCookie.split(";")[0];
-		const [name, value] = sessionPart.split("=");
-		if (name === cookieName && value) {
-			next.cookies.set(cookieName, decodeURIComponent(value), {
-				httpOnly: true,
-				secure: process.env.NODE_ENV === "production",
-				sameSite: "lax",
-				path: "/",
-			});
+		if (sessionPart) {
+			const [name, value] = sessionPart.split("=");
+			if (name === cookieName && value) {
+				next.cookies.set(cookieName, decodeURIComponent(value), {
+					httpOnly: true,
+					secure: process.env.NODE_ENV === "production",
+					sameSite: "lax",
+					path: "/",
+				});
+			}
 		}
 	}
 	next.cookies.set("oryon_org", organization, {
