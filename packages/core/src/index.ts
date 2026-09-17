@@ -33,3 +33,9 @@ export {
 	validateWorkObjectDates,
 	validateWorkObjectUpdate,
 } from "./work-object.js";
+
+export {
+	assertBudget,
+	requiresCheckpoint,
+	evaluateWorkflowCondition,
+} from "./agent-execution.js";
