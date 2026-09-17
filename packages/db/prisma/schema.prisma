@@ -80,6 +80,9 @@ model Organization {
   messages            Message[]
   reactions           Reaction[]
   webhookDeliveries   WebhookDelivery[]
+  workspaceMembers    WorkspaceMember[]
+  consumerDeliveries  OutboxConsumerDelivery[]
+  agentRunIdempotency AgentRunIdempotency[]
 
   @@map("organizations")
 }
@@ -95,7 +98,8 @@ model Workspace {
   updatedAt  DateTime   @updatedAt @map("updated_at")
   deletedAt  DateTime?  @map("deleted_at")
 
-  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org               Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  workspaceMembers  WorkspaceMember[]
 
   @@unique([orgId, key])
   @@index([orgId])
@@ -143,6 +147,7 @@ model User {
   reactions           Reaction[]
   meetingParticipants MeetingParticipant[]
   notifications       Notification[]
+  workspaceMembers    WorkspaceMember[]
 
   @@unique([orgId, email])
   @@index([orgId, status])
@@ -213,6 +218,7 @@ model Agent {
   principal   User         @relation("AgentPrincipal", fields: [principalId], references: [id])
   modelPolicy ModelPolicy? @relation(fields: [modelPolicyId], references: [id])
   runs        AgentRun[]
+  idempotency AgentRunIdempotency[]
 
   @@unique([orgId, key])
   @@index([orgId, status])
@@ -432,7 +438,7 @@ model Edge {
 
   org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
-  @@unique([fromType, fromId, toType, toId, relation])
+  @@index([orgId, fromType, fromId, toType, toId, relation])
   @@index([orgId, fromType, fromId, relation])
   @@index([orgId, toType, toId, relation])
   @@map("edges")
@@ -989,12 +995,72 @@ model DomainEvent {
   org           Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   webhookDeliveries WebhookDelivery[]
+  consumerDeliveries OutboxConsumerDelivery[]
+
+  dispatchStatus    String    @default("PENDING") @map("dispatch_status")
+  dispatchAttempts  Int       @default(0) @map("dispatch_attempts")
+  dispatchLockedAt  DateTime? @map("dispatch_locked_at")
+  dispatchLastError String?   @map("dispatch_last_error")
+  dispatchedAt      DateTime? @map("dispatched_at")
 
   @@index([orgId, name, createdAt(sort: Desc)])
   @@index([orgId, subjectType, subjectId, createdAt(sort: Desc)])
   @@index([correlationId])
   @@index([publishedAt])
   @@map("domain_events")
+}
+
+model WorkspaceMember {
+  id          String   @id @default(cuid(2))
+  orgId       String   @map("org_id")
+  workspaceId String   @map("workspace_id")
+  userId      String   @map("user_id")
+  role        String   @default("MEMBER")
+  joinedAt    DateTime @default(now()) @map("joined_at")
+
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  workspace  Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([orgId, userId])
+  @@index([orgId, workspaceId])
+  @@map("workspace_members")
+}
+
+model OutboxConsumerDelivery {
+  id           String      @id @default(cuid(2))
+  orgId        String      @map("org_id")
+  eventId      String      @map("event_id")
+  consumerKey  String      @map("consumer_key")
+  status       String      @default("PROCESSING")
+  attempts     Int         @default(1)
+  lockedAt     DateTime?   @map("locked_at")
+  lastError    String?     @map("last_error")
+  deliveredAt  DateTime?   @map("delivered_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  event DomainEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, eventId, consumerKey])
+  @@index([orgId, consumerKey, createdAt])
+  @@map("outbox_consumer_deliveries")
+}
+
+model AgentRunIdempotency {
+  org            Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  orgId          String       @map("org_id")
+  agent          Agent        @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agentId        String       @map("agent_id")
+  run            AgentRun     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  runId          String       @map("run_id")
+  idempotencyKey String       @map("idempotency_key")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@id([orgId, agentId, idempotencyKey])
+  @@index([orgId, runId])
+  @@map("agent_run_idempotency")
 }
 
 model WebhookDelivery {
@@ -1045,6 +1111,7 @@ model AgentRun {
   finishedAt           DateTime?        @map("finished_at")
   org                  Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
   agent                Agent            @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  idempotency           AgentRunIdempotency[]
 
   @@index([orgId, agentId, startedAt(sort: Desc)])
   @@index([orgId, state])

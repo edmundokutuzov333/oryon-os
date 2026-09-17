@@ -177,7 +177,7 @@ async function resolveNodes(
 		const ids = nodes.filter((node) => node.type === type).map((node) => node.id);
 		if (ids.length === 0) continue;
 		const rows = await tx.$queryRawUnsafe<RawGenericNode[]>(
-			`SELECT ${resolver.select} FROM ${resolver.table} WHERE org_id = $1 AND id = ANY($2::text[]) AND (deleted_at IS NULL OR deleted_at IS NULL)`,
+			`SELECT ${resolver.select} FROM ${resolver.table} WHERE org_id = $1 AND id = ANY($2::text[])`,
 			orgId,
 			ids,
 		);
@@ -202,6 +202,12 @@ async function resolveNodes(
 
 export class GraphRepository {
 	private readonly db: PrismaClient;
+
+	async findById(orgId: string, id: string) {
+		return withOrgContext(this.db, orgId, (tx) =>
+			tx.edge.findFirst({ where: { id, orgId } }),
+		);
+	}
 
 	constructor(db: PrismaClient) {
 		this.db = db;

@@ -29,7 +29,11 @@ SELECT 'wm_' || w."id" || '_' || u."id", w."org_id", w."id", u."id"
 FROM "workspaces" w
 JOIN "users" u ON u."org_id" = w."org_id" AND u."deleted_at" IS NULL
 WHERE w."deleted_at" IS NULL
+  AND (SELECT count(*) FROM "workspaces" w2 WHERE w2."org_id" = w."org_id" AND w2."deleted_at" IS NULL) = 1
 ON CONFLICT ("workspace_id", "user_id") DO NOTHING;
+
+DROP INDEX IF EXISTS "edges_fromType_fromId_toType_toId_relation_key";
+DROP INDEX IF EXISTS "edges_from_type_from_id_to_type_to_id_relation_key";
 
 CREATE UNIQUE INDEX IF NOT EXISTS "edges_active_unique"
   ON "edges"("org_id", "from_type", "from_id", "to_type", "to_id", "relation")
@@ -53,6 +57,11 @@ CREATE TABLE IF NOT EXISTS "outbox_consumer_deliveries" (
   "org_id" text NOT NULL,
   "event_id" text NOT NULL,
   "consumer_key" text NOT NULL,
+  "status" text NOT NULL DEFAULT 'PROCESSING',
+  "attempts" integer NOT NULL DEFAULT 1,
+  "locked_at" timestamp(3),
+  "last_error" text,
+  "delivered_at" timestamp(3),
   "created_at" timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "outbox_consumer_deliveries_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "outbox_consumer_deliveries_org_fk" FOREIGN KEY ("org_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE,
