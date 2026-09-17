@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Turborepo / build output
+.turbo/
+dist/
+.next/
+coverage/
+playwright-report/
+test-results/
+
+# Generated Prisma client and generated API artifacts
+packages/db/src/generated/
+apps/api/src/generated/
+sdk/dist/
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
