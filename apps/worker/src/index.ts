@@ -1,10 +1,10 @@
-import { Client, Connection } from "@temporalio/client";
-import { Worker as TemporalWorker } from "@temporalio/worker";
+import { Client } from "@temporalio/client";
+import { NativeConnection, Worker as TemporalWorker } from "@temporalio/worker";
 import { Worker as BullWorker } from "bullmq";
 import { fileURLToPath } from "node:url";
 import { AgentRepository, AutomationRepository } from "@oryon/db/repositories";
 import { closePrisma, getPrisma } from "@oryon/db";
-import { agentRunQueue, workflowRunQueue, enqueueAgentRun, enqueueWorkflowRun, startQueueWorkers } from "./queue.js";
+import { enqueueAgentRun, enqueueWorkflowRun, startQueueWorkers } from "./queue.js";
 import { activities } from "./temporal-activities.js";
 import { runOryonWorkflow } from "./temporal-workflow.js";
 import { WorkflowTriggerSchema } from "@oryon/contracts/agents-automation";
@@ -56,7 +56,7 @@ async function configureSchedules(): Promise<void> {
 async function startTemporal(): Promise<{ worker: TemporalWorker; client: Client } | null> {
 	const address = process.env.TEMPORAL_ADDRESS;
 	if (!address) return null;
-	const connection = await Connection.connect({ address });
+	const connection = await NativeConnection.connect({ address });
 	const client = new Client({ connection });
 	const worker = await TemporalWorker.create({ connection, namespace: process.env.TEMPORAL_NAMESPACE ?? "default", taskQueue: process.env.TEMPORAL_TASK_QUEUE ?? "oryon-agents", workflowsPath: fileURLToPath(new URL("./temporal-workflow.js", import.meta.url)), activities });
 	return { worker, client };
