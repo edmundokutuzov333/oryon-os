@@ -8,6 +8,7 @@ import { registerGraphRoutes } from "./graph.js";
 import { registerMeetingRoutesV2 } from "./meetings-v2.js";
 import { registerPageAttachmentRoutes } from "./page-attachments.js";
 import { registerPermissionRoutes } from "./permissions.js";
+import { registerSearchAiRoutes, closeAiSearchResources } from "./search-ai.js";
 import { registerWorkExperienceRoutes } from "./work-experience.js";
 import { registerWorkObjectRoutes } from "./work-objects.js";
 import { registerDomainTemplateRoutes } from "./domain-templates.js";

@@ -1363,6 +1363,10 @@ enum PageKind {
   POSTMORTEM
   TEMPLATE
   KB_ARTICLE
+  CANVAS
+  DATABASE_VIEW
+  BRIEF
+  NOTE
 }
 
 enum ViewType {
