@@ -21,6 +21,15 @@ import {
 	WebhookTestResponseSchema,
 	WebhookUpdateInputSchema,
 } from "@oryon/contracts/platform-release";
+import {
+	GraphEdgeCreateInputSchema,
+	GraphEdgeDeleteInputSchema,
+	GraphEdgeMutationResponseSchema,
+	GraphEdgeRestoreInputSchema,
+	GraphEdgeSchema,
+	GraphTraverseQuerySchema,
+	GraphTraverseResponseSchema,
+} from "@oryon/contracts/graph";
 
 function schemaRef(name: string) {
 	return { $ref: `#/components/schemas/${name}` };
@@ -98,13 +107,9 @@ export const openApiDocument = {
 			AuditEntry: toOpenApiSchema(AuditEntrySchema),
 			AuditQuery: toOpenApiSchema(AuditQuerySchema),
 			ExportWorkObjectsInput: toOpenApiSchema(ExportWorkObjectsInputSchema),
-			ExportWorkObjectsResponse: toOpenApiSchema(
-				ExportWorkObjectsResponseSchema,
-			),
+			ExportWorkObjectsResponse: toOpenApiSchema(ExportWorkObjectsResponseSchema),
 			ImportWorkObjectsInput: toOpenApiSchema(ImportWorkObjectsInputSchema),
-			ImportWorkObjectsResponse: toOpenApiSchema(
-				ImportWorkObjectsResponseSchema,
-			),
+			ImportWorkObjectsResponse: toOpenApiSchema(ImportWorkObjectsResponseSchema),
 			PlatformHealth: toOpenApiSchema(PlatformHealthSchema),
 			WebhookCreateInput: toOpenApiSchema(WebhookCreateInputSchema),
 			WebhookSummary: toOpenApiSchema(WebhookSummarySchema),
@@ -113,6 +118,13 @@ export const openApiDocument = {
 			WebhookUpdateInput: toOpenApiSchema(WebhookUpdateInputSchema),
 			ApiKeySummaryList: arrayRef("ApiKeySummary"),
 			AuditEntryList: arrayRef("AuditEntry"),
+			GraphEdgeCreateInput: toOpenApiSchema(GraphEdgeCreateInputSchema),
+			GraphEdgeDeleteInput: toOpenApiSchema(GraphEdgeDeleteInputSchema),
+			GraphEdgeRestoreInput: toOpenApiSchema(GraphEdgeRestoreInputSchema),
+			GraphEdgeMutationResponse: toOpenApiSchema(GraphEdgeMutationResponseSchema),
+			GraphEdge: toOpenApiSchema(GraphEdgeSchema),
+			GraphTraverseQuery: toOpenApiSchema(GraphTraverseQuerySchema),
+			GraphTraverseResponse: toOpenApiSchema(GraphTraverseResponseSchema),
 		},
 	},
 	paths: {
@@ -131,68 +143,37 @@ export const openApiDocument = {
 			},
 		},
 		"/platform/api-keys": {
-			get: {
-				responses: { "200": jsonResponse("ApiKeySummaryList", "API keys") },
-			},
+			get: { responses: { "200": jsonResponse("ApiKeySummaryList", "API keys") } },
 			post: {
 				requestBody: jsonRequestBody("ApiKeyCreateInput"),
-				responses: {
-					"201": jsonResponse("ApiKeyCreated", "Created API key"),
-				},
+				responses: { "201": jsonResponse("ApiKeyCreated", "Created API key") },
 			},
 		},
 		"/platform/api-keys/{id}": {
-			parameters: [{
-				name: "id",
-				in: "path",
-				required: true,
-				schema: { type: "string" },
-			}],
+			parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
 			delete: {
 				requestBody: jsonRequestBody("ApiKeyRevokeInput"),
-				responses: {
-					"200": jsonResponse("ApiKeyRevokeResponse", "Revoked API key"),
-				},
+				responses: { "200": jsonResponse("ApiKeyRevokeResponse", "Revoked API key") },
 			},
 		},
 		"/platform/webhooks": {
-			get: {
-				responses: {
-					"200": jsonResponse("WebhookSummaryList", "Webhook endpoints"),
-				},
-			},
+			get: { responses: { "200": jsonResponse("WebhookSummaryList", "Webhook endpoints") } },
 			post: {
 				requestBody: jsonRequestBody("WebhookCreateInput"),
-				responses: {
-					"201": jsonResponse("WebhookSummary", "Created webhook"),
-				},
+				responses: { "201": jsonResponse("WebhookSummary", "Created webhook") },
 			},
 		},
 		"/platform/webhooks/{id}": {
-			parameters: [{
-				name: "id",
-				in: "path",
-				required: true,
-				schema: { type: "string" },
-			}],
+			parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
 			patch: {
 				requestBody: jsonRequestBody("WebhookUpdateInput"),
-				responses: {
-					"200": jsonResponse("WebhookSummary", "Updated webhook"),
-				},
+				responses: { "200": jsonResponse("WebhookSummary", "Updated webhook") },
 			},
 		},
 		"/platform/webhooks/{id}/test": {
-			parameters: [{
-				name: "id",
-				in: "path",
-				required: true,
-				schema: { type: "string" },
-			}],
+			parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
 			post: {
-				responses: {
-					"200": jsonResponse("WebhookTestResponse", "Delivery result"),
-				},
+				responses: { "200": jsonResponse("WebhookTestResponse", "Delivery result") },
 			},
 		},
 		"/platform/audit": {
@@ -204,41 +185,55 @@ export const openApiDocument = {
 		"/platform/import/work-objects": {
 			post: {
 				requestBody: jsonRequestBody("ImportWorkObjectsInput"),
-				responses: {
-					"200": jsonResponse(
-						"ImportWorkObjectsResponse",
-						"Imported WorkObjects",
-					),
-				},
+				responses: { "200": jsonResponse("ImportWorkObjectsResponse", "Imported WorkObjects") },
 			},
 		},
 		"/platform/export/work-objects": {
 			get: {
 				parameters: queryParameters(ExportWorkObjectsInputSchema),
-				responses: {
-					"200": jsonResponse(
-						"ExportWorkObjectsResponse",
-						"Exported WorkObjects",
-					),
-				},
+				responses: { "200": jsonResponse("ExportWorkObjectsResponse", "Exported WorkObjects") },
+			},
+		},
+		"/edges": {
+			post: {
+				parameters: [{ name: "Idempotency-Key", in: "header", required: true, schema: { type: "string", minLength: 8 } }],
+				requestBody: jsonRequestBody("GraphEdgeCreateInput"),
+				responses: { "201": jsonResponse("GraphEdgeMutationResponse", "Created graph edge") },
+			},
+		},
+		"/edges/{id}": {
+			parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+			delete: {
+				parameters: [{ name: "Idempotency-Key", in: "header", required: true, schema: { type: "string", minLength: 8 } }],
+				requestBody: jsonRequestBody("GraphEdgeDeleteInput"),
+				responses: { "200": jsonResponse("GraphEdgeMutationResponse", "Deleted graph edge") },
+			},
+		},
+		"/edges/{id}/restore": {
+			parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+			post: {
+				parameters: [{ name: "Idempotency-Key", in: "header", required: true, schema: { type: "string", minLength: 8 } }],
+				requestBody: jsonRequestBody("GraphEdgeRestoreInput"),
+				responses: { "200": jsonResponse("GraphEdgeMutationResponse", "Restored graph edge") },
+			},
+		},
+		"/graph/traverse": {
+			get: {
+				parameters: queryParameters(GraphTraverseQuerySchema),
+				responses: { "200": jsonResponse("GraphTraverseResponse", "Visible graph traversal") },
 			},
 		},
 	},
 } as const;
 
-export async function registerOpenApiRoutes(
-	app: FastifyInstance,
-): Promise<void> {
+export async function registerOpenApiRoutes(app: FastifyInstance): Promise<void> {
 	app.get("/openapi.json", async (_request, reply) =>
 		reply.type("application/json").send(openApiDocument),
 	);
 }
 
 if (process.argv[1]?.endsWith("openapi.ts")) {
-	const generatedDir = resolve(
-		dirname(fileURLToPath(import.meta.url)),
-		"../generated",
-	);
+	const generatedDir = resolve(dirname(fileURLToPath(import.meta.url)), "../generated");
 	mkdirSync(generatedDir, { recursive: true });
 	const outputPath = resolve(generatedDir, "openapi.json");
 	writeFileSync(outputPath, `${JSON.stringify(openApiDocument, null, 2)}\n`);
