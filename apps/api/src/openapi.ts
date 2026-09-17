@@ -1,79 +1,129 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { z } from "zod";
 import type { FastifyInstance } from "fastify";
+import {
+	publicApiContracts,
+	type ApiContract,
+} from "@oryon/contracts/public-api";
 
-export const openApiDocument = {
-	openapi: "3.1.0",
-	info: {
-		title: "OryonOS API",
-		version: "0.1.0",
-		description: "Public REST API for OryonOS V1.",
-	},
-	servers: [{ url: "https://api.oryon.os/v1" }],
-	security: [{ bearerAuth: [] }, { apiKeyAuth: [] }],
-	components: {
-		securitySchemes: {
-			bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
-			apiKeyAuth: { type: "apiKey", in: "header", name: "X-Oryon-Api-Key" },
-		},
-	},
-	paths: {
-		"/health": {
-			get: {
-				security: [],
-				responses: { "200": { description: "Health check" } },
-			},
-		},
-		"/platform/health": {
-			get: {
-				responses: {
-					"200": { description: "Platform health" },
-					"503": { description: "Degraded platform" },
+type OpenApiSchema = Record<string, unknown>;
+type OpenApiOperation = Record<string, unknown>;
+
+type JsonSchemaDocument = OpenApiSchema & {
+	properties?: Record<string, OpenApiSchema>;
+	required?: string[];
+	$schema?: string;
+};
+
+function jsonSchema(
+	schema: z.ZodType,
+	io: "input" | "output",
+): JsonSchemaDocument {
+	const document = z.toJSONSchema(schema, {
+		target: "draft-2020-12",
+		io,
+		unrepresentable: "any",
+	}) as JsonSchemaDocument;
+	delete document.$schema;
+	return document;
+}
+
+function parametersFor(
+	schema: z.ZodType | undefined,
+	location: "path" | "query",
+): OpenApiSchema[] {
+	if (!schema) return [];
+	const document = jsonSchema(schema, "input");
+	const properties = document.properties ?? {};
+	const required = new Set(document.required ?? []);
+	return Object.entries(properties).map(([name, propertySchema]) => ({
+		name,
+		in: location,
+		required: location === "path" ? true : required.has(name),
+		schema: propertySchema,
+	}));
+}
+
+function securityFor(
+	security: ApiContract["security"],
+): OpenApiSchema[] | undefined {
+	if (!security || security === "none") return [];
+	if (security === "bearer") return [{ bearerAuth: [] }];
+	if (security === "apiKey") return [{ apiKeyAuth: [] }];
+	return [{ bearerAuth: [] }, { apiKeyAuth: [] }];
+}
+
+function operationFor(contract: ApiContract): OpenApiOperation {
+	const operation: OpenApiOperation = {
+		operationId: contract.operationId,
+		summary: contract.summary,
+		tags: contract.tags,
+		responses: {
+			[String(contract.response.status)]: {
+				description: contract.response.description,
+				content: {
+					"application/json": {
+						schema: jsonSchema(contract.response.schema, "output"),
+					},
 				},
 			},
 		},
-		"/platform/api-keys": {
-			get: { responses: { "200": { description: "API keys" } } },
-			post: { responses: { "201": { description: "Created API key" } } },
+	};
+	const parameters = [
+		...parametersFor(contract.params, "path"),
+		...parametersFor(contract.query, "query"),
+	];
+	if (parameters.length > 0) operation.parameters = parameters;
+	if (contract.body) {
+		operation.requestBody = {
+			required: true,
+			content: {
+				"application/json": {
+					schema: jsonSchema(contract.body, "input"),
+				},
+			},
+		};
+	}
+	operation.security = securityFor(contract.security);
+	return operation;
+}
+
+function buildOpenApiDocument() {
+	const paths: Record<string, Record<string, OpenApiOperation>> = {};
+	for (const contract of publicApiContracts) {
+		const path = (paths[contract.path] ??= {});
+		path[contract.method.toLowerCase()] = operationFor(contract);
+	}
+	return {
+		openapi: "3.1.0",
+		info: {
+			title: "OryonOS API",
+			version: "0.1.0",
+			description:
+				"Public REST API for OryonOS V1. Contract-generated from packages/contracts.",
 		},
-		"/platform/api-keys/{id}": {
-			delete: { responses: { "200": { description: "Revoked" } } },
+		servers: [{ url: "https://api.oryon.os" }],
+		paths,
+		components: {
+			securitySchemes: {
+				bearerAuth: {
+					type: "http",
+					scheme: "bearer",
+					bearerFormat: "JWT",
+				},
+				apiKeyAuth: {
+					type: "apiKey",
+					in: "header",
+					name: "X-Oryon-Api-Key",
+				},
+			},
 		},
-		"/platform/webhooks": {
-			get: { responses: { "200": { description: "Webhook endpoints" } } },
-			post: { responses: { "201": { description: "Created webhook" } } },
-		},
-		"/platform/webhooks/{id}": {
-			patch: { responses: { "200": { description: "Updated webhook" } } },
-		},
-		"/platform/webhooks/{id}/test": {
-			post: { responses: { "200": { description: "Delivery result" } } },
-		},
-		"/platform/audit": {
-			get: { responses: { "200": { description: "Audit entries" } } },
-		},
-		"/platform/import/work-objects": {
-			post: { responses: { "200": { description: "Imported WorkObjects" } } },
-		},
-		"/platform/export/work-objects": {
-			get: { responses: { "200": { description: "Exported WorkObjects" } } },
-		},
-		"/domain-templates": {
-			get: { responses: { "200": { description: "Domain templates" } } },
-		},
-		"/work-objects": {
-			get: { responses: { "200": { description: "WorkObjects" } } },
-			post: { responses: { "201": { description: "Created WorkObject" } } },
-		},
-		"/graph/traverse": {
-			get: { responses: { "200": { description: "Graph traversal" } } },
-		},
-		"/agents/{id}/runs": {
-			post: { responses: { "200": { description: "Agent run" } } },
-		},
-	},
-} as const;
+	};
+}
+
+export const openApiDocument = buildOpenApiDocument();
 
 export async function registerOpenApiRoutes(
 	app: FastifyInstance,

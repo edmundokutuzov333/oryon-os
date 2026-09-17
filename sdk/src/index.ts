@@ -1,40 +1,67 @@
+import { z } from "zod";
+import {
+	ApiKeyCreateInputSchema,
+	ApiKeyCreatedSchema,
+	ApiKeyRevokeInputSchema,
+	ApiKeySummarySchema,
+	AuditEntrySchema,
+	AuditQuerySchema,
+	ExportWorkObjectsInputSchema,
+	ExportWorkObjectsResponseSchema,
+	ImportWorkObjectsInputSchema,
+	ImportWorkObjectsResponseSchema,
+	PlatformHealthSchema,
+	WebhookCreateInputSchema,
+	WebhookSummarySchema,
+	WebhookTestResponseSchema,
+	WebhookUpdateInputSchema,
+	apiEnvelopeSchema,
+} from "@oryon/contracts/public-api";
+
+const ApiKeyListResponseSchema = apiEnvelopeSchema(ApiKeySummarySchema.array());
+const ApiKeyCreatedResponseSchema = apiEnvelopeSchema(ApiKeyCreatedSchema);
+const RevokedResponseSchema = apiEnvelopeSchema(z.object({ revoked: z.boolean() }));
+const WebhookListResponseSchema = apiEnvelopeSchema(WebhookSummarySchema.array());
+const WebhookResponseSchema = apiEnvelopeSchema(WebhookSummarySchema);
+const WebhookTestResponseEnvelopeSchema = apiEnvelopeSchema(WebhookTestResponseSchema);
+const AuditListResponseSchema = apiEnvelopeSchema(AuditEntrySchema.array());
+const ImportResponseSchema = apiEnvelopeSchema(ImportWorkObjectsResponseSchema);
+const ExportResponseSchema = apiEnvelopeSchema(ExportWorkObjectsResponseSchema);
+const PlatformHealthResponseSchema = apiEnvelopeSchema(PlatformHealthSchema);
+
+type AnySchema = z.ZodType;
+
+type RequestOptions = RequestInit & {
+	idempotencyKey?: string;
+};
+
 export type OryonClientOptions = {
 	baseUrl?: string;
 	apiKey: string;
 	orgId: string;
 	fetch?: typeof fetch;
 };
+
 export type OryonEnvelope<T> = {
 	data: T;
 	meta: { requestId: string; durationMs: number };
 };
-export type Webhook = {
-	id: string;
-	url: string;
-	events: string[];
-	description: string | null;
-	active: boolean;
-	secretPreview: string;
-	createdAt: string;
-	updatedAt: string;
-};
-export type ApiKey = {
-	id: string;
-	label: string;
-	prefix: string;
-	userId: string;
-	createdAt: string;
-	expiresAt: string | null;
-	revokedAt: string | null;
-};
-export type ApiKeyCreated = ApiKey & { secret: string };
-export type ImportResult = { imported: number; ids: string[] };
+export type Webhook = z.infer<typeof WebhookSummarySchema>;
+export type ApiKey = z.infer<typeof ApiKeySummarySchema>;
+export type ApiKeyCreated = z.infer<typeof ApiKeyCreatedSchema>;
+export type ImportResult = z.infer<typeof ImportWorkObjectsResponseSchema>;
+export type ExportResult = z.infer<typeof ExportWorkObjectsResponseSchema>;
+
+function encodePath(value: string): string {
+	return encodeURIComponent(value);
+}
 
 export class OryonClient {
 	private readonly baseUrl: string;
 	private readonly apiKey: string;
 	private readonly orgId: string;
 	private readonly http: typeof fetch;
+
 	constructor(options: OryonClientOptions) {
 		this.baseUrl = (options.baseUrl ?? "https://api.oryon.os/v1").replace(
 			/\/$/,
@@ -44,112 +71,176 @@ export class OryonClient {
 		this.orgId = options.orgId;
 		this.http = options.fetch ?? fetch;
 	}
-	private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
-		const headers = new Headers(init.headers);
+
+	private async request<T>(
+		path: string,
+		schema: AnySchema,
+		options: RequestOptions = {},
+	): Promise<T> {
+		const headers = new Headers(options.headers);
 		headers.set("Accept", "application/json");
 		headers.set("X-Oryon-Org", this.orgId);
 		headers.set("X-Oryon-Api-Key", this.apiKey);
-		if (init.method && init.method !== "GET")
-			headers.set("Idempotency-Key", crypto.randomUUID());
+		if (options.method && options.method !== "GET") {
+			headers.set(
+				"Idempotency-Key",
+				options.idempotencyKey ?? crypto.randomUUID(),
+			);
+		}
+		const { idempotencyKey: _idempotencyKey, ...init } = options;
 		const response = await this.http(`${this.baseUrl}${path}`, {
 			...init,
 			headers,
 		});
-		const payload = (await response.json()) as
-			| OryonEnvelope<T>
-			| { error?: { message?: string } };
-		if (!response.ok)
+		const payload: unknown = await response.json();
+		if (!response.ok) {
+			const error =
+				typeof payload === "object" && payload !== null && "error" in payload
+					? (payload as { error?: { message?: string } }).error
+					: undefined;
 			throw new Error(
-				"error" in payload && payload.error?.message
-					? payload.error.message
+				typeof error?.message === "string"
+					? error.message
 					: `Oryon API error ${response.status}`,
 			);
-		return (payload as OryonEnvelope<T>).data;
+		}
+		return schema.parse(payload) as T;
 	}
+
 	listApiKeys(): Promise<ApiKey[]> {
-		return this.request("/platform/api-keys");
+		return this.request<z.infer<typeof ApiKeyListResponseSchema>>(
+			"/platform/api-keys",
+			ApiKeyListResponseSchema,
+		).then((value) => value.data);
 	}
+
 	createApiKey(
-		label: string,
-		expiresAt: string | null = null,
+		input: z.input<typeof ApiKeyCreateInputSchema>,
 	): Promise<ApiKeyCreated> {
-		return this.request("/platform/api-keys", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ label, expiresAt }),
-		});
+		const body = ApiKeyCreateInputSchema.parse(input);
+		return this.request<z.infer<typeof ApiKeyCreatedResponseSchema>>(
+			"/platform/api-keys",
+			ApiKeyCreatedResponseSchema,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			},
+		).then((value) => value.data);
 	}
+
 	revokeApiKey(
 		id: string,
-		reason: string | null = null,
+		reason: z.input<typeof ApiKeyRevokeInputSchema>["reason"] = null,
 	): Promise<{ revoked: boolean }> {
-		return this.request(`/platform/api-keys/${encodeURIComponent(id)}`, {
-			method: "DELETE",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ reason }),
-		});
+		const body = ApiKeyRevokeInputSchema.parse({ reason });
+		return this.request<z.infer<typeof RevokedResponseSchema>>(
+			`/platform/api-keys/${encodePath(id)}`,
+			RevokedResponseSchema,
+			{
+				method: "DELETE",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			},
+		).then((value) => value.data);
 	}
+
 	listWebhooks(): Promise<Webhook[]> {
-		return this.request("/platform/webhooks");
+		return this.request<z.infer<typeof WebhookListResponseSchema>>(
+			"/platform/webhooks",
+			WebhookListResponseSchema,
+		).then((value) => value.data);
 	}
-	createWebhook(input: {
-		url: string;
-		events: string[];
-		description?: string | null;
-	}): Promise<Webhook> {
-		return this.request("/platform/webhooks", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(input),
-		});
+
+	createWebhook(
+		input: z.input<typeof WebhookCreateInputSchema>,
+	): Promise<Webhook> {
+		const body = WebhookCreateInputSchema.parse(input);
+		return this.request<z.infer<typeof WebhookResponseSchema>>(
+			"/platform/webhooks",
+			WebhookResponseSchema,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			},
+		).then((value) => value.data);
 	}
+
 	updateWebhook(
 		id: string,
-		input: Partial<{
-			url: string;
-			events: string[];
-			description: string | null;
-			active: boolean;
-		}>,
+		input: z.input<typeof WebhookUpdateInputSchema>,
 	): Promise<Webhook> {
-		return this.request(`/platform/webhooks/${encodeURIComponent(id)}`, {
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(input),
-		});
+		const body = WebhookUpdateInputSchema.parse(input);
+		return this.request<z.infer<typeof WebhookResponseSchema>>(
+			`/platform/webhooks/${encodePath(id)}`,
+			WebhookResponseSchema,
+			{
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			},
+		).then((value) => value.data);
 	}
-	testWebhook(
-		id: string,
-	): Promise<{
-		delivered: boolean;
-		statusCode: number | null;
-		durationMs: number;
-	}> {
-		return this.request(`/platform/webhooks/${encodeURIComponent(id)}/test`, {
-			method: "POST",
-		});
+
+	testWebhook(id: string): Promise<z.infer<typeof WebhookTestResponseSchema>> {
+		return this.request<z.infer<typeof WebhookTestResponseEnvelopeSchema>>(
+			`/platform/webhooks/${encodePath(id)}/test`,
+			WebhookTestResponseEnvelopeSchema,
+			{ method: "POST" },
+		).then((value) => value.data);
 	}
-	importWorkObjects(objects: unknown[]): Promise<ImportResult> {
-		return this.request("/platform/import/work-objects", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ objects }),
-		});
+
+	listAudit(
+		params: z.input<typeof AuditQuerySchema> = {},
+	): Promise<z.infer<typeof AuditEntrySchema>[]> {
+		const query = AuditQuerySchema.parse(params);
+		const search = new URLSearchParams();
+		if (query.action) search.set("action", query.action);
+		if (query.resourceType) search.set("resourceType", query.resourceType);
+		if (query.resourceId) search.set("resourceId", query.resourceId);
+		if (query.actorId) search.set("actorId", query.actorId);
+		search.set("limit", String(query.limit));
+		return this.request<z.infer<typeof AuditListResponseSchema>>(
+			`/platform/audit?${search.toString()}`,
+			AuditListResponseSchema,
+		).then((value) => value.data);
 	}
+
+	importWorkObjects(
+		input: z.input<typeof ImportWorkObjectsInputSchema>,
+	): Promise<ImportResult> {
+		const body = ImportWorkObjectsInputSchema.parse(input);
+		return this.request<z.infer<typeof ImportResponseSchema>>(
+			"/platform/import/work-objects",
+			ImportResponseSchema,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			},
+		).then((value) => value.data);
+	}
+
 	exportWorkObjects(
-		params: {
-			typeKey?: string;
-			workspaceId?: string;
-			includeCustomFields?: boolean;
-			limit?: number;
-		} = {},
-	): Promise<unknown> {
+		params: z.input<typeof ExportWorkObjectsInputSchema> = {},
+	): Promise<ExportResult> {
+		const parsed = ExportWorkObjectsInputSchema.parse(params);
 		const query = new URLSearchParams();
-		if (params.typeKey) query.set("typeKey", params.typeKey);
-		if (params.workspaceId) query.set("workspaceId", params.workspaceId);
-		if (params.includeCustomFields !== undefined)
-			query.set("includeCustomFields", String(params.includeCustomFields));
-		if (params.limit) query.set("limit", String(params.limit));
-		return this.request(`/platform/export/work-objects?${query.toString()}`);
+		if (parsed.typeKey) query.set("typeKey", parsed.typeKey);
+		if (parsed.workspaceId) query.set("workspaceId", parsed.workspaceId);
+		query.set("includeCustomFields", String(parsed.includeCustomFields));
+		query.set("limit", String(parsed.limit));
+		return this.request<z.infer<typeof ExportResponseSchema>>(
+			`/platform/export/work-objects?${query.toString()}`,
+			ExportResponseSchema,
+		).then((value) => value.data);
+	}
+
+	getPlatformHealth(): Promise<z.infer<typeof PlatformHealthSchema>> {
+		return this.request<z.infer<typeof PlatformHealthResponseSchema>>(
+			"/platform/health",
+			PlatformHealthResponseSchema,
+		).then((value) => value.data);
 	}
 }
