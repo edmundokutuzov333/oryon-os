@@ -2,7 +2,6 @@
   "name": "@oryon/sdk",
   "version": "0.1.0",
   "description": "Official TypeScript client for OryonOS public REST API",
-  "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
