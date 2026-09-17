@@ -181,8 +181,17 @@ export class AgentRepository {
 				where: { id: agentId, orgId, deletedAt: null, status: "ACTIVE" },
 				select: { id: true, principalId: true },
 			});
-			if (!agent) throw new Error("NOT_FOUND");
-			const id = randomUUID();
+			const idempotencyKey = input.idempotencyKey ?? requestId;
+			if (idempotencyKey) {
+				await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`${orgId}:${agentId}:${idempotencyKey}`}, 0))`;
+				const existing = await tx.$queryRaw<Array<{ run_id: string }>>`
+					SELECT run_id FROM agent_run_idempotency
+					WHERE org_id = ${orgId} AND agent_id = ${agentId} AND idempotency_key = ${idempotencyKey}
+					LIMIT 1
+				`;
+				if (existing[0]) return { id: existing[0].run_id };
+			}
+
 			await tx.agentRun.create({
 				data: {
 					id,
@@ -198,6 +207,12 @@ export class AgentRepository {
 					modelKey: input.preferredModel ?? null,
 				},
 			});
+			if (idempotencyKey) {
+				await tx.$executeRaw`
+					INSERT INTO agent_run_idempotency (org_id, agent_id, idempotency_key, run_id)
+					VALUES (${orgId}, ${agentId}, ${idempotencyKey}, ${id})
+				`;
+			}
 			await appendDomainEvent(tx, {
 				orgId,
 				actorId,
