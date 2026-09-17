@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { authCopy } from "../../../../lib/auth-copy";
+import { authCopy } from "../../../lib/auth-copy";
 
 export function VerifyClient({ token, organization }: { token: string; organization: string }) {
 	const [error, setError] = useState<string>();
