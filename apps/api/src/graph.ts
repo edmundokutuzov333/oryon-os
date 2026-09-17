@@ -129,8 +129,8 @@ export async function registerGraphRoutes(app: FastifyInstance): Promise<void> {
 			if (input.from.type !== "work_object" || input.to.type !== "work_object") throw new Error("GRAPH_NODE_TYPE_UNSUPPORTED");
 			if (!(await canRead(orgId, current.userId, input.from.id)) || !(await canRead(orgId, current.userId, input.to.id))) throw new Error("PERMISSION_DENIED");
 			const fromSnapshot = await permissions.getSnapshot(orgId, current.userId, "work_object", input.from.id);
-			const fromObject = await graph.getWorkObject(orgId, input.from.id);
-			if (!fromObject || !can({ orgId, ...fromSnapshot }, objectResource(fromObject), "update").allowed) throw new Error("PERMISSION_DENIED");
+			const fromObject = await workObjects.findById(orgId, input.from.id);
+			if (!fromObject || !can({ orgId, ...fromSnapshot }, objectResource(orgId, fromObject), "update").allowed) throw new Error("PERMISSION_DENIED");
 			const created = await graph.createEdge(orgId, current.userId, input);
 			return reply.code(201).send(envelope(request, GraphEdgeResponseSchema.parse(created)));
 		} catch (error) {
