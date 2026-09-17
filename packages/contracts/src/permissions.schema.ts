@@ -41,6 +41,7 @@ export const PermissionSubjectSchema = z.object({
 	]),
 	email: z.string().email(),
 	teamIds: z.array(z.string().min(1)).default([]),
+	workspaceIds: z.array(z.string().min(1)).default([]),
 	channelIds: z.array(z.string().min(1)).default([]),
 	meetingIds: z.array(z.string().min(1)).default([]),
 });
@@ -180,22 +181,12 @@ export type PermissionResource = z.infer<typeof PermissionResourceSchema>;
 export type PermissionDecision = z.infer<typeof PermissionDecisionSchema>;
 export type PermissionGrant = z.infer<typeof PermissionGrantSchema>;
 export type PermissionRoleBinding = z.infer<typeof PermissionRoleBindingSchema>;
-export type PermissionClassification = z.infer<
-	typeof PermissionClassificationSchema
->;
+export type PermissionClassification = z.infer<typeof PermissionClassificationSchema>;
 export type PermissionSet = z.infer<typeof PermissionSetSchema>;
 export type PermissionExposure = z.infer<typeof PermissionExposureSchema>;
-export type PermissionEvaluateInput = z.infer<
-	typeof PermissionEvaluateInputSchema
->;
+export type PermissionEvaluateInput = z.infer<typeof PermissionEvaluateInputSchema>;
 export type PermissionViewAsInput = z.infer<typeof PermissionViewAsInputSchema>;
 export type PermissionEvaluation = z.infer<typeof PermissionEvaluationSchema>;
-export type PermissionRoleCreateInput = z.infer<
-	typeof PermissionRoleCreateInputSchema
->;
-export type PermissionRoleBindingCreateInput = z.infer<
-	typeof PermissionRoleBindingCreateInputSchema
->;
-export type PermissionGrantCreateInput = z.infer<
-	typeof PermissionGrantCreateInputSchema
->;
+export type PermissionRoleCreateInput = z.infer<typeof PermissionRoleCreateInputSchema>;
+export type PermissionRoleBindingCreateInput = z.infer<typeof PermissionRoleBindingCreateInputSchema>;
+export type PermissionGrantCreateInput = z.infer<typeof PermissionGrantCreateInputSchema>;
