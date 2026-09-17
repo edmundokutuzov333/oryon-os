@@ -23,8 +23,7 @@
     "node": ">=24 <25"
   },
   "dependencies": {
-    "@oryon/contracts": "workspace:*",
-    "zod": "^4.0.0"
+    "@oryon/contracts": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.9.2"
