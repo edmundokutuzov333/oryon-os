@@ -9,6 +9,8 @@ const P13 = "origin/feat/phase-13-agents-automation";
 const P15 = "origin/feat/phase-15-platform-release";
 const MAIN_BASE = "14ad4ca34915ed772b7a49ef4989c4c6147a0aa6";
 const P12_BASE = "df812c3a2fe9fd4a15cbffd4ed5ab1bc2bf4de5f";
+const mainCiPath = ".github/workflows/ci.yml";
+const mainCiContent = existsSync(mainCiPath) ? readFileSync(mainCiPath, "utf8") : null;
 
 const show = (ref, path) => run("git", ["show", `${ref}:${path}`]);
 const changed = (base, ref) => run("git", ["diff", "--name-status", base, ref]).split("\n").filter(Boolean).map((line) => {
@@ -22,6 +24,7 @@ const p13Changed = changed(P12_BASE, P13);
 
 run("git", ["fetch", "origin", "main", "refs/heads/feat/phase-12-search-ai", "refs/heads/feat/phase-13-agents-automation", "refs/heads/feat/phase-15-platform-release"], { stdio: "inherit" });
 run("git", ["checkout", "--detach", P15], { stdio: "inherit" });
+if (mainCiContent !== null) writeFileSync(mainCiPath, mainCiContent);
 
 const collisionPaths = new Set([
   ".env.example",
@@ -134,15 +137,9 @@ writeFileSync(serverPath, server);
 
 const shellPath = "apps/web/src/app/os/OryonAppShell.tsx";
 let shell = readFileSync(shellPath, "utf8");
-const additions = [
-  ['{ href: "/os/search", label: "Search + AI" },', '{ href: "/os/search", label: "Search + AI" },'],
-  ['{ href: "/os/agents", label: "Agents" },', '{ href: "/os/agents", label: "Agents" },'],
-  ['{ href: "/os/automations", label: "Automations" },', '{ href: "/os/automations", label: "Automations" },'],
-];
 if (!shell.includes('/os/search')) shell = shell.replace('{ href: "/os/work", label: "Work" },', '{ href: "/os/work", label: "Work" },\n  { href: "/os/search", label: "Search + AI" },');
 if (!shell.includes('/os/agents')) shell = shell.replace('{ href: "/os/search", label: "Search + AI" },', '{ href: "/os/search", label: "Search + AI" },\n  { href: "/os/agents", label: "Agents" },');
 if (!shell.includes('/os/automations')) shell = shell.replace('{ href: "/os/agents", label: "Agents" },', '{ href: "/os/agents", label: "Agents" },\n  { href: "/os/automations", label: "Automations" },');
-void additions;
 writeFileSync(shellPath, shell);
 
 const schema = "packages/db/prisma/schema.prisma";
