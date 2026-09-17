@@ -14,6 +14,24 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ORYON_MAX_CHUNK_GZIP_BYTES: 184320
+      POSTGRES_USER: oryon
+      POSTGRES_PASSWORD: oryon_local
+      POSTGRES_DB: oryon
+      DATABASE_URL: postgresql://oryon:oryon_local@127.0.0.1:5432/oryon
+      DATABASE_DIRECT_URL: postgresql://oryon:oryon_local@127.0.0.1:5432/oryon
+      REDIS_URL: redis://127.0.0.1:6379
+      ORYON_AUTH_JWT_SECRET: ci-release-identity-secret-0123456789abcdef
+      ORYON_AUTH_SESSION_TTL_SECONDS: 2592000
+      ORYON_AUTH_ACCESS_TTL_SECONDS: 900
+      ORYON_AUTH_MAGIC_LINK_TTL_SECONDS: 600
+      ORYON_AUTH_DEV_MODE: true
+      ORYON_AUTH_COOKIE_NAME: oryon_session
+      ORYON_API_URL: http://127.0.0.1:4000
+      ORYON_WEB_URL: http://127.0.0.1:3000
+      S3_BUCKET: oryon-local
+      MINIO_ROOT_USER: oryon
+      MINIO_ROOT_PASSWORD: oryon_local_password
+      TYPESENSE_API_KEY: oryon-typesense-local
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -26,8 +44,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
-      - run: pnpm --filter @oryon/db db:validate
-      - run: pnpm --filter @oryon/db db:rls:verify
+      - run: pnpm db:validate
+      - run: pnpm db:rls:verify
       - run: pnpm check:boundaries
       - run: pnpm check:v1
       - run: pnpm check:phase13
