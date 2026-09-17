@@ -14,6 +14,7 @@ export type { PermissionSnapshot, ExternalExposureRow } from "./permission.repos
 export { AgentRepository } from "./agent.repository.js";
 export { AutomationRepository } from "./automation.repository.js";
 export { PlatformRepository } from "./platform.repository.js";
+export { WebhookDeliveryRepository } from "./webhook-delivery.repository.js";
 export { RoomRepository } from "./room.repository.js";
 export { meetingRepository, roomRepository } from "./instances.js";
 export { WorkExperienceRepository } from "./work-experience.repository.js";

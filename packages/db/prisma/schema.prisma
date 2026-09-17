@@ -79,6 +79,7 @@ model Organization {
   timeEntries         TimeEntry[]
   messages            Message[]
   reactions           Reaction[]
+  webhookDeliveries   WebhookDelivery[]
 
   @@map("organizations")
 }
@@ -988,11 +989,36 @@ model DomainEvent {
   createdAt     DateTime      @default(now()) @map("created_at")
   org           Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
+  webhookDeliveries WebhookDelivery[]
+
   @@index([orgId, name, createdAt(sort: Desc)])
   @@index([orgId, subjectType, subjectId, createdAt(sort: Desc)])
   @@index([correlationId])
   @@index([publishedAt])
   @@map("domain_events")
+}
+
+model WebhookDelivery {
+  id             String               @id @default(cuid(2))
+  orgId          String               @map("org_id")
+  webhookId      String               @map("webhook_id")
+  eventId        String               @map("event_id")
+  status         WebhookDeliveryState  @default(PENDING)
+  attempts       Int                  @default(0)
+  responseStatus Int?                 @map("response_status")
+  lastError      String?              @map("last_error") @db.Text
+  lastAttemptAt  DateTime?            @map("last_attempt_at")
+  deliveredAt    DateTime?            @map("delivered_at")
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  event DomainEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([webhookId, eventId])
+  @@index([orgId, status, createdAt])
+  @@index([orgId, eventId])
+  @@map("webhook_deliveries")
 }
 
 model AgentRun {
@@ -1413,6 +1439,12 @@ enum RunState {
   FAILED
   CANCELLED
   ROLLED_BACK
+}
+
+enum WebhookDeliveryState {
+  PENDING
+  DELIVERED
+  FAILED
 }
 
 enum TriggerType {

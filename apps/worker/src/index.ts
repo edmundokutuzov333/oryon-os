@@ -4,7 +4,8 @@ import { Worker as BullWorker } from "bullmq";
 import { fileURLToPath } from "node:url";
 import { AgentRepository, AutomationRepository } from "@oryon/db/repositories";
 import { closePrisma, getPrisma } from "@oryon/db";
-import { enqueueAgentRun, enqueueWorkflowRun, startQueueWorkers } from "./queue.js";
+import { enqueueAgentRun, enqueueWebhookDelivery, enqueueWorkflowRun, startQueueWorkers } from "./queue.js";
+import { WebhookDeliveryRepository } from "@oryon/db/repositories";
 import { activities } from "./temporal-activities.js";
 import { runOryonWorkflow } from "./temporal-workflow.js";
 import { WorkflowTriggerSchema } from "@oryon/contracts/agents-automation";
@@ -16,7 +17,7 @@ const redisConnection = { host: process.env.REDIS_HOST ?? "localhost", port: Num
 const triggerQueue = new (await import("bullmq")).Queue("oryon.workflow-triggers", { connection: redisConnection });
 const agentTriggerQueue = new (await import("bullmq")).Queue("oryon.agent-triggers", { connection: redisConnection });
 let stopped = false;
-const lastEventByOrg = new Map<string, number>();
+const webhookDeliveries = new WebhookDeliveryRepository(db);
 
 async function pollRunnable(): Promise<void> {
 	for (const orgId of await automation.listOrganizations()) {
@@ -27,21 +28,24 @@ async function pollRunnable(): Promise<void> {
 
 async function pollEvents(): Promise<void> {
 	for (const orgId of await automation.listOrganizations()) {
-		const since = new Date(lastEventByOrg.get(orgId) ?? Date.now() - 15000);
-		const events = await automation.listRecentEvents(orgId, since);
-		if (events.length > 0) lastEventByOrg.set(orgId, events[events.length - 1]?.createdAt.getTime() ?? Date.now());
+		const events = await webhookDeliveries.listUnpublishedEvents(orgId, 200);
 		const workflows = await automation.listActiveEventWorkflows(orgId);
-		for (const workflow of workflows) {
-			const trigger = WorkflowTriggerSchema.parse(workflow.triggerJson);
-			if (trigger.kind !== "EVENT") continue;
-			for (const event of events.filter((item) => item.name === trigger.eventName)) {
+		for (const event of events) {
+			for (const hook of await webhookDeliveries.listWebhookTargets(orgId, event.name)) {
+				const delivery = await webhookDeliveries.createDelivery(orgId, hook.id, event.id);
+				if (delivery.created) await enqueueWebhookDelivery(orgId, delivery.id);
+			}
+			for (const workflow of workflows) {
+				const trigger = WorkflowTriggerSchema.parse(workflow.triggerJson);
+				if (trigger.kind !== "EVENT" || trigger.eventName !== event.name) continue;
 				const existing = await automation.findRunByTriggerEvent(orgId, workflow.id, event.id);
 				if (!existing) { const created = await automation.createRun(orgId, null, workflow.id, { input: event.payload as Record<string, unknown>, triggerEventId: event.id }, event.id); await enqueueWorkflowRun(orgId, created.id); }
 			}
+			await webhookDeliveries.markEventPublished(orgId, event.id);
 		}
+		for (const deliveryId of await webhookDeliveries.listPendingDeliveries(orgId, 200)) await enqueueWebhookDelivery(orgId, deliveryId);
 	}
 }
-
 async function configureSchedules(): Promise<void> {
 	for (const orgId of await automation.listOrganizations()) {
 		for (const workflow of await automation.list(orgId)) {

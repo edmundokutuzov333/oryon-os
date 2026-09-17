@@ -5,7 +5,7 @@ import { WorkflowTriggerSchema, type WorkflowCreateInput, type WorkflowRunInput 
 
 export class AutomationRepository {
 	constructor(private readonly db: PrismaClient) {}
-	async listOrganizations(): Promise<string[]> { return this.db.organization.findMany({ where: { deletedAt: null }, select: { id: true } }).then((rows) => rows.map((row) => row.id)); }
+	async listOrganizations(): Promise<string[]> { const rows = await this.db.$queryRaw<Array<{ id: string }>>`SELECT id FROM public.oryon_worker_organization_ids()`; return rows.map((row) => row.id); }
 	async list(orgId: string) { return withOrgContext(this.db, orgId, (tx) => tx.workflow.findMany({ where: { orgId }, orderBy: { name: "asc" } })); }
 	async findById(orgId: string, id: string) { return withOrgContext(this.db, orgId, (tx) => tx.workflow.findFirst({ where: { id, orgId } })); }
 	async create(orgId: string, actorId: string, input: WorkflowCreateInput): Promise<{ id: string }> { return withOrgContext(this.db, orgId, async (tx) => { const row = await tx.workflow.create({ data: { orgId, key: input.key, name: input.name, description: input.description ?? null, triggerJson: input.trigger as Prisma.InputJsonValue, stepsJson: input.steps as Prisma.InputJsonValue, state: "DRAFT", version: 1, createdBy: actorId } }); await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "Workflow", subjectId: row.id, name: "workflow.created", payload: { key: row.key, name: row.name } as Prisma.InputJsonValue }); return { id: row.id }; }); }
