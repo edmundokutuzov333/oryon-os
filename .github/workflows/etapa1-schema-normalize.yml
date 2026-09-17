@@ -50,6 +50,10 @@ jobs:
             END IF;
           END $$;
           SQL
+      - name: Verify normalized source
+        run: |
+          grep -q 'organization Organization @relation(fields: \[orgId\]' packages/db/prisma/schema.prisma
+          ! grep -q 'organizationId String?' packages/db/prisma/schema.prisma
       - name: Commit normalization
         run: |
           git add packages/db/prisma/schema.prisma packages/db/prisma/migrations/20260917143000_channel_member_tenant_key/migration.sql
