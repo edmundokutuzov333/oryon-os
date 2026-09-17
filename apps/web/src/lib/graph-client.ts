@@ -12,14 +12,6 @@ import {
 	type GraphTraverseResponse,
 } from "@oryon/contracts/graph";
 
-async function request<T>(path: string, init: RequestInit, parse: (value: unknown) => T): Promise<T> {
-	const response = await fetch(path, { ...init, cache: "no-store" });
-	const payload = (await response.json()) as { data?: unknown; error?: { message?: string } };
-	if (!response.ok || payload.data === undefined)
-		throw new Error(payload.error?.message ?? `Oryon API returned HTTP ${response.status}`);
-	return parse(payload.data);
-}
-
 export function createGraphClient(fetchImpl: typeof fetch = fetch) {
 	const call = async <T>(path: string, init: RequestInit, parse: (value: unknown) => T) => {
 		const response = await fetchImpl(path, { ...init, cache: "no-store" });
