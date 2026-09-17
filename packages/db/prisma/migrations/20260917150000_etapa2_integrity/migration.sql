@@ -48,6 +48,28 @@ ALTER TABLE "domain_events"
 CREATE INDEX IF NOT EXISTS "domain_events_dispatch_idx"
   ON "domain_events"("org_id", "dispatch_status", "created_at");
 
+CREATE TABLE IF NOT EXISTS "outbox_consumer_deliveries" (
+  "id" text NOT NULL,
+  "org_id" text NOT NULL,
+  "event_id" text NOT NULL,
+  "consumer_key" text NOT NULL,
+  "created_at" timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "outbox_consumer_deliveries_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "outbox_consumer_deliveries_org_fk" FOREIGN KEY ("org_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT "outbox_consumer_deliveries_event_fk" FOREIGN KEY ("event_id") REFERENCES "domain_events"("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "outbox_consumer_event_key"
+  ON "outbox_consumer_deliveries"("org_id", "event_id", "consumer_key");
+CREATE INDEX IF NOT EXISTS "outbox_consumer_deliveries_org_consumer_idx"
+  ON "outbox_consumer_deliveries"("org_id", "consumer_key", "created_at");
+ALTER TABLE "outbox_consumer_deliveries" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "outbox_consumer_deliveries" FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "outbox_consumer_deliveries_tenant_isolation" ON "outbox_consumer_deliveries";
+CREATE POLICY "outbox_consumer_deliveries_tenant_isolation"
+  ON "outbox_consumer_deliveries"
+  USING ("org_id" = current_setting('app.org_id', true))
+  WITH CHECK ("org_id" = current_setting('app.org_id', true));
+
 CREATE TABLE IF NOT EXISTS "agent_run_idempotency" (
   "org_id" text NOT NULL,
   "agent_id" text NOT NULL,
