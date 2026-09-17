@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oryon-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: source-and-build-integrity
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://oryon:oryon_local@127.0.0.1:5432/oryon
+      DATABASE_DIRECT_URL: postgresql://oryon:oryon_local@127.0.0.1:5432/oryon
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+          run_install: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Generate canonical artifacts
+        run: pnpm generate
+      - name: Validate architecture and contracts
+        run: pnpm validate
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm lint
+      - name: Test
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+
+  infrastructure:
+    name: database-and-infrastructure
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      POSTGRES_USER: oryon
+      POSTGRES_PASSWORD: oryon_local
+      POSTGRES_DB: oryon
+      DATABASE_URL: postgresql://oryon:oryon_local@127.0.0.1:5432/oryon
+      DATABASE_DIRECT_URL: postgresql://oryon:oryon_local@127.0.0.1:5432/oryon
+      REDIS_URL: redis://127.0.0.1:6379
+      ORYON_AUTH_JWT_SECRET: ci-phase1-identity-secret-0123456789abcdef
+      ORYON_AUTH_SESSION_TTL_SECONDS: 2592000
+      ORYON_AUTH_ACCESS_TTL_SECONDS: 900
+      ORYON_AUTH_MAGIC_LINK_TTL_SECONDS: 600
+      ORYON_AUTH_DEV_MODE: true
+      ORYON_AUTH_COOKIE_NAME: oryon_session
+      ORYON_API_URL: http://127.0.0.1:4000
+      ORYON_WEB_URL: http://127.0.0.1:3000
+      S3_BUCKET: oryon-local
+      MINIO_ROOT_USER: oryon
+      MINIO_ROOT_PASSWORD: oryon_local_password
+      TYPESENSE_API_KEY: oryon-typesense-local
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+          run_install: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: pnpm db:generate
+      - name: Validate Prisma schema
+        run: pnpm db:validate
+      - name: Validate Compose configuration
+        run: pnpm infra:config
+      - name: Start local infrastructure
+        run: pnpm infra:up
+      - name: Diagnose local infrastructure
+        run: pnpm infra:doctor
+      - name: Apply migrations
+        run: pnpm db:migrate:deploy
+      - name: Verify migration status
+        run: pnpm db:migrate:status
+      - name: Seed deterministic data
+        run: pnpm db:seed
+      - name: Re-run deterministic seed
+        run: pnpm db:seed
+      - name: Verify RLS tenant isolation
+        run: pnpm db:rls:verify
+      - name: Stop local infrastructure
+        if: always()
+        run: pnpm infra:down
