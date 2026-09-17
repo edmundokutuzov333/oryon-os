@@ -3,6 +3,7 @@ import {
 	ApiKeyCreateInputSchema,
 	ApiKeyCreatedSchema,
 	ApiKeyRevokeInputSchema,
+	ApiKeyRevokeResponseSchema,
 	ApiKeySummarySchema,
 	AuditEntrySchema,
 	ExportWorkObjectsInputSchema,
@@ -45,8 +46,6 @@ export type Webhook = WebhookSummary;
 export type ImportResult = ImportWorkObjectsResponse;
 export type HealthResult = z.infer<typeof PlatformHealthSchema>;
 export type AuditResult = AuditEntry[];
-
-const RevokedResponseSchema = z.object({ revoked: z.literal(true) });
 
 export class OryonClient {
 	private readonly baseUrl: string;
@@ -114,11 +113,11 @@ export class OryonClient {
 	revokeApiKey(
 		id: string,
 		input: z.input<typeof ApiKeyRevokeInputSchema> = {},
-	): Promise<{ revoked: true }> {
+	): Promise<z.infer<typeof ApiKeyRevokeResponseSchema>> {
 		const body = ApiKeyRevokeInputSchema.parse(input);
 		return this.request(
 			`/platform/api-keys/${encodeURIComponent(id)}`,
-			RevokedResponseSchema,
+			ApiKeyRevokeResponseSchema,
 			{
 				method: "DELETE",
 				headers: { "Content-Type": "application/json" },
@@ -165,7 +164,10 @@ export class OryonClient {
 		const query = new URLSearchParams();
 		for (const [key, value] of Object.entries(params))
 			if (value !== undefined) query.set(key, String(value));
-		return this.request(`/platform/audit?${query.toString()}`, AuditEntrySchema.array());
+		return this.request(
+			`/platform/audit?${query.toString()}`,
+			AuditEntrySchema.array(),
+		);
 	}
 
 	importWorkObjects(input: ImportWorkObjectsInput): Promise<ImportResult> {
