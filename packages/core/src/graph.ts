@@ -41,6 +41,14 @@ export const PROTECTED_CYCLE_RELATIONS: readonly GraphRelation[] = [
 
 export type GraphAdjacency = ReadonlyMap<string, readonly GraphNodeRef[]>;
 
+export const GRAPH_INVERSE_RELATIONS: ReadonlyMap<GraphRelation, GraphRelation> =
+	new Map([
+		["BLOCKED_BY", "BLOCKS"],
+		["BLOCKS", "BLOCKED_BY"],
+		["DUPLICATES", "DUPLICATES"],
+		["RELATES_TO", "RELATES_TO"],
+	]);
+
 export function graphNodeKey(node: GraphNodeRef): string {
 	return `${node.type}:${node.id}`;
 }
@@ -54,6 +62,27 @@ export function validateGraphSelfEdge(
 			"INVALID_SELF_EDGE",
 			"A graph edge cannot point to itself",
 		);
+}
+
+export function canonicalizeGraphEdge(
+	from: GraphNodeRef,
+	to: GraphNodeRef,
+	relation: GraphRelation,
+): { from: GraphNodeRef; to: GraphNodeRef; relation: GraphRelation } {
+	validateGraphSelfEdge(from, to);
+	if (relation === "BLOCKED_BY")
+		return { from: to, to: from, relation: "BLOCKS" };
+	if (relation === "DUPLICATES" || relation === "RELATES_TO") {
+		const [left, right] = [from, to].sort((a, b) =>
+			graphNodeKey(a).localeCompare(graphNodeKey(b)),
+		);
+		return { from: left, to: right, relation };
+	}
+	return { from, to, relation };
+}
+
+export function inverseRelation(relation: GraphRelation): GraphRelation | null {
+	return GRAPH_INVERSE_RELATIONS.get(relation) ?? null;
 }
 
 export function relationAllowedForCycleCheck(relation: GraphRelation): boolean {
