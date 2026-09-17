@@ -1,0 +1,49 @@
+name: audit-format-main
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  format:
+    if: github.actor == 'edmundokutuzov333'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 1
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+          run_install: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Format and organize imports
+        run: pnpm exec biome check --write . --max-diagnostics=5000
+      - name: Validate
+        run: |
+          pnpm db:generate
+          pnpm check:boundaries
+          pnpm check:v1
+          pnpm check:phase14
+          pnpm check:phase15
+          pnpm gen:openapi
+          pnpm gen:sdk
+          pnpm typecheck
+          pnpm lint
+          git diff --check
+      - name: Commit to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No formatting changes required"
+            exit 0
+          fi
+          git commit -m "chore: normalize repository formatting"
+          git push origin HEAD:main
