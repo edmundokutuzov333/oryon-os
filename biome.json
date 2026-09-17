@@ -1,7 +1,16 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
 	"files": {
-		"includes": ["**", "!!**/.turbo", "!!**/.next", "!!**/node_modules", "!!apps/api/generated", "!!sdk/dist"]
+		"includes": [
+			"**",
+			"!!**/.turbo",
+			"!!**/.next",
+			"!!**/node_modules",
+			"!!apps/api/generated",
+			"!!apps/api/apps/api/generated",
+			"!!sdk/dist",
+			"!!packages/ui/src/tokens/theme.css"
+		]
 	},
 	"formatter": {
 		"enabled": true,
