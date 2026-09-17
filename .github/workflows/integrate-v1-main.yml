@@ -1,0 +1,58 @@
+name: Integrate OryonOS V1 into main
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: contains(github.event.head_commit.message, '[integrate-v1]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch phase branches
+        run: |
+          git fetch origin feat/phase-12-search-ai feat/phase-13-agents-automation feat/phase-15-platform-release
+
+      - name: Squash Phase 12 into main
+        run: |
+          git merge --squash -X ours origin/feat/phase-12-search-ai || true
+          git diff --name-only --diff-filter=U | xargs -r git checkout --ours --
+          git add -A
+          git commit -m "feat: centralize Phase 12 Search + AI into main [integrate-v1]" || true
+
+      - name: Squash Phase 13 into main
+        run: |
+          git merge --squash -X ours origin/feat/phase-13-agents-automation || true
+          git diff --name-only --diff-filter=U | xargs -r git checkout --ours --
+          git add -A
+          git commit -m "feat: centralize Phase 13 Agents + Automation into main [integrate-v1]" || true
+
+      - name: Squash Phase 15 into main
+        run: |
+          git merge --squash -X ours origin/feat/phase-15-platform-release || true
+          git diff --name-only --diff-filter=U | xargs -r git checkout --ours --
+          git add -A
+          git commit -m "feat: centralize Phase 15 Platform + Release into main [integrate-v1]" || true
+
+      - name: Remove integration workflow
+        run: |
+          git rm -f .github/workflows/integrate-v1-main.yml
+          git add -A
+          git commit -m "chore: remove temporary main integration workflow" || true
+
+      - name: Push consolidated main
+        run: git push origin HEAD:main
