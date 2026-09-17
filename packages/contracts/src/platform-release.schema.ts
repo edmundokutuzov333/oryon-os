@@ -94,7 +94,7 @@ export const ExportWorkObjectSchema = z.object({
 	severity: z.string().nullable(),
 	classification: z.string().nullable(),
 	tags: z.array(z.string()),
-	customFields: z.record(z.string(), z.unknown()),
+	customFields: z.record(z.string(), z.unknown()).optional(),
 	createdAt: z.string().datetime({ offset: true }),
 	updatedAt: z.string().datetime({ offset: true }),
 });
