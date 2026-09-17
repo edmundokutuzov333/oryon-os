@@ -1,0 +1,329 @@
+name: audit-webhook-dispatch
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor == 'edmundokutuzov333'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 1
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+          run_install: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Patch durable webhook dispatch
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              s = p.read_text()
+              if old not in s:
+                  raise SystemExit(f'Missing pattern in {path}: {old[:120]!r}')
+              p.write_text(s.replace(old, new, 1))
+
+          schema = Path('packages/db/prisma/schema.prisma')
+          s = schema.read_text()
+          replace_once('packages/db/prisma/schema.prisma', '  reactions           Reaction[]\n', '  reactions           Reaction[]\n  webhookDeliveries   WebhookDelivery[]\n')
+          replace_once('packages/db/prisma/schema.prisma', '  notifications Notification[]\n  meetings', '  notifications Notification[]\n  webhookDeliveries WebhookDelivery[]\n  meetings') if '  notifications Notification[]\n  meetings' in s else None
+          s = schema.read_text()
+          if '  webhookDeliveries   WebhookDelivery[]' not in s:
+              raise SystemExit('Organization webhookDeliveries relation missing after patch')
+          marker = '  @@index([orgId, name, createdAt(sort: Desc)])\n'
+          replace_once('packages/db/prisma/schema.prisma', marker, '  webhookDeliveries WebhookDelivery[]\n\n' + marker)
+          webhook_model = textwrap.dedent('''\
+          model WebhookDelivery {
+            id             String               @id @default(cuid(2))
+            orgId          String               @map("org_id")
+            webhookId      String               @map("webhook_id")
+            eventId        String               @map("event_id")
+            status         WebhookDeliveryState  @default(PENDING)
+            attempts       Int                  @default(0)
+            responseStatus Int?                 @map("response_status")
+            lastError      String?              @map("last_error") @db.Text
+            lastAttemptAt  DateTime?            @map("last_attempt_at")
+            deliveredAt    DateTime?            @map("delivered_at")
+            createdAt      DateTime              @default(now()) @map("created_at")
+            updatedAt      DateTime              @updatedAt @map("updated_at")
+
+            org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+            event DomainEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+            @@unique([webhookId, eventId])
+            @@index([orgId, status, createdAt])
+            @@index([orgId, eventId])
+            @@map("webhook_deliveries")
+          }
+
+          ''')
+          replace_once('packages/db/prisma/schema.prisma', 'model AgentRun {', webhook_model + 'model AgentRun {')
+          replace_once('packages/db/prisma/schema.prisma', 'enum TriggerType {', 'enum WebhookDeliveryState {\n  PENDING\n  DELIVERED\n  FAILED\n}\n\nenum TriggerType {')
+          schema.write_text(schema.read_text())
+
+          migration = Path('packages/db/prisma/migrations/20260917093000_webhook_delivery_outbox/migration.sql')
+          migration.parent.mkdir(parents=True, exist_ok=True)
+          migration.write_text(textwrap.dedent('''\
+          CREATE TYPE "WebhookDeliveryState" AS ENUM ('PENDING', 'DELIVERED', 'FAILED');
+
+          CREATE TABLE "webhook_deliveries" (
+            "id" TEXT NOT NULL,
+            "org_id" TEXT NOT NULL,
+            "webhook_id" TEXT NOT NULL,
+            "event_id" TEXT NOT NULL,
+            "status" "WebhookDeliveryState" NOT NULL DEFAULT 'PENDING',
+            "attempts" INTEGER NOT NULL DEFAULT 0,
+            "response_status" INTEGER,
+            "last_error" TEXT,
+            "last_attempt_at" TIMESTAMP(3),
+            "delivered_at" TIMESTAMP(3),
+            "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            "updated_at" TIMESTAMP(3) NOT NULL,
+            CONSTRAINT "webhook_deliveries_pkey" PRIMARY KEY ("id")
+          );
+
+          CREATE UNIQUE INDEX "webhook_deliveries_webhook_id_event_id_key" ON "webhook_deliveries"("webhook_id", "event_id");
+          CREATE INDEX "webhook_deliveries_org_id_status_created_at_idx" ON "webhook_deliveries"("org_id", "status", "created_at");
+          CREATE INDEX "webhook_deliveries_org_id_event_id_idx" ON "webhook_deliveries"("org_id", "event_id");
+
+          ALTER TABLE "webhook_deliveries" ADD CONSTRAINT "webhook_deliveries_org_id_fkey" FOREIGN KEY ("org_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+          ALTER TABLE "webhook_deliveries" ADD CONSTRAINT "webhook_deliveries_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "domain_events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+          ALTER TABLE "webhook_deliveries" ENABLE ROW LEVEL SECURITY;
+          ALTER TABLE "webhook_deliveries" FORCE ROW LEVEL SECURITY;
+          CREATE POLICY "oryon_tenant_isolation" ON "webhook_deliveries"
+            USING (org_id = current_setting('app.org_id', true))
+            WITH CHECK (org_id = current_setting('app.org_id', true));
+
+          CREATE OR REPLACE FUNCTION public.oryon_worker_organization_ids()
+          RETURNS TABLE(id text)
+          LANGUAGE sql
+          SECURITY DEFINER
+          SET search_path = public
+          AS $$
+            SELECT o.id::text
+            FROM organizations AS o
+            WHERE o.deleted_at IS NULL
+            ORDER BY o.id;
+          $$;
+          REVOKE ALL ON FUNCTION public.oryon_worker_organization_ids() FROM PUBLIC;
+          GRANT EXECUTE ON FUNCTION public.oryon_worker_organization_ids() TO current_user;
+          '''))
+
+          replace_once('packages/db/src/repositories/automation.repository.ts',
+            'async listOrganizations(): Promise<string[]> { return this.db.organization.findMany({ where: { deletedAt: null }, select: { id: true } }).then((rows) => rows.map((row) => row.id)); }',
+            'async listOrganizations(): Promise<string[]> { const rows = await this.db.$queryRaw<Array<{ id: string }>>`SELECT id FROM public.oryon_worker_organization_ids()`; return rows.map((row) => row.id); }')
+
+          Path('packages/db/src/repositories/webhook-delivery.repository.ts').write_text(textwrap.dedent('''\
+          import { Prisma, type PrismaClient } from "../generated/client.js";
+          import { withOrgContext } from "../tenant.js";
+
+          type HookSetting = { id: string; url: string; events: string[]; active: boolean; secret: string };
+          type PlatformSettings = { webhooks?: HookSetting[] };
+
+          function parseSettings(value: Prisma.JsonValue): PlatformSettings {
+            if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+            return value as PlatformSettings;
+          }
+
+          export class WebhookDeliveryRepository {
+            constructor(private readonly db: PrismaClient) {}
+
+            async listUnpublishedEvents(orgId: string, limit = 200) {
+              return withOrgContext(this.db, orgId, (tx) => tx.domainEvent.findMany({
+                where: { orgId, publishedAt: null },
+                orderBy: { createdAt: "asc" },
+                take: Math.min(limit, 200),
+              }));
+            }
+
+            async markEventPublished(orgId: string, eventId: string): Promise<void> {
+              await withOrgContext(this.db, orgId, (tx) => tx.domainEvent.updateMany({
+                where: { id: eventId, orgId, publishedAt: null },
+                data: { publishedAt: new Date() },
+              }));
+            }
+
+            async listWebhookTargets(orgId: string, eventName: string): Promise<HookSetting[]> {
+              return withOrgContext(this.db, orgId, async (tx) => {
+                const org = await tx.organization.findFirst({ where: { id: orgId, deletedAt: null }, select: { settings: true } });
+                if (!org) return [];
+                const hooks = parseSettings(org.settings).webhooks ?? [];
+                return hooks.filter((hook) => hook.active && hook.events.some((event) => event === "*" || event === eventName));
+              });
+            }
+
+            async getWebhook(orgId: string, webhookId: string): Promise<HookSetting | null> {
+              return withOrgContext(this.db, orgId, async (tx) => {
+                const org = await tx.organization.findFirst({ where: { id: orgId, deletedAt: null }, select: { settings: true } });
+                if (!org) return null;
+                const hook = (parseSettings(org.settings).webhooks ?? []).find((item) => item.id === webhookId);
+                return hook?.active ? hook : null;
+              });
+            }
+
+            async createDelivery(orgId: string, webhookId: string, eventId: string): Promise<{ id: string; created: boolean }> {
+              return withOrgContext(this.db, orgId, async (tx) => {
+                const existing = await tx.webhookDelivery.findUnique({ where: { webhookId_eventId: { webhookId, eventId } }, select: { id: true } });
+                if (existing) return { id: existing.id, created: false };
+                const row = await tx.webhookDelivery.create({ data: { orgId, webhookId, eventId, status: "PENDING" }, select: { id: true } });
+                return { id: row.id, created: true };
+              });
+            }
+
+            async listPendingDeliveries(orgId: string, limit = 200): Promise<string[]> {
+              return withOrgContext(this.db, orgId, async (tx) => {
+                const rows = await tx.webhookDelivery.findMany({ where: { orgId, status: "PENDING" }, orderBy: { createdAt: "asc" }, take: Math.min(limit, 200), select: { id: true } });
+                return rows.map((row) => row.id);
+              });
+            }
+
+            async getDelivery(orgId: string, deliveryId: string) {
+              return withOrgContext(this.db, orgId, (tx) => tx.webhookDelivery.findFirst({ where: { id: deliveryId, orgId }, include: { event: true } }));
+            }
+
+            async recordAttempt(orgId: string, deliveryId: string): Promise<number> {
+              return withOrgContext(this.db, orgId, async (tx) => {
+                const row = await tx.webhookDelivery.update({ where: { id: deliveryId }, data: { attempts: { increment: 1 }, lastAttemptAt: new Date() }, select: { attempts: true } });
+                return row.attempts;
+              });
+            }
+
+            async markDelivered(orgId: string, deliveryId: string, responseStatus: number): Promise<void> {
+              await withOrgContext(this.db, orgId, (tx) => tx.webhookDelivery.update({ where: { id: deliveryId }, data: { status: "DELIVERED", responseStatus, deliveredAt: new Date(), lastError: null } }));
+            }
+
+            async markFailed(orgId: string, deliveryId: string, responseStatus: number | null, error: string): Promise<void> {
+              await withOrgContext(this.db, orgId, (tx) => tx.webhookDelivery.update({ where: { id: deliveryId }, data: { status: "FAILED", responseStatus, lastError: error.slice(0, 4000) } }));
+            }
+          }
+          '''))
+
+          replace_once('packages/db/src/repositories/index.ts',
+            'export { PlatformRepository } from "./platform.repository.js";',
+            'export { PlatformRepository } from "./platform.repository.js";\nexport { WebhookDeliveryRepository } from "./webhook-delivery.repository.js";')
+
+          Path('apps/worker/src/webhook-delivery.ts').write_text(textwrap.dedent('''\
+          import { createHmac } from "node:crypto";
+          import { WebhookDeliveryRepository } from "@oryon/db/repositories";
+          import { getPrisma } from "@oryon/db";
+
+          const repository = new WebhookDeliveryRepository(getPrisma());
+          const MAX_ATTEMPTS = 8;
+
+          function envelope(event: {
+            id: string;
+            name: string;
+            version: number;
+            orgId: string;
+            createdAt: Date;
+            actorId: string | null;
+            actorType: string;
+            subjectType: string;
+            subjectId: string;
+            payload: unknown;
+            correlationId: string | null;
+            causationId: string | null;
+          }) {
+            return {
+              eventId: event.id,
+              name: event.name,
+              version: event.version,
+              orgId: event.orgId,
+              occurredAt: event.createdAt.toISOString(),
+              actor: event.actorId ? { id: event.actorId, type: event.actorType } : null,
+              subject: { type: event.subjectType, id: event.subjectId },
+              payload: event.payload,
+              correlationId: event.correlationId,
+              causationId: event.causationId,
+            };
+          }
+
+          export async function deliverWebhookDelivery(orgId: string, deliveryId: string): Promise<void> {
+            const delivery = await repository.getDelivery(orgId, deliveryId);
+            if (!delivery || delivery.status === "DELIVERED") return;
+            const hook = await repository.getWebhook(orgId, delivery.webhookId);
+            if (!hook) {
+              await repository.markFailed(orgId, deliveryId, null, "Webhook endpoint is inactive or missing");
+              return;
+            }
+
+            const attempt = await repository.recordAttempt(orgId, deliveryId);
+            const body = JSON.stringify(envelope(delivery.event));
+            const signature = createHmac("sha256", hook.secret).update(body).digest("hex");
+            try {
+              const response = await fetch(hook.url, {
+                method: "POST",
+                headers: {
+                  "content-type": "application/json",
+                  "x-oryon-event-id": delivery.event.id,
+                  "x-oryon-event": delivery.event.name,
+                  "x-oryon-signature": `sha256=${signature}`,
+                  "x-oryon-delivery-id": delivery.id,
+                },
+                body,
+                signal: AbortSignal.timeout(Number(process.env.ORYON_WEBHOOK_TIMEOUT_MS ?? "10000")),
+              });
+              if (response.ok) {
+                await repository.markDelivered(orgId, deliveryId, response.status);
+                return;
+              }
+              const retryable = response.status === 408 || response.status === 425 || response.status === 429 || response.status >= 500;
+              if (!retryable || attempt >= MAX_ATTEMPTS) {
+                await repository.markFailed(orgId, deliveryId, response.status, `Webhook delivery failed with HTTP ${response.status}`);
+                return;
+              }
+              throw new Error(`WEBHOOK_RETRY:${response.status}`);
+            } catch (error) {
+              if (attempt >= MAX_ATTEMPTS) {
+                await repository.markFailed(orgId, deliveryId, null, error instanceof Error ? error.message : "Webhook delivery failed");
+                return;
+              }
+              throw error;
+            }
+          }
+          '''))
+
+          replace_once('apps/worker/src/queue.ts', 'import { executeWorkflowRun } from "./workflow-engine.js";\n', 'import { executeWorkflowRun } from "./workflow-engine.js";\nimport { deliverWebhookDelivery } from "./webhook-delivery.js";\n')
+          replace_once('apps/worker/src/queue.ts', 'export const workflowRunQueue = new Queue("oryon.workflow-runs", { connection });\n', 'export const workflowRunQueue = new Queue("oryon.workflow-runs", { connection });\nexport const webhookDeliveryQueue = new Queue("oryon.webhook-deliveries", { connection });\n')
+          replace_once('apps/worker/src/queue.ts', 'const workflowWorker = new Worker<RunPayload>("oryon.workflow-runs", async (job: Job<RunPayload>) => executeWorkflowRun(job.data.orgId, job.data.runId), { connection, concurrency: Number(process.env.ORYON_WORKFLOW_CONCURRENCY ?? "4") });\n', 'const workflowWorker = new Worker<RunPayload>("oryon.workflow-runs", async (job: Job<RunPayload>) => executeWorkflowRun(job.data.orgId, job.data.runId), { connection, concurrency: Number(process.env.ORYON_WORKFLOW_CONCURRENCY ?? "4") });\n\tconst webhookWorker = new Worker<{ orgId: string; deliveryId: string }>("oryon.webhook-deliveries", async (job) => deliverWebhookDelivery(job.data.orgId, job.data.deliveryId), { connection, concurrency: Number(process.env.ORYON_WEBHOOK_CONCURRENCY ?? "8") });\n')
+          replace_once('apps/worker/src/queue.ts', 'return { close: async () => { await agentWorker.close(); await workflowWorker.close(); await agentRunQueue.close(); await workflowRunQueue.close(); } };\n', 'return { close: async () => { await agentWorker.close(); await workflowWorker.close(); await webhookWorker.close(); await agentRunQueue.close(); await workflowRunQueue.close(); await webhookDeliveryQueue.close(); } };\n')
+          Path('apps/worker/src/queue.ts').write_text(Path('apps/worker/src/queue.ts').read_text() + '\nexport async function enqueueWebhookDelivery(orgId: string, deliveryId: string): Promise<void> { await webhookDeliveryQueue.add("webhook.delivery", { orgId, deliveryId }, { jobId: `webhook:${orgId}:${deliveryId}`, removeOnComplete: 10000, removeOnFail: 10000, attempts: 8, backoff: { type: "exponential", delay: 1000 } }); }\n')
+
+          replace_once('apps/worker/src/index.ts', 'import { enqueueAgentRun, enqueueWorkflowRun, startQueueWorkers } from "./queue.js";', 'import { enqueueAgentRun, enqueueWebhookDelivery, enqueueWorkflowRun, startQueueWorkers } from "./queue.js";\nimport { WebhookDeliveryRepository } from "@oryon/db/repositories";')
+          replace_once('apps/worker/src/index.ts', 'const lastEventByOrg = new Map<string, number>();\n', 'const webhookDeliveries = new WebhookDeliveryRepository(db);\n')
+          start = Path('apps/worker/src/index.ts').read_text()
+          old_start = 'async function pollEvents(): Promise<void> {\n'
+          a = start.index(old_start)
+          b = start.index('\n}\n\nasync function configureSchedules', a) + 3
+          new_func = '''async function pollEvents(): Promise<void> {\n\tfor (const orgId of await automation.listOrganizations()) {\n\t\tconst events = await webhookDeliveries.listUnpublishedEvents(orgId, 200);\n\t\tconst workflows = await automation.listActiveEventWorkflows(orgId);\n\t\tfor (const event of events) {\n\t\t\tfor (const hook of await webhookDeliveries.listWebhookTargets(orgId, event.name)) {\n\t\t\t\tconst delivery = await webhookDeliveries.createDelivery(orgId, hook.id, event.id);\n\t\t\t\tif (delivery.created) await enqueueWebhookDelivery(orgId, delivery.id);\n\t\t\t}\n\t\t\tfor (const workflow of workflows) {\n\t\t\t\tconst trigger = WorkflowTriggerSchema.parse(workflow.triggerJson);\n\t\t\t\tif (trigger.kind !== "EVENT" || trigger.eventName !== event.name) continue;\n\t\t\t\tconst existing = await automation.findRunByTriggerEvent(orgId, workflow.id, event.id);\n\t\t\t\tif (!existing) { const created = await automation.createRun(orgId, null, workflow.id, { input: event.payload as Record<string, unknown>, triggerEventId: event.id }, event.id); await enqueueWorkflowRun(orgId, created.id); }\n\t\t\t}\n\t\t\tawait webhookDeliveries.markEventPublished(orgId, event.id);\n\t\t}\n\t\tfor (const deliveryId of await webhookDeliveries.listPendingDeliveries(orgId, 200)) await enqueueWebhookDelivery(orgId, deliveryId);\n\t}\n}'''
+          Path('apps/worker/src/index.ts').write_text(start[:a] + new_func + start[b:])
+          PY
+      - name: Validate and commit
+        run: |
+          pnpm db:generate
+          pnpm typecheck
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/db/prisma/schema.prisma packages/db/prisma/migrations/20260917093000_webhook_delivery_outbox/migration.sql packages/db/src/repositories/automation.repository.ts packages/db/src/repositories/webhook-delivery.repository.ts packages/db/src/repositories/index.ts apps/worker/src/webhook-delivery.ts apps/worker/src/queue.ts apps/worker/src/index.ts .github/workflows/audit-webhook-dispatch.yml
+          git commit -m "feat: make domain event webhook delivery durable"
+          git push origin HEAD:main
+      - name: Remove temporary workflow
+        run: |
+          git pull --rebase origin main
+          git rm .github/workflows/audit-webhook-dispatch.yml
+          git commit -m "chore: remove temporary webhook patch workflow"
+          git push origin HEAD:main
