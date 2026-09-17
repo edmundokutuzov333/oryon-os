@@ -17,3 +17,5 @@ A phase is not considered complete until its implementation is present on `main`
 The V1 execution rule is explicit: do not create new branches for feature delivery, repairs, integrations or release hardening. Commit the cumulative production state directly to `main`.
 
 Historical feature branches are not sources of truth. The code in `main` is authoritative, and their pull requests are treated as superseded after successful consolidation.
+
+The current V1 platform is consolidated on `main` and is validated as one cumulative system rather than as isolated phase branches.
