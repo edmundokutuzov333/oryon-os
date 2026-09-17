@@ -7,6 +7,6 @@ export function toOpenApiSchema(schema: ContractSchema): OpenApiSchema {
 	return z.toJSONSchema(schema, {
 		target: "draft-2020-12",
 		reused: "ref",
-		unrepresentable: "any",
+		unrepresentable: "throw",
 	}) as OpenApiSchema;
 }
