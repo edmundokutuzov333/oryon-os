@@ -624,10 +624,9 @@ model ChannelMember {
   mutedUntil   DateTime?         @map("muted_until")
   joinedAt     DateTime          @default(now()) @map("joined_at")
 
-  channel        Channel       @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  organizationId String?
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  channel      Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([channelId, userId])
   @@index([orgId, userId])
