@@ -1,43 +1,25 @@
 import { z } from "zod";
 
-export const AgentStatusSchema = z.enum([
-	"DRAFT",
-	"ACTIVE",
-	"PAUSED",
-	"ARCHIVED",
-]);
+export const AgentStatusSchema = z.enum(["DRAFT", "ACTIVE", "PAUSED", "ARCHIVED"]);
 export const AgentStatusUpdateSchema = z.object({ status: AgentStatusSchema });
-export const RunStateSchema = z.enum([
-	"RUNNING",
-	"WAITING",
-	"SUCCEEDED",
-	"FAILED",
-	"CANCELLED",
-	"ROLLED_BACK",
-]);
-export const TriggerTypeSchema = z.enum([
-	"EVENT",
-	"SCHEDULE",
-	"MANUAL",
-	"MENTION",
-	"WEBHOOK",
-	"FORM",
-]);
-export const CheckpointStateSchema = z.enum([
-	"WAITING",
-	"APPROVED",
-	"REJECTED",
-]);
-export const CheckpointPolicySchema = z.enum([
-	"NEVER",
-	"SENSITIVE_ONLY",
-	"ALWAYS",
-]);
+export const RunStateSchema = z.enum(["RUNNING", "WAITING", "SUCCEEDED", "FAILED", "CANCELLED", "ROLLED_BACK"]);
+export const TriggerTypeSchema = z.enum(["EVENT", "SCHEDULE", "MANUAL", "MENTION", "WEBHOOK", "FORM"]);
+export const CheckpointStateSchema = z.enum(["WAITING", "APPROVED", "REJECTED"]);
+export const CheckpointPolicySchema = z.enum(["NEVER", "SENSITIVE_ONLY", "ALWAYS"]);
 export const AgentToolDefinitionSchema = z.object({
 	key: z.string().regex(/^[a-z0-9_.-]{2,80}$/),
 	description: z.string().min(1).max(500),
 	sensitive: z.boolean().default(false),
 	inputSchema: z.record(z.string(), z.unknown()).default({}),
+});
+export const AgentToolPlanItemSchema = z.object({
+	id: z.string().min(1).max(120).optional(),
+	toolKey: z.string().regex(/^[a-z0-9_.-]{2,80}$/),
+	input: z.record(z.string(), z.unknown()).default({}),
+	sensitive: z.boolean().default(false),
+});
+export const AgentToolPlanSchema = z.object({
+	tools: z.array(AgentToolPlanItemSchema).max(50),
 });
 export const AgentKnowledgeScopeSchema = z
 	.object({
@@ -46,12 +28,7 @@ export const AgentKnowledgeScopeSchema = z
 		includeDocs: z.boolean().default(true),
 		includeMessages: z.boolean().default(false),
 	})
-	.default({
-		workspaces: [],
-		types: [],
-		includeDocs: true,
-		includeMessages: false,
-	});
+	.default({ workspaces: [], types: [], includeDocs: true, includeMessages: false });
 export const AgentCreateInputSchema = z.object({
 	key: z.string().regex(/^[a-z0-9_.-]{2,80}$/),
 	name: z.string().trim().min(1).max(120),
@@ -88,6 +65,7 @@ export const AgentRunInputSchema = z.object({
 	input: z.record(z.string(), z.unknown()).default({}),
 	triggerType: TriggerTypeSchema.default("MANUAL"),
 	preferredModel: z.string().trim().max(200).optional(),
+	idempotencyKey: z.string().trim().min(8).max(200).optional(),
 });
 export const AgentRunStepSchema = z.object({
 	index: z.number().int().nonnegative(),
@@ -103,14 +81,7 @@ export const AgentRunStepSchema = z.object({
 export const AgentToolCallSchema = z.object({
 	id: z.string(),
 	toolKey: z.string(),
-	status: z.enum([
-		"PLANNED",
-		"WAITING_APPROVAL",
-		"RUNNING",
-		"SUCCEEDED",
-		"FAILED",
-		"ROLLED_BACK",
-	]),
+	status: z.enum(["PLANNED", "WAITING_APPROVAL", "RUNNING", "SUCCEEDED", "FAILED", "ROLLED_BACK"]),
 	sensitive: z.boolean(),
 	input: z.unknown(),
 	output: z.unknown().nullable(),
@@ -140,6 +111,9 @@ export const AgentRunResponseSchema = z.object({
 	startedAt: z.string(),
 	finishedAt: z.string().nullable(),
 });
+export const AgentRollbackInputSchema = z.object({
+	rollbackToken: z.string().min(16).max(200),
+});
 export const CheckpointDecisionSchema = z.object({
 	decision: z.enum(["APPROVE", "REJECT"]),
 	comment: z.string().trim().max(2000).optional(),
@@ -151,16 +125,7 @@ export const WorkflowTriggerSchema = z.discriminatedUnion("kind", [
 ]);
 export const WorkflowConditionSchema = z.object({
 	path: z.string().min(1).max(200),
-	operator: z.enum([
-		"exists",
-		"eq",
-		"neq",
-		"contains",
-		"gt",
-		"gte",
-		"lt",
-		"lte",
-	]),
+	operator: z.enum(["exists", "eq", "neq", "contains", "gt", "gte", "lt", "lte"]),
 	value: z.unknown().optional(),
 });
 export const WorkflowActionSchema = z.object({
@@ -218,6 +183,8 @@ export const WorkflowRunInputSchema = z.object({
 });
 
 export type AgentToolDefinition = z.infer<typeof AgentToolDefinitionSchema>;
+export type AgentToolPlanItem = z.infer<typeof AgentToolPlanItemSchema>;
+export type AgentToolPlan = z.infer<typeof AgentToolPlanSchema>;
 export type AgentCreateInput = z.infer<typeof AgentCreateInputSchema>;
 export type AgentPatchInput = z.infer<typeof AgentPatchInputSchema>;
 export type AgentSummary = z.infer<typeof AgentSummarySchema>;
@@ -225,6 +192,7 @@ export type AgentRunInput = z.infer<typeof AgentRunInputSchema>;
 export type AgentRunStep = z.infer<typeof AgentRunStepSchema>;
 export type AgentToolCall = z.infer<typeof AgentToolCallSchema>;
 export type AgentRunResponse = z.infer<typeof AgentRunResponseSchema>;
+export type AgentRollbackInput = z.infer<typeof AgentRollbackInputSchema>;
 export type WorkflowCreateInput = z.infer<typeof WorkflowCreateInputSchema>;
 export type WorkflowStep = z.infer<typeof WorkflowStepSchema>;
 export type WorkflowCondition = z.infer<typeof WorkflowConditionSchema>;
