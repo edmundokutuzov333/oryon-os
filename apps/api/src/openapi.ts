@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import {
-	ApiContract,
 	publicApiContracts,
+	type ApiContract,
 } from "@oryon/contracts/public-api";
 
 type OpenApiSchema = Record<string, unknown>;
@@ -17,7 +17,10 @@ type JsonSchemaDocument = OpenApiSchema & {
 	$schema?: string;
 };
 
-function jsonSchema(schema: z.ZodType, io: "input" | "output"): JsonSchemaDocument {
+function jsonSchema(
+	schema: z.ZodType,
+	io: "input" | "output",
+): JsonSchemaDocument {
 	const document = z.toJSONSchema(schema, {
 		target: "draft-2020-12",
 		io,
@@ -98,7 +101,8 @@ function buildOpenApiDocument() {
 		info: {
 			title: "OryonOS API",
 			version: "0.1.0",
-			description: "Public REST API for OryonOS V1. Contract-generated from packages/contracts.",
+			description:
+				"Public REST API for OryonOS V1. Contract-generated from packages/contracts.",
 		},
 		servers: [{ url: "https://api.oryon.os" }],
 		paths,
