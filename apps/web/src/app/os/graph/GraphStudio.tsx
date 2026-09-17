@@ -162,7 +162,7 @@ export function GraphStudio() {
 						})}
 						{graphObjects.map((node, index) => {
 							const point = positions.get(node.id);
-							if (!point || node.type !== "work_object") return null;
+							if (!point || !("humanId" in node) || !("title" in node)) return null;
 							const active = node.id === rootId;
 							return <g key={node.id} className={active ? "graph-node active" : "graph-node"} onClick={() => setRootId(node.id)} role="button" tabIndex={0} aria-label={`${node.humanId} ${node.title}`} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") setRootId(node.id); }}>
 								<circle cx={point.x} cy={point.y} r={index === 0 ? 58 : 48} />
