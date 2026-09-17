@@ -1,0 +1,61 @@
+name: etapa1-schema-normalize
+
+on:
+  push:
+    branches: [feat/etapa1-canonicalization-build-integrity]
+
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Normalize ChannelMember tenant relation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          schema_path = Path('packages/db/prisma/schema.prisma')
+          text = schema_path.read_text()
+          old = '''  channel        Channel       @relation(fields: [channelId], references: [id], onDelete: Cascade)\n  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)\n  organization   Organization? @relation(fields: [organizationId], references: [id])\n  organizationId String?\n'''
+          new = '''  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)\n  channel      Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)\n  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)\n'''
+          if old not in text:
+              raise SystemExit('Expected ChannelMember relation block was not found')
+          schema_path.write_text(text.replace(old, new, 1))
+          PY
+      - name: Add tenant-key migration
+        run: |
+          mkdir -p packages/db/prisma/migrations/20260917143000_channel_member_tenant_key
+          cat > packages/db/prisma/migrations/20260917143000_channel_member_tenant_key/migration.sql <<'SQL'
+          -- ChannelMember already carries the canonical org_id tenant key.
+          -- Remove the redundant nullable organizationId relation and ensure org_id
+          -- is the authoritative organization foreign key.
+          ALTER TABLE "channel_members"
+            DROP CONSTRAINT IF EXISTS "channel_members_organizationId_fkey";
+
+          ALTER TABLE "channel_members"
+            DROP COLUMN IF EXISTS "organizationId";
+
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1
+              FROM pg_constraint
+              WHERE conname = 'channel_members_org_id_fkey'
+            ) THEN
+              ALTER TABLE "channel_members"
+                ADD CONSTRAINT "channel_members_org_id_fkey"
+                FOREIGN KEY ("org_id") REFERENCES "organizations"("id")
+                ON DELETE CASCADE ON UPDATE CASCADE;
+            END IF;
+          END $$;
+          SQL
+      - name: Commit schema normalization
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/db/prisma/schema.prisma packages/db/prisma/migrations/20260917143000_channel_member_tenant_key/migration.sql
+          git commit -m "db: canonicalize channel member tenant key"
+          git push origin HEAD:feat/etapa1-canonicalization-build-integrity
