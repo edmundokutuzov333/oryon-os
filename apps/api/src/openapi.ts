@@ -2,8 +2,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { FastifyInstance } from "fastify";
+import { toOpenApiSchema } from "@oryon/contracts/openapi";
 import {
-	toOpenApiSchema,
 	ApiKeyCreateInputSchema,
 	ApiKeyCreatedSchema,
 	ApiKeyRevokeInputSchema,
@@ -19,7 +19,7 @@ import {
 	WebhookSummarySchema,
 	WebhookTestResponseSchema,
 	WebhookUpdateInputSchema,
-} from "@oryon/contracts";
+} from "@oryon/contracts/platform-release";
 
 function schemaRef(name: string) {
 	return { $ref: `#/components/schemas/${name}` };
@@ -29,9 +29,7 @@ function arrayRef(name: string) {
 	return { type: "array", items: schemaRef(name) };
 }
 
-function queryParameters(
-	schema: Parameters<typeof toOpenApiSchema>[0],
-): Array<Record<string, unknown>> {
+function queryParameters(schema: Parameters<typeof toOpenApiSchema>[0]) {
 	const json = toOpenApiSchema(schema) as {
 		properties?: Record<string, Record<string, unknown>>;
 		required?: string[];
@@ -132,9 +130,7 @@ export const openApiDocument = {
 		},
 		"/platform/api-keys": {
 			get: {
-				responses: {
-					"200": jsonResponse("ApiKeySummaryList", "API keys"),
-				},
+				responses: { "200": jsonResponse("ApiKeySummaryList", "API keys") },
 			},
 			post: {
 				requestBody: jsonRequestBody("ApiKeyCreateInput"),
@@ -144,36 +140,16 @@ export const openApiDocument = {
 			},
 		},
 		"/platform/api-keys/{id}": {
-			parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+			parameters: [{
+				name: "id",
+				in: "path",
+				required: true,
+				schema: { type: "string" },
+			}],
 			delete: {
 				requestBody: jsonRequestBody("ApiKeyRevokeInput"),
 				responses: {
-					"200": {
-						description: "Revoked",
-						content: {
-							"application/json": {
-								schema: {
-									type: "object",
-									required: ["data", "meta"],
-									properties: {
-										data: {
-											type: "object",
-											required: ["revoked"],
-											properties: { revoked: { const: true } },
-										},
-										meta: {
-											type: "object",
-											required: ["requestId", "durationMs"],
-											properties: {
-												requestId: { type: "string" },
-												durationMs: { type: "number" },
-											},
-										},
-									},
-								},
-							},
-						},
-					},
+					"200": jsonResponse("ApiKeySummary", "Revoked API key"),
 				},
 			},
 		},
@@ -191,7 +167,12 @@ export const openApiDocument = {
 			},
 		},
 		"/platform/webhooks/{id}": {
-			parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+			parameters: [{
+				name: "id",
+				in: "path",
+				required: true,
+				schema: { type: "string" },
+			}],
 			patch: {
 				requestBody: jsonRequestBody("WebhookUpdateInput"),
 				responses: {
@@ -200,7 +181,12 @@ export const openApiDocument = {
 			},
 		},
 		"/platform/webhooks/{id}/test": {
-			parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+			parameters: [{
+				name: "id",
+				in: "path",
+				required: true,
+				schema: { type: "string" },
+			}],
 			post: {
 				responses: {
 					"200": jsonResponse("WebhookTestResponse", "Delivery result"),
@@ -210,9 +196,7 @@ export const openApiDocument = {
 		"/platform/audit": {
 			get: {
 				parameters: queryParameters(AuditQuerySchema),
-				responses: {
-					"200": jsonResponse("AuditEntryList", "Audit entries"),
-				},
+				responses: { "200": jsonResponse("AuditEntryList", "Audit entries") },
 			},
 		},
 		"/platform/import/work-objects": {
