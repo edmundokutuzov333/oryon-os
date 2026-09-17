@@ -14,6 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ORYON_MAX_CHUNK_GZIP_BYTES: 184320
+      DATABASE_URL: postgresql://oryon:oryon_local@localhost:5432/oryon?schema=public
+      DATABASE_DIRECT_URL: postgresql://oryon:oryon_local@localhost:5432/oryon?schema=public
+      ORYON_AUTH_JWT_SECRET: ci-only-secret-with-at-least-32-characters
+      ORYON_AUTH_DEV_MODE: "true"
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -24,15 +28,22 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --no-frozen-lockfile
       - run: pnpm db:generate
-      - run: pnpm --filter @oryon/db db:validate
-      - run: pnpm --filter @oryon/db db:rls:verify
+      - run: pnpm db:validate
       - run: pnpm check:boundaries
+      - run: pnpm check:contracts
       - run: pnpm check:v1
       - run: pnpm check:phase13
       - run: pnpm check:phase14
       - run: pnpm check:phase15
+      - name: Start integration infrastructure
+        run: pnpm infra:up
+      - name: Apply schema and seed deterministic tenants
+        run: |
+          pnpm db:migrate:deploy
+          pnpm db:seed
+      - run: pnpm db:rls:verify
       - run: pnpm gen:openapi
       - run: pnpm gen:sdk
       - run: pnpm typecheck
@@ -44,3 +55,6 @@ jobs:
       - run: pnpm analyze:bundle
       - run: pnpm performance:gate
       - run: pnpm audit:security
+      - name: Tear down integration infrastructure
+        if: always()
+        run: pnpm infra:down
