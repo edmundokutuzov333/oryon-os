@@ -36,7 +36,7 @@ jobs:
               p.write_text(text[:start] + current.replace(old, new, 1) + text[end:])
 
           schema_path = 'packages/db/prisma/schema.prisma'
-          patch_model(schema_path, 'Organization', '  webhookDeliveries   WebhookDelivery[]\n', '  webhookDeliveries   WebhookDelivery[]\n  workspaceMembers    WorkspaceMember[]\n  consumerDeliveries  OutboxConsumerDelivery[]\n')
+          patch_model(schema_path, 'Organization', '  webhookDeliveries   WebhookDelivery[]\n', '  webhookDeliveries   WebhookDelivery[]\n  workspaceMembers    WorkspaceMember[]\n  consumerDeliveries  OutboxConsumerDelivery[]\n  agentRunIdempotency AgentRunIdempotency[]\n')
           patch_model(schema_path, 'Workspace', '  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)\n', '  org               Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)\n  workspaceMembers  WorkspaceMember[]\n')
           patch_model(schema_path, 'User', '  notifications       Notification[]\n', '  notifications       Notification[]\n  workspaceMembers    WorkspaceMember[]\n')
           patch_model(schema_path, 'Agent', '  runs        AgentRun[]\n', '  runs        AgentRun[]\n  idempotency AgentRunIdempotency[]\n')
@@ -52,8 +52,8 @@ jobs:
 
           migration_path = Path('packages/db/prisma/migrations/20260917150000_etapa2_integrity/migration.sql')
           migration = migration_path.read_text()
-          if 'edges_fromType_fromId_toType_toId_relation_key' not in migration:
-              migration = migration.replace('CREATE UNIQUE INDEX IF NOT EXISTS "edges_active_unique"', 'DROP INDEX IF EXISTS "edges_fromType_fromId_toType_toId_relation_key";\n\nCREATE UNIQUE INDEX IF NOT EXISTS "edges_active_unique"', 1)
+          if 'DROP INDEX IF EXISTS "edges_fromType_fromId_toType_toId_relation_key"' not in migration:
+              migration = migration.replace('CREATE UNIQUE INDEX IF NOT EXISTS "edges_active_unique"', 'DROP INDEX IF EXISTS "edges_fromType_fromId_toType_toId_relation_key";\nDROP INDEX IF EXISTS "edges_from_type_from_id_to_type_to_id_relation_key";\n\nCREATE UNIQUE INDEX IF NOT EXISTS "edges_active_unique"', 1)
           if 'count(*) FROM "workspaces" w2' not in migration:
               migration = migration.replace('WHERE w."deleted_at" IS NULL\nON CONFLICT', 'WHERE w."deleted_at" IS NULL\n  AND (SELECT count(*) FROM "workspaces" w2 WHERE w2."org_id" = w."org_id" AND w2."deleted_at" IS NULL) = 1\nON CONFLICT', 1)
           if '"status" text NOT NULL DEFAULT \'PROCESSING\'' not in migration:
