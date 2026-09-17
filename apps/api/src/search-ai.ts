@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { createClient, type RedisClientType } from "redis";
+import { createClient } from "redis";
 import { can } from "@oryon/core";
 import { AiSearchRequestSchema, AiSearchResponseSchema, SearchQuerySchema, SearchReindexResponseSchema, SearchResponseSchema, type SearchDocumentType } from "@oryon/contracts/search-ai";
 import { AiRepository, PermissionRepository, SearchRepository } from "@oryon/db/repositories";
@@ -17,7 +17,7 @@ const typesense = process.env.TYPESENSE_URL && process.env.TYPESENSE_API_KEY ? n
 const redis = createClient({ url: process.env.REDIS_URL ?? "redis://localhost:6379" });
 let redisConnectPromise: Promise<void> | undefined;
 
-async function getRedis(): Promise<RedisClientType> {
+async function getRedis(): Promise<typeof redis> {
 	if (!redis.isOpen) {
 		redisConnectPromise ??= redis.connect().then(() => undefined);
 		await redisConnectPromise;
@@ -56,9 +56,10 @@ function cookie(request: FastifyRequest): string | undefined {
 }
 
 async function session(request: FastifyRequest, orgId: string) {
-	const token = bearer(request) ?? cookie(request);
+	const bearerToken = bearer(request);
+	const token = bearerToken ?? cookie(request);
 	if (!token) throw new Error("UNAUTHENTICATED");
-	const value = await authenticate(token, bearer(request) ? "bearer" : "session");
+	const value = await authenticate(token, bearerToken ? "bearer" : "session");
 	if (value.orgId !== orgId) throw new Error("UNAUTHENTICATED");
 	return value;
 }
@@ -118,7 +119,7 @@ async function readAndAuthorize(orgId: string, userId: string, type: SearchDocum
 	const resource = { orgId, type, id, workspaceId: source.workspaceId, projectId: null, ownerId: source.ownerId, teamId: null, classification: source.classification };
 	const readDecision = can({ orgId, ...snapshot }, resource, "read");
 	if (!readDecision.allowed) return null;
-	const aiDecision = can(snapshot, resource, "use_ai");
+	const aiDecision = can({ orgId, ...snapshot }, resource, "use_ai");
 	if (requireAi && !aiDecision.allowed) return null;
 	return { source, snapshot, permissions: { read: readDecision.allowed, use_ai: aiDecision.allowed } };
 }
@@ -145,7 +146,7 @@ async function hybridSearch(orgId: string, userId: string, query: string, limit:
 	}
 
 	const fused = fuseHybrid(lexical, semantic, Math.min(limit * 2, 50));
-	const authorized = [];
+	const authorized: Array<{ id: string; type: SearchDocumentType; title: string; snippet: string; score: number; matchedBy: string[]; classification: string | null; href: string; permissions: { read: boolean; use_ai: boolean } }> = [];
 	for (const hit of fused) {
 		const [hitType, ...idParts] = hit.id.split(":");
 		const resourceId = idParts.join(":");
@@ -236,7 +237,7 @@ export async function registerSearchAiRoutes(app: FastifyInstance): Promise<void
 			const orgId = orgIdOf(request);
 			const current = await session(request, orgId);
 			const snapshot = await permissions.getSnapshot(orgId, current.userId, "organization", orgId, null);
-			const allowed = can(snapshot, { orgId, type: "organization", id: orgId, workspaceId: null, projectId: null, ownerId: null, teamId: null, classification: null }, "manage");
+			const allowed = can({ orgId, ...snapshot }, { orgId, type: "organization", id: orgId, workspaceId: null, projectId: null, ownerId: null, teamId: null, classification: null }, "manage");
 			if (!allowed.allowed) return reply.code(403).send(errorEnvelope(request, "PERMISSION_DENIED", 403, "Search index management requires manage permission"));
 			if (!typesense) return reply.code(503).send(errorEnvelope(request, "INTERNAL", 503, "Typesense is not configured"));
 			const documents = await searchRepository.listIndexDocuments(orgId);
