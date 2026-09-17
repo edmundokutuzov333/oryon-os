@@ -15,3 +15,5 @@ Every production-facing surface must remain connected through the canonical cont
 A phase is not considered complete until its implementation is present on `main` and the repository verification gates pass against the consolidated state.
 
 The V1 execution rule is explicit: do not create new branches for feature delivery, repairs, integrations or release hardening. Commit the cumulative production state directly to `main`.
+
+Historical feature branches are not sources of truth. The code in `main` is authoritative, and their pull requests are treated as superseded after successful consolidation.
