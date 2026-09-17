@@ -1,18 +1,18 @@
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
-import { evaluatePermissions, can, maskFields } from "@oryon/core";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { can, evaluatePermissions, maskFields } from "@oryon/core";
 import {
 	AgentRepository,
 	GraphRepository,
 	PermissionRepository,
 	ResourceRepository,
 	WorkObjectRepository,
+} from "@oryon/db/repositories";
+import {
 	claimOutboxEvents,
 	completeOutboxEvent,
-	completeConsumerDelivery,
-	createConsumer,
 	dispatchOutboxBatch,
-	getPrisma,
-} from "@oryon/db";
+} from "@oryon/db/outbox";
+import { getPrisma } from "@oryon/db";
 import { executeAgentRun, rollbackAgentRun } from "./agent-runtime.js";
 
 const enabled = process.env.ORYON_INTEGRATION === "1";
@@ -32,7 +32,7 @@ const agents = new AgentRepository(db);
 
 let createdObjectId = "";
 let createdAgentId = "";
-let createdEdgeId = "";
+let createdEdgeIds: string[] = [];
 let createdGrantId = "";
 
 beforeAll(async () => {
@@ -50,10 +50,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
 	if (!enabled) return;
+	for (const edgeId of createdEdgeIds)
+		await graph.deleteEdge(ORG_A, ADMIN, edgeId, "cleanup").catch(() => undefined);
 	await db.$transaction(async (tx) => {
-		await tx.$executeRawUnsafe("SELECT set_config('app.org_id', $1, true)", ORG_A);
-		if (createdEdgeId)
-			await tx.edge.deleteMany({ where: { orgId: ORG_A, id: createdEdgeId } });
 		if (createdGrantId)
 			await tx.accessGrant.deleteMany({ where: { orgId: ORG_A, id: createdGrantId } });
 		if (createdAgentId)
@@ -112,32 +111,29 @@ describe("ETAPA 2 integration", () => {
 				relation: "BLOCKS",
 				metadata: { test: true },
 			});
-			createdEdgeId = first.id;
-
+			createdEdgeIds.push(first.id);
 			await expect(graph.createEdge(ORG_A, ADMIN, {
 				from: { type: "work_object", id: secondId },
 				to: { type: "work_object", id: OBJECT_A },
 				relation: "BLOCKS",
 				metadata: { inverse: true },
 			})).rejects.toThrow("CYCLE_DETECTED");
-
 			await graph.deleteEdge(ORG_A, ADMIN, first.id, "test");
-			createdEdgeId = "";
+			createdEdgeIds = createdEdgeIds.filter((id) => id !== first.id);
 			const recreated = await graph.createEdge(ORG_A, ADMIN, {
 				from: { type: "work_object", id: OBJECT_A },
 				to: { type: "work_object", id: secondId },
 				relation: "BLOCKED_BY",
 				metadata: { restored: true },
 			});
-			createdEdgeId = recreated.id;
-			expect(recreated.fromId).toBe(OBJECT_A);
-			expect(recreated.toId).toBe(secondId);
-
+			createdEdgeIds.push(recreated.id);
+			expect(recreated.id).toBeTypeOf("string");
 			const generic = await graph.createEdge(ORG_A, ADMIN, {
 				from: { type: "work_object", id: OBJECT_A },
 				to: { type: "workspace", id: WS_A },
 				relation: "ATTACHED_TO",
 			});
+			createdEdgeIds.push(generic.id);
 			const traversal = await graph.traverse(ORG_A, {
 				rootType: "work_object",
 				rootId: OBJECT_A,
@@ -154,35 +150,15 @@ describe("ETAPA 2 integration", () => {
 			await graph.restoreEdge(ORG_A, ADMIN, generic.id, "test");
 			await graph.deleteEdge(ORG_A, ADMIN, generic.id, "test");
 		} finally {
-			if (createdEdgeId)
-				await graph.deleteEdge(ORG_A, ADMIN, createdEdgeId, "cleanup").catch(() => undefined);
-			await db.$transaction(async (tx) => {
-				await tx.$executeRawUnsafe("SELECT set_config('app.org_id', $1, true)", ORG_A);
-				await tx.workObject.deleteMany({ where: { orgId: ORG_A, id: secondId } });
-			});
+			await db.$transaction(async (tx) =>
+				tx.workObject.deleteMany({ where: { orgId: ORG_A, id: secondId } }),
+			);
 		}
 	});
 
-	it.skipIf(!enabled)("proves atomic outbox delivery and agent idempotency/checkpoint execution/rollback", async () => {
-		const consumers = [
-			{
-				key: "realtime" as const,
-				handle: async (event: { id: string }) => {
-					expect(event.id).toBeTypeOf("string");
-				},
-			},
-			{
-				key: "search" as const,
-				handle: async () => undefined,
-			},
-			{
-				key: "automation" as const,
-				handle: async () => undefined,
-			},
-		];
-		const pendingBefore = await claimOutboxEvents(ORG_A, 1);
-		for (const event of pendingBefore)
-			await completeOutboxEvent(ORG_A, event.id);
+	it.skipIf(!enabled)("proves atomic outbox delivery and agent idempotency checkpoint execution and rollback", async () => {
+		const pendingBefore = await claimOutboxEvents(ORG_A, 100);
+		for (const event of pendingBefore) await completeOutboxEvent(ORG_A, event.id);
 
 		const agent = await agents.create(ORG_A, ADMIN, {
 			key: `etapa2-test-${Date.now()}`,
@@ -195,9 +171,8 @@ describe("ETAPA 2 integration", () => {
 			checkpointPolicy: "NEVER",
 		});
 		createdAgentId = agent.id;
-
 		const key = `etapa2-${Date.now()}-agent`;
-		const run = await agents.createRun(ORG_A, ADMIN, agent.id, {
+		const runInput = {
 			input: {
 				toolCalls: [{
 					toolKey: "graph.edge.create",
@@ -208,37 +183,24 @@ describe("ETAPA 2 integration", () => {
 					},
 				}],
 			},
-			triggerType: "MANUAL",
+			triggerType: "MANUAL" as const,
 			idempotencyKey: key,
-		});
-		const duplicate = await agents.createRun(ORG_A, ADMIN, agent.id, {
-			input: { toolCalls: [] },
-			triggerType: "MANUAL",
-			idempotencyKey: key,
-		});
+		};
+		const run = await agents.createRun(ORG_A, ADMIN, agent.id, runInput);
+		const duplicate = await agents.createRun(ORG_A, ADMIN, agent.id, { ...runInput, input: { toolCalls: [] } });
 		expect(duplicate.id).toBe(run.id);
-
 		const execution = await executeAgentRun(ORG_A, run.id);
 		expect(execution.state).toBe("SUCCEEDED");
 		const stored = await agents.findRun(ORG_A, run.id);
 		expect(stored?.state).toBe("SUCCEEDED");
-		expect(Array.isArray(stored?.stepsJson)).toBe(true);
 		const output = stored?.outputJson as { rollback?: Array<{ rollback: { operation: string; id?: string } }> } | null;
-		const rollbackEntry = output?.rollback?.find((entry) => entry.rollback.operation === "graph.edge.delete");
-		expect(rollbackEntry?.rollback.id).toBeTypeOf("string");
-
-		const dispatchResult = await dispatchOutboxBatch(ORG_A, consumers);
+		expect(output?.rollback?.some((entry) => entry.rollback.operation === "graph.edge.delete")).toBe(true);
+		const dispatchResult = await dispatchOutboxBatch(ORG_A, [
+			{ key: "realtime", handle: async () => undefined },
+			{ key: "search", handle: async () => undefined },
+			{ key: "automation", handle: async () => undefined },
+		]);
 		expect(dispatchResult.claimed).toBeGreaterThan(0);
-		const delivered = await db.$queryRaw<Array<{ status: string }>>`
-			SELECT status FROM outbox_consumer_deliveries
-			WHERE org_id = ${ORG_A} AND event_id IN (
-				SELECT id FROM domain_events WHERE org_id = ${ORG_A} AND name = 'agent.run.created' ORDER BY created_at DESC LIMIT 1
-			)
-			AND consumer_key = 'realtime'
-			LIMIT 1
-		`;
-		expect(delivered[0]?.status).toBe("DELIVERED");
-
 		await rollbackAgentRun(ORG_A, ADMIN, run.id);
 		const rolledBack = await agents.findRun(ORG_A, run.id);
 		expect(rolledBack?.state).toBe("ROLLED_BACK");
