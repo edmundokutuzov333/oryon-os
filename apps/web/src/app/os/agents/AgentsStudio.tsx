@@ -6,7 +6,7 @@ import { Button, Card, EmptyState, ErrorState, InvertedPanel, Input, PageHeader,
 import "./agents.css";
 
 function data(payload: unknown): unknown { if (!payload || typeof payload !== "object" || !("data" in payload)) throw new Error("INVALID_RESPONSE"); return (payload as { data: unknown }).data; }
-function statusState(state: AgentRunResponse["state"]): "neutral" | "info" | "positive" | "negative" { if (state === "SUCCEEDED") return "positive"; if (state === "FAILED" || state === "CANCELLED" || state === "ROLLED_BACK") return "negative"; if (state === "WAITING") return "info"; return "neutral"; }
+function statusState(state: AgentRunResponse["state"]): "neutral" | "info" | "positive" | "danger" { if (state === "SUCCEEDED") return "positive"; if (state === "FAILED" || state === "CANCELLED" || state === "ROLLED_BACK") return "danger"; if (state === "WAITING") return "info"; return "neutral"; }
 
 export function AgentsStudio(): React.ReactElement {
 	const [agents, setAgents] = useState<AgentSummary[]>([]); const [runs, setRuns] = useState<Record<string, AgentRunResponse>>({}); const [selected, setSelected] = useState<AgentSummary | null>(null); const [name, setName] = useState(""); const [key, setKey] = useState(""); const [prompt, setPrompt] = useState("Executa o trabalho pedido usando apenas as ferramentas declaradas."); const [loading, setLoading] = useState(true); const [error, setError] = useState(false); const [creating, setCreating] = useState(false); const [running, setRunning] = useState(false);

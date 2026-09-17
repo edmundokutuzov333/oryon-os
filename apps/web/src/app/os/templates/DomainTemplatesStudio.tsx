@@ -109,7 +109,7 @@ export function DomainTemplatesStudio() {
 
   return (
     <main className="domain-template-page">
-      <PageHeader eyebrow={COPY.eyebrow} title={COPY.title} description={COPY.description} />
+      <PageHeader title={COPY.title} description={COPY.description} />
       <div className="domain-template-toolbar" aria-label={COPY.all}>
         <div className="domain-template-filters" role="tablist" aria-label={COPY.all}>
           <Button type="button" size="sm" variant={filter === "ALL" ? "primary" : "secondary"} onClick={() => setFilter("ALL")}>{COPY.all}</Button>

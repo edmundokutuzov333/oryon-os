@@ -23,13 +23,13 @@ async function sha256(file: File): Promise<string> { const digest = await crypto
 function toolbarButton(label: string, onClick: () => void, active = false, children?: React.ReactNode) { return <button type="button" className={active ? "docs-editor-button active" : "docs-editor-button"} aria-label={label} title={label} onClick={onClick}>{children}</button>; }
 
 function PageEditor({ page, onSaved }: { page: Page; onSaved: (page: Page) => void }) {
-  const documentRef = useRef<Y.Doc>();
+  const documentRef = useRef<Y.Doc | null>(null);
   const initialUpdate = useMemo(() => page.contentYjsBase64 ? decodeBase64(page.contentYjsBase64) : null, [page.id]);
-  if (!documentRef.current) { documentRef.current = new Y.Doc(); if (initialUpdate) Y.applyUpdate(documentRef.current, initialUpdate); }
+  if (!documentRef.current) { const document = new Y.Doc(); if (initialUpdate) Y.applyUpdate(document, initialUpdate); documentRef.current = document; }
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
-  const saveTimer = useRef<ReturnType<typeof setTimeout>>();
-  const editor = useEditor({ extensions: [StarterKit.configure({ undoRedo: false }), Collaboration.configure({ document: documentRef.current })], immediatelyRender: false, editorProps: { attributes: { class: "docs-editor-content" } } }, [page.id]);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const editor = useEditor({ extensions: [StarterKit.configure({ undoRedo: false }), Collaboration.configure({ document: documentRef.current as Y.Doc })], immediatelyRender: false, editorProps: { attributes: { class: "docs-editor-content" } } }, [page.id]);
 
   async function save() { if (!editor || !dirty) return; setSaving(true); try { const yUpdate = Y.encodeStateAsUpdate(documentRef.current as Y.Doc); const updated = PageSchema.parse(await api(`/api/pages/${encodeURIComponent(page.id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: page.title, contentJson: editor.getJSON(), contentText: editor.getText(), contentYjsBase64: encodeBase64(yUpdate) }) })); onSaved(updated); setDirty(false); } finally { setSaving(false); } }
   useEffect(() => { if (!editor) return; const handler = () => { setDirty(true); if (saveTimer.current) clearTimeout(saveTimer.current); saveTimer.current = setTimeout(() => void save(), 1200); }; editor.on("update", handler); return () => { editor.off("update", handler); if (saveTimer.current) clearTimeout(saveTimer.current); }; }, [editor, dirty]);
