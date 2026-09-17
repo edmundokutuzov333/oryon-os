@@ -1,0 +1,43 @@
+name: Phase 13 verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - "apps/web/**"
+      - "apps/worker/**"
+      - "packages/ai/**"
+      - "packages/contracts/**"
+      - "packages/core/**"
+      - "packages/db/**"
+      - "infra/**"
+      - "scripts/check-phase13.mjs"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "docs/**"
+
+permissions:
+  contents: read
+
+jobs:
+  phase13:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:phase13
+      - run: pnpm --filter @oryon/contracts test
+      - run: pnpm --filter @oryon/core test
+      - run: pnpm --filter @oryon/ai test --passWithNoTests
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test -- --passWithNoTests
+      - run: pnpm build

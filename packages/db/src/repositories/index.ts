@@ -21,5 +21,7 @@ export { meetingRepository, roomRepository } from "./instances.js";
 export { WorkExperienceRepository } from "./work-experience.repository.js";
 export { WorkObjectRepository } from "./work-object.repository.js";
 export type { WorkObjectListInput } from "./work-object.repository.js";
+export { AgentRepository } from "./agent.repository.js";
+export { AutomationRepository } from "./automation.repository.js";
 export { appendDomainEvent } from "../outbox.js";
 export type { DomainEventInput } from "../outbox.js";

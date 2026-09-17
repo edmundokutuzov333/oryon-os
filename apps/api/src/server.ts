@@ -2,6 +2,7 @@ import { AuthRequestLinkResponseSchema, AuthVerifyLinkResponseSchema } from "@or
 import { HealthResponseSchema } from "@oryon/contracts/health";
 import { closePrisma, getPrisma } from "@oryon/db";
 import Fastify from "fastify";
+import { registerAgentAutomationRoutes } from "./agents.js";
 import { registerCommunicationRoutesV2 } from "./communication-v2.js";
 import { registerDocsFilesRoutesV2 } from "./docs-files-v2.js";
 import { registerGraphRoutes } from "./graph.js";
