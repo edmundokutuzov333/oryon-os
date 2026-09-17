@@ -25,12 +25,15 @@ jobs:
       - name: Format and autofix
         run: |
           pnpm exec biome format --write .
-          pnpm exec biome check --write .
-      - name: Fix deterministic lint exceptions
+          pnpm exec biome check --write --unsafe . || true
+      - name: Fix deterministic lint rules
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p = Path('packages/ui/src/tokens/tokens.css')
+          s = p.read_text().replace(' !important', '')
+          p.write_text(s)
+          p = Path('apps/web/src/app/globals.css')
           s = p.read_text().replace(' !important', '')
           p.write_text(s)
           p = Path('apps/api/src/agents.ts')
@@ -40,14 +43,12 @@ jobs:
           s = p.read_text().replace('const current = await user(request, organizationId);', 'await user(request, organizationId);', 1)
           p.write_text(s)
           p = Path('scripts/check-boundaries.mjs')
-          s = p.read_text().replace("`(?:from|import\\()\\s*[\\\"']${forbidden.replaceAll(\"/\", \"\\/\")}\\b`", "`(?:from|import\\()\\s*['\\\"]${forbidden.replaceAll(\"/\", \"\\/\")}\\b`", 1)
-          p.write_text(s)
-          p = Path('scripts/analyze-bundle.mjs')
-          s = p.read_text().replace('const max = Number(process.env.ORYON_MAX_CHUNK_GZIP_BYTES ?? "184320");', 'const max = Number(process.env.ORYON_MAX_CHUNK_GZIP_BYTES ?? "184320");', 1)
+          s = p.read_text()
+          s = s.replace('`(?:from|import\\()\\s*[\\\"\']${forbidden.replaceAll("/", "\\/")}\\b`', '`(?:from|import\\()\\s*[\\\"\']${forbidden.replaceAll("/", "\\/")}\\b`')
           p.write_text(s)
           PY
           pnpm exec biome format --write .
-          pnpm exec biome check --write .
+          pnpm exec biome check --write --unsafe . || true
       - name: Validate
         run: |
           pnpm db:generate
@@ -61,11 +62,18 @@ jobs:
           pnpm typecheck
           pnpm lint
           git diff --check
-      - name: Commit formatted source to main
+      - name: Commit normalized source to main
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "chore: normalize source and close lint blockers"
+          git push origin HEAD:main
+      - name: Remove formatter
+        if: success()
+        run: |
+          git pull --rebase origin main
+          git rm .github/workflows/format-main-once.yml
+          git commit -m "chore: remove one-shot source formatter"
           git push origin HEAD:main
