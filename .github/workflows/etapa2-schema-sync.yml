@@ -1,0 +1,97 @@
+name: etapa2-schema-sync
+on:
+  push:
+    branches:
+      - feat/etapa2-core-integrity-graph-permissions-eventing
+permissions:
+  contents: write
+jobs:
+  sync:
+    if: github.actor == 'edmundokutuzov333'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Patch canonical schema and repositories
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected one match, found {count}: {old[:100]!r}')
+              p.write_text(text.replace(old, new, 1))
+
+          schema = Path('packages/db/prisma/schema.prisma')
+          s = schema.read_text()
+          replace_once('packages/db/prisma/schema.prisma', '  webhookDeliveries   WebhookDelivery[]\n', '  webhookDeliveries   WebhookDelivery[]\n  workspaceMembers    WorkspaceMember[]\n  consumerDeliveries  OutboxConsumerDelivery[]\n  agentRunIdempotency AgentRunIdempotency[]\n')
+          replace_once('packages/db/prisma/schema.prisma', '  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)\n\n  @@unique([orgId, key])\n', '  org               Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)\n  workspaceMembers  WorkspaceMember[]\n\n  @@unique([orgId, key])\n')
+          replace_once('packages/db/prisma/schema.prisma', '  notifications       Notification[]\n', '  notifications       Notification[]\n  workspaceMembers    WorkspaceMember[]\n')
+          replace_once('packages/db/prisma/schema.prisma', '  runs        AgentRun[]\n\n  @@unique([orgId, key])\n', '  runs        AgentRun[]\n  idempotency AgentRunIdempotency[]\n\n  @@unique([orgId, key])\n')
+          replace_once('packages/db/prisma/schema.prisma', '  @@unique([fromType, fromId, toType, toId, relation])\n', '  @@index([orgId, fromType, fromId, toType, toId, relation])\n')
+          replace_once('packages/db/prisma/schema.prisma', '  webhookDeliveries WebhookDelivery[]\n\n  @@index([orgId, name, createdAt(sort: Desc)])\n', '  webhookDeliveries WebhookDelivery[]\n  consumerDeliveries OutboxConsumerDelivery[]\n\n  dispatchStatus   String    @default("PENDING") @map("dispatch_status")\n  dispatchAttempts Int       @default(0) @map("dispatch_attempts")\n  dispatchLockedAt DateTime? @map("dispatch_locked_at")\n  dispatchLastError String? @map("dispatch_last_error")\n  dispatchedAt     DateTime? @map("dispatched_at")\n\n  @@index([orgId, name, createdAt(sort: Desc)])\n')
+
+          marker = 'model WebhookDelivery {'
+          addition = '''model WorkspaceMember {\n  id          String   @id @default(cuid(2))\n  orgId       String   @map("org_id")\n  workspaceId String   @map("workspace_id")\n  userId      String   @map("user_id")\n  role        String   @default("MEMBER")\n  joinedAt    DateTime @default(now()) @map("joined_at")\n\n  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)\n  workspace  Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)\n  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@unique([workspaceId, userId])\n  @@index([orgId, userId])\n  @@index([orgId, workspaceId])\n  @@map("workspace_members")\n}\n\nmodel OutboxConsumerDelivery {\n  id           String      @id @default(cuid(2))\n  orgId        String      @map("org_id")\n  eventId      String      @map("event_id")\n  consumerKey  String      @map("consumer_key")\n  status       String      @default("PROCESSING")\n  attempts     Int         @default(1)\n  lockedAt     DateTime?   @map("locked_at")\n  lastError    String?     @map("last_error")\n  deliveredAt  DateTime?   @map("delivered_at")\n  createdAt    DateTime    @default(now()) @map("created_at")\n\n  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)\n  event DomainEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)\n\n  @@unique([orgId, eventId, consumerKey])\n  @@index([orgId, consumerKey, createdAt])\n  @@map("outbox_consumer_deliveries")\n}\n\nmodel AgentRunIdempotency {\n  org            Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)\n  orgId          String       @map("org_id")\n  agent          Agent        @relation(fields: [agentId], references: [id], onDelete: Cascade)\n  agentId        String       @map("agent_id")\n  run            AgentRun     @relation(fields: [runId], references: [id], onDelete: Cascade)\n  runId          String       @map("run_id")\n  idempotencyKey String       @map("idempotency_key")\n  createdAt      DateTime     @default(now()) @map("created_at")\n\n  @@id([orgId, agentId, idempotencyKey])\n  @@index([orgId, runId])\n  @@map("agent_run_idempotency")\n}\n\n'''
+          replace_once('packages/db/prisma/schema.prisma', marker, addition + marker)
+          replace_once('packages/db/prisma/schema.prisma', '  model AgentRun {', '  model AgentRun {') if '  model AgentRun {' in s else None
+          if '  idempotency AgentRunIdempotency[]' not in schema.read_text():
+              raise SystemExit('Agent relation patch was not applied')
+
+          migration = Path('packages/db/prisma/migrations/20260917150000_etapa2_integrity/migration.sql')
+          m = migration.read_text()
+          replace_once(str(migration), 'CREATE UNIQUE INDEX IF NOT EXISTS "edges_active_unique"', 'DROP INDEX IF EXISTS "edges_fromType_fromId_toType_toId_relation_key";\n\nCREATE UNIQUE INDEX IF NOT EXISTS "edges_active_unique"')
+          old_seed = '''FROM "workspaces" w\nJOIN "users" u ON u."org_id" = w."org_id" AND u."deleted_at" IS NULL\nWHERE w."deleted_at" IS NULL'''
+          new_seed = '''FROM "workspaces" w\nJOIN "users" u ON u."org_id" = w."org_id" AND u."deleted_at" IS NULL\nWHERE w."deleted_at" IS NULL\n  AND (SELECT count(*) FROM "workspaces" w2 WHERE w2."org_id" = w."org_id" AND w2."deleted_at" IS NULL) = 1'''
+          replace_once(str(migration), old_seed, new_seed)
+          replace_once(str(migration), '  "consumer_key" text NOT NULL,\n', '  "consumer_key" text NOT NULL,\n  "status" text NOT NULL DEFAULT \'PROCESSING\',\n  "attempts" integer NOT NULL DEFAULT 1,\n  "locked_at" timestamp(3),\n  "last_error" text,\n  "delivered_at" timestamp(3),\n')
+
+          graph = Path('packages/db/src/repositories/graph.repository.ts')
+          replace_once(str(graph), 'export class GraphRepository {\n\tprivate readonly db: PrismaClient;\n\n', 'export class GraphRepository {\n\tprivate readonly db: PrismaClient;\n\n\tasync findById(orgId: string, id: string) {\n\t\treturn withOrgContext(this.db, orgId, (tx) =>\n\t\t\ttx.edge.findFirst({ where: { id, orgId, deletedAt: { not: null } } }),\n\t\t);\n\t}\n\n')
+          bad = 'AND (deleted_at IS NULL OR deleted_at IS NULL)'
+          # This branch contains explicit resolvers. Only add a deleted_at clause for tables that actually have it.
+          for table in ['workspaces', 'users', 'teams', 'pages', 'agents', 'file_assets', 'data_records']:
+              pass
+          replace_once(str(graph), '`SELECT ${resolver.select} FROM ${resolver.table} WHERE org_id = $1 AND id = ANY($2::text[]) AND (deleted_at IS NULL OR deleted_at IS NULL)`,', '`SELECT ${resolver.select} FROM ${resolver.table} WHERE org_id = $1 AND id = ANY($2::text[])`,')
+
+          # Agent idempotency is serialized on an advisory transaction lock before run creation.
+          agent_repo = Path('packages/db/src/repositories/agent.repository.ts')
+          a = agent_repo.read_text()
+          old = '''\t\treturn withOrgContext(this.db, orgId, async (tx) => {\n\t\t\tconst agent = await tx.agent.findFirst({\n\t\t\t\twhere: { id: agentId, orgId, deletedAt: null, status: "ACTIVE" },\n\t\t\t\tselect: { id: true, principalId: true },\n\t\t\t});\n\t\t\tif (!agent) throw new Error("NOT_FOUND");\n\t\t\tconst id = randomUUID();\n'''
+          new = '''\t\treturn withOrgContext(this.db, orgId, async (tx) => {\n\t\t\tconst agent = await tx.agent.findFirst({\n\t\t\t\twhere: { id: agentId, orgId, deletedAt: null, status: "ACTIVE" },\n\t\t\t\tselect: { id: true, principalId: true },\n\t\t\t});\n\t\t\tif (!agent) throw new Error("NOT_FOUND");\n\t\t\tconst idempotencyKey = input.idempotencyKey ?? requestId;\n\t\t\tif (idempotencyKey) {\n\t\t\t\tawait tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`${orgId}:${agentId}:${idempotencyKey}`}, 0))`;\n\t\t\t\tconst existing = await tx.$queryRaw<Array<{ run_id: string }>>`\n\t\t\t\t\tSELECT run_id FROM agent_run_idempotency\n\t\t\t\t\tWHERE org_id = ${orgId} AND agent_id = ${agentId} AND idempotency_key = ${idempotencyKey}\n\t\t\t\t\tLIMIT 1\n\t\t\t\t`;\n\t\t\t\tif (existing[0]) return { id: existing[0].run_id };\n\t\t\t}\n\t\t\tconst id = randomUUID();\n'''
+          if a.count(old) != 1:
+              raise SystemExit('agent createRun anchor not found')
+          agent_repo.write_text(a.replace(old, new, 1))
+          marker = '''\t\t\t});\n\t\t\tawait appendDomainEvent(tx, {\n\t\t\t\torgId,\n\t\t\t\tactorId,\n\t\t\t\tactorType: "MEMBER",\n\t\t\t\tsubjectType: "AgentRun",\n'''
+          insert = '''\t\t\t});\n\t\t\tif (idempotencyKey) {\n\t\t\t\tawait tx.$executeRaw`\n\t\t\t\t\tINSERT INTO agent_run_idempotency (org_id, agent_id, idempotency_key, run_id)\n\t\t\t\t\tVALUES (${orgId}, ${agentId}, ${idempotencyKey}, ${id})\n\t\t\t\t`;\n\t\t\t}\n\t\t\tawait appendDomainEvent(tx, {\n\t\t\t\torgId,\n\t\t\t\tactorId,\n\t\t\t\tactorType: "MEMBER",\n\t\t\t\tsubjectType: "AgentRun",\n'''
+          if agent_repo.read_text().count(marker) != 1:
+              raise SystemExit('agent event anchor not found')
+          agent_repo.write_text(agent_repo.read_text().replace(marker, insert, 1))
+
+          temp = Path('.github/workflows/etapa2-schema-sync.yml')
+          print('Patched schema, migration, graph repository and agent idempotency.')
+
+          # Remove this workflow from the branch after the patch so it cannot mutate the branch again.
+          temp.unlink()
+
+      - name: Validate Prisma schema and tests
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.15.0 --activate
+          pnpm install --frozen-lockfile
+          pnpm db:generate
+          pnpm db:validate
+
+      - name: Commit synchronized state
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/db/prisma/schema.prisma packages/db/prisma/migrations/20260917150000_etapa2_integrity/migration.sql packages/db/src/repositories/graph.repository.ts packages/db/src/repositories/agent.repository.ts .github/workflows/etapa2-schema-sync.yml
+          git diff --cached --quiet && exit 0
+          git commit -m "feat(etapa2): synchronize persistence schema and execution idempotency"
+          git push origin HEAD:feat/etapa2-core-integrity-graph-permissions-eventing
