@@ -1,0 +1,53 @@
+name: etapa2-agent-persistence-sync
+on:
+  push:
+    branches:
+      - feat/etapa2-core-integrity-graph-permissions-eventing
+permissions:
+  contents: write
+jobs:
+  sync:
+    if: github.actor == 'edmundokutuzov333'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Patch agent repository
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('packages/db/src/repositories/agent.repository.ts')
+          text = p.read_text()
+          if 'agent_run_idempotency' not in text:
+              text, count = re.subn(
+                  r'(\t\t\tif \(!agent\) throw new Error\("NOT_FOUND"\);\n)(\t\t\tconst id = randomUUID\(\);)',
+                  r'''\1\t\t\tconst idempotencyKey = input.idempotencyKey ?? requestId;\n\t\t\tif (idempotencyKey) {\n\t\t\t\tawait tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`${orgId}:${agentId}:${idempotencyKey}`}, 0))`;\n\t\t\t\tconst existing = await tx.$queryRaw<Array<{ run_id: string }>>`\n\t\t\t\t\tSELECT run_id FROM agent_run_idempotency\n\t\t\t\t\tWHERE org_id = ${orgId} AND agent_id = ${agentId} AND idempotency_key = ${idempotencyKey}\n\t\t\t\t\tLIMIT 1\n\t\t\t\t`;\n\t\t\t\tif (existing[0]) return { id: existing[0].run_id };\n\t\t\t}\n\1'''.replace('\\1', ''),
+                  text,
+              )
+              if count != 1:
+                  raise SystemExit(f'createRun anchor count={count}')
+              marker = re.compile(r'(\t\t\tawait tx\.agentRun\.create\([\s\S]*?\n\t\t\t\}\);\n)(\t\t\tawait appendDomainEvent\(tx, \{\n\t\t\t\torgId,\n\t\t\t\tactorId,)', re.MULTILINE)
+              replacement = r'''\1\t\t\tif (idempotencyKey) {\n\t\t\t\tawait tx.$executeRaw`\n\t\t\t\t\tINSERT INTO agent_run_idempotency (org_id, agent_id, idempotency_key, run_id)\n\t\t\t\t\tVALUES (${orgId}, ${agentId}, ${idempotencyKey}, ${id})\n\t\t\t\t`;\n\t\t\t}\n\2'''
+              text, count2 = marker.subn(replacement, text, count=1)
+              if count2 != 1:
+                  raise SystemExit(f'agent run event anchor count={count2}')
+              p.write_text(text)
+          Path('.github/workflows/etapa2-agent-persistence-sync.yml').unlink()
+      - name: Validate and commit
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.15.0 --activate
+          pnpm install --frozen-lockfile
+          pnpm db:generate
+          pnpm db:validate
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/db/src/repositories/agent.repository.ts .github/workflows/etapa2-agent-persistence-sync.yml
+          git diff --cached --quiet && exit 0
+          git commit -m "feat(etapa2): make agent run idempotency transactional"
+          git fetch origin feat/etapa2-core-integrity-graph-permissions-eventing
+          git rebase origin/feat/etapa2-core-integrity-graph-permissions-eventing
+          git push origin HEAD:feat/etapa2-core-integrity-graph-permissions-eventing
