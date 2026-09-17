@@ -17,12 +17,13 @@ import {
 	type ApiKeyCreated,
 	type ApiKeySummary,
 	type AuditEntry,
+	type AuditQuery,
 	type ExportWorkObjectsInput,
 	type ExportWorkObjectsResponse,
 	type ImportWorkObjectsInput,
 	type ImportWorkObjectsResponse,
-	type Webhook,
 	type WebhookCreateInput,
+	type WebhookSummary,
 	type WebhookTestResponse,
 	type WebhookUpdateInput,
 } from "@oryon/contracts/platform-release";
@@ -40,10 +41,10 @@ export type OryonEnvelope<T> = {
 };
 
 export type ApiKey = ApiKeySummary;
+export type Webhook = WebhookSummary;
 export type ImportResult = ImportWorkObjectsResponse;
 export type HealthResult = z.infer<typeof PlatformHealthSchema>;
 export type AuditResult = AuditEntry[];
-export type WebhookResult = Webhook;
 
 const RevokedResponseSchema = z.object({ revoked: z.literal(true) });
 
@@ -160,17 +161,7 @@ export class OryonClient {
 		);
 	}
 
-	listAudit(
-		params: z.input<typeof AuditEntrySchema> extends never
-			? never
-			: {
-					action?: string;
-					resourceType?: string;
-					resourceId?: string;
-					actorId?: string;
-					limit?: number;
-			  } = {},
-	): Promise<AuditResult> {
+	listAudit(params: AuditQuery = {}): Promise<AuditResult> {
 		const query = new URLSearchParams();
 		for (const [key, value] of Object.entries(params))
 			if (value !== undefined) query.set(key, String(value));
