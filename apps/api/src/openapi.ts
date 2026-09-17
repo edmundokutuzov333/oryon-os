@@ -7,6 +7,7 @@ import {
 	ApiKeyCreateInputSchema,
 	ApiKeyCreatedSchema,
 	ApiKeyRevokeInputSchema,
+	ApiKeyRevokeResponseSchema,
 	ApiKeySummarySchema,
 	AuditEntrySchema,
 	AuditQuerySchema,
@@ -92,6 +93,7 @@ export const openApiDocument = {
 			ApiKeyCreateInput: toOpenApiSchema(ApiKeyCreateInputSchema),
 			ApiKeyCreated: toOpenApiSchema(ApiKeyCreatedSchema),
 			ApiKeyRevokeInput: toOpenApiSchema(ApiKeyRevokeInputSchema),
+			ApiKeyRevokeResponse: toOpenApiSchema(ApiKeyRevokeResponseSchema),
 			ApiKeySummary: toOpenApiSchema(ApiKeySummarySchema),
 			AuditEntry: toOpenApiSchema(AuditEntrySchema),
 			AuditQuery: toOpenApiSchema(AuditQuerySchema),
@@ -149,7 +151,7 @@ export const openApiDocument = {
 			delete: {
 				requestBody: jsonRequestBody("ApiKeyRevokeInput"),
 				responses: {
-					"200": jsonResponse("ApiKeySummary", "Revoked API key"),
+					"200": jsonResponse("ApiKeyRevokeResponse", "Revoked API key"),
 				},
 			},
 		},
