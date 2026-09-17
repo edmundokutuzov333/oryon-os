@@ -68,6 +68,12 @@ export const ExportWorkObjectsInputSchema = z.object({
 	includeCustomFields: z.boolean().default(true),
 	limit: z.coerce.number().int().min(1).max(200).default(200),
 });
+export const ExportWorkObjectItemSchema = z.record(z.string(), z.unknown());
+export const ExportWorkObjectsResponseSchema = z.object({
+	exportedBy: z.string(),
+	count: z.number().int().nonnegative(),
+	objects: z.array(ExportWorkObjectItemSchema),
+});
 export const AuditQuerySchema = z.object({
 	action: z.string().optional(),
 	resourceType: z.string().optional(),
@@ -113,6 +119,12 @@ export type WebhookSummary = z.infer<typeof WebhookSummarySchema>;
 export type ImportWorkObjectsInput = z.infer<
 	typeof ImportWorkObjectsInputSchema
 >;
+export type ImportWorkObjectsResponse = z.infer<
+	typeof ImportWorkObjectsResponseSchema
+>;
 export type ExportWorkObjectsInput = z.infer<
 	typeof ExportWorkObjectsInputSchema
+>;
+export type ExportWorkObjectsResponse = z.infer<
+	typeof ExportWorkObjectsResponseSchema
 >;
