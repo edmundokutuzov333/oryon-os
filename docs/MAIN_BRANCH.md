@@ -13,3 +13,5 @@ The expected V1 state is cumulative:
 Every production-facing surface must remain connected through the canonical contracts, permission engine, WorkObject model, domain events/outbox and shared design system documented by `CLAUDE.md`, `DESIGN_SYSTEM.md`, `packages/db/prisma/schema.prisma` and `docs/API_CONTRACTS.md`.
 
 A phase is not considered complete until its implementation is present on `main` and the repository verification gates pass against the consolidated state.
+
+The V1 execution rule is explicit: do not create new branches for feature delivery, repairs, integrations or release hardening. Commit the cumulative production state directly to `main`.
