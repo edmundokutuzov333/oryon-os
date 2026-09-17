@@ -1,0 +1,41 @@
+name: Fix AI main typecheck
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor == 'edmundokutuzov333'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Patch agent runtime types
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('packages/ai/src/agent-runtime.ts')
+          s = p.read_text()
+          s = s.replace('import { AgentRunStepSchema, AgentToolDefinitionSchema, type AgentToolDefinition } from "@oryon/contracts/agents-automation";', 'import { AgentRunStepSchema, AgentToolDefinitionSchema, type AgentToolDefinition } from "@oryon/contracts/agents-automation";\nimport type { GraphRelation } from "@oryon/contracts/graph";')
+          s = s.replace('const steps = (Array.isArray(run.stepsJson) ? run.stepsJson : []).slice(); const toolCalls = (Array.isArray(run.toolCallsJson) ? run.toolCallsJson : []).slice(); const readResources = (Array.isArray(run.readResources) ? run.readResources : []).slice(); const writtenResources = (Array.isArray(run.writtenResources) ? run.writtenResources : []).slice();', 'const steps: unknown[] = (Array.isArray(run.stepsJson) ? run.stepsJson : []).slice(); const toolCalls: unknown[] = (Array.isArray(run.toolCallsJson) ? run.toolCallsJson : []).slice(); const readResources: unknown[] = (Array.isArray(run.readResources) ? run.readResources : []).slice(); const writtenResources: unknown[] = (Array.isArray(run.writtenResources) ? run.writtenResources : []).slice();')
+          s = s.replace('relation: typeof call.input.relation === "string" ? call.input.relation : "*", includeTimeline', 'relation: (typeof call.input.relation === "string" ? call.input.relation : "*") as GraphRelation | "*", includeTimeline')
+          if s.count('const steps: unknown[]') != 1:
+              raise SystemExit('Agent runtime step annotation was not applied')
+          p.write_text(s)
+          PY
+      - name: Commit directly to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/ai/src/agent-runtime.ts
+          git commit -m "fix: normalize agent runtime JSON types on main"
+          git push origin HEAD:main
+      - name: Remove temporary workflow from main
+        run: |
+          git pull --rebase origin main
+          git rm .github/workflows/fix-ai-main.yml
+          git commit -m "chore: remove temporary AI main workflow"
+          git push origin HEAD:main
