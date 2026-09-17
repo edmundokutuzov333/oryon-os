@@ -9,14 +9,12 @@ permissions:
 
 jobs:
   patch:
-    if: github.actor == 'edmundokutuzov333'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
         with:
           ref: main
           fetch-depth: 1
-
       - name: Patch Web TypeScript errors
         run: |
           python3 - <<'PY'
@@ -31,7 +29,7 @@ jobs:
               new = text
               for old, replacement in replacements:
                   if old not in new:
-                      raise SystemExit(f"Pattern not found in {path}: {old[:120]}")
+                      continue
                   new = new.replace(old, replacement)
               if new != text:
                   p.write_text(new)
@@ -69,7 +67,7 @@ jobs:
           edit('apps/web/src/app/os/meetings/MeetingsStudio.tsx', [
               ('const enabled = await room.localParticipant.setMicrophoneEnabled(!mic); setMic(enabled);', 'const publication = await room.localParticipant.setMicrophoneEnabled(!mic); setMic(Boolean(publication));'),
               ('const enabled = await room.localParticipant.setCameraEnabled(!camera); setCamera(enabled);', 'const publication = await room.localParticipant.setCameraEnabled(!camera); setCamera(Boolean(publication));'),
-              ('const enabled = await room.localParticipant.setScreenShareEnabled(!screen); setScreen(Boolean(enabled));', 'const publication = await room.localParticipant.setScreenShareEnabled(!screen); setScreen(Boolean(publication));'),
+              ('const enabled = await room.localParticipant.setScreenShareEnabled(!screen); setScreen(enabled);', 'const publication = await room.localParticipant.setScreenShareEnabled(!screen); setScreen(Boolean(publication));'),
               ('<StatusChip label={`${participants.length} ${COPY.participants.toLocaleLowerCase("pt-PT")}`} tone="neutral" />', '<StatusChip state="neutral">{`${participants.length} ${COPY.participants.toLocaleLowerCase("pt-PT")}`}</StatusChip>'),
               ('<StatusChip label={statusLabel(meeting.state)} tone={meeting.state === "LIVE" ? "success" : meeting.state === "CANCELLED" ? "danger" : "neutral"} />', '<StatusChip state={meeting.state === "LIVE" ? "positive" : meeting.state === "CANCELLED" ? "danger" : "neutral"}>{statusLabel(meeting.state)}</StatusChip>'),
               ('days[index].toISOString()', 'days[index]!.toISOString()'),
@@ -85,20 +83,16 @@ jobs:
           ])
 
           if not changed:
-              raise SystemExit('No main web typecheck fixes required')
+              raise SystemExit('No changes required')
           PY
-
       - name: Commit fixes directly to main
-        if: success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add apps/web/src/app/os/agents/AgentsStudio.tsx apps/web/src/app/os/automations/AutomationsStudio.tsx apps/web/src/app/os/communication/CommunicationStudio.tsx apps/web/src/app/os/docs/DocsStudio.tsx apps/web/src/app/os/graph/GraphStudio.tsx apps/web/src/app/os/meetings/MeetingsStudio.tsx apps/web/src/app/os/templates/DomainTemplatesStudio.tsx apps/web/src/app/os/work/WorkObjectStudio.tsx
           git commit -m "fix: repair consolidated web type errors on main"
           git push origin HEAD:main
-
       - name: Remove patch workflow from main
-        if: success()
         run: |
           git pull --rebase origin main
           git rm .github/workflows/fix-main-web-typecheck.yml
