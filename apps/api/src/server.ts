@@ -16,8 +16,6 @@ import { registerDomainTemplateRoutes } from "./domain-templates.js";
 import { registerPlatformRoutes } from "./platform.js";
 import { registerOpenApiRoutes } from "./openapi.js";
 import { installSecurityHardening } from "./security.js";
-import { registerSearchAiRoutes, closeAiSearchResources } from "./search-ai.js";
-import { registerAgentAutomationRoutes } from "./agents.js";
 import { AUTH_COOKIE_NAME, authenticate, identityForSession, requestMagicLink, revokeSession, verifyMagicLink } from "./auth.js";
 import { registerRealtime } from "./realtime.js";
 const app = Fastify({ logger: true, bodyLimit: 2 * 1024 * 1024 });
