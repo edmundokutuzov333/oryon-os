@@ -11,9 +11,17 @@ Node.js 24 LTS, pnpm 10.x, Turborepo 2.5+, TypeScript 5.9+ strict, Biome 2.x, Le
 
 Frontend: Next.js 16 App Router, React 19.2+, Tailwind 4, Radix, Motion 12, Zustand 5, TanStack Query/Table/Virtual, dnd-kit, React Hook Form, Zod 4, Lucide, Temporal/date-fns, TipTap 3, Yjs 13, tldraw 3, Visx/Recharts, next-intl, Storybook 9.
 
-Backend: tRPC 11, Fastify 5 + OpenAPI 3.1, Prisma 6, PostgreSQL 17, pgvector/pg_trgm/pgcrypto/uuid-ossp/pg_partman, Redis 7.4+, BullMQ 5, NATS JetStream 2.11+, Typesense 28, S3 compatível, Socket.IO/uWebSockets, LiveKit 1.9+, Temporal 1.28+, WorkOS, Auth.js 5, Resend/React Email, React PDF/Gotenberg, Vercel AI SDK 5, OpenTelemetry/Grafana LGTM, Sentry 9, OpenFeature/Flagsmith.
+Backend: Fastify 5 + OpenAPI 3.1, Prisma 6, PostgreSQL 17, pgvector/pg_trgm/pgcrypto/uuid-ossp/pg_partman, Redis 7.4+, BullMQ 5, NATS JetStream 2.11+, Typesense 28, S3 compatível, Socket.IO/uWebSockets, LiveKit 1.9+, Temporal 1.28+, WorkOS, Auth.js 5, Resend/React Email, React PDF/Gotenberg, Vercel AI SDK 5, OpenTelemetry/Grafana LGTM, Sentry 9, OpenFeature/Flagsmith.
 
 Node 24 é obrigatório para CI. Bun não é runtime de produção. npm e yarn não são usados.
+
+## Contrato da API
+
+REST + OpenAPI 3.1 é o contrato externo canónico da OryonOS V1.
+
+`tRPC` não faz parte da arquitectura V1 e não deve ser introduzido como uma segunda camada de transporte ou contrato. A API HTTP, o frontend, o SDK e a documentação pública devem consumir a mesma definição de contratos em `packages/contracts`.
+
+As entradas e saídas públicas são validadas com Zod. O documento OpenAPI é derivado dos schemas de contrato e o SDK deve expor os tipos inferidos desses mesmos schemas, sem `unknown` em métodos públicos.
 
 ## Fronteiras
 
