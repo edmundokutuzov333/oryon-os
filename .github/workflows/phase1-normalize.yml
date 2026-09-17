@@ -1,8 +1,9 @@
 name: phase1-normalize
 
 on:
-  push:
-    branches: [exec/phase1-canonical-build-integrity]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
 
 permissions:
   contents: write
@@ -32,7 +33,7 @@ jobs:
       - name: Remove tracked generated artifacts
         run: |
           git rm -r --ignore-unmatch .turbo node_modules apps/api/.turbo apps/api/node_modules apps/api/generated packages/db/src/generated
-      - name: Normalize schema and documentation
+      - name: Normalize schema and canonical contract metadata
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -56,19 +57,6 @@ jobs:
           text = text.replace('registerCommunicationRoutesV2', 'registerCommunicationRoutes')
           text = text.replace('registerDocsFilesRoutesV2', 'registerDocsFilesRoutes')
           server.write_text(text)
-
-          claude = Path('CLAUDE.md')
-          text = claude.read_text().replace(
-              'e deve ser incorporada ao índice normativo de decisões na próxima manutenção documental.',
-              'e está indexada por esta decisão normativa.'
-          )
-          claude.write_text(text)
-
-          decisions = Path('docs/DECISIONS.md')
-          text = decisions.read_text()
-          if '## ADR-0010: REST + OpenAPI como contrato externo canónico da V1' not in text:
-              text += '''\n\n## ADR-0010: REST + OpenAPI como contrato externo canónico da V1\n\n- Estado: aceite para a V1\n- Data: 2026-09-17\n\n### Contexto\n\nO manual histórico declarava simultaneamente tRPC 11 e Fastify + OpenAPI 3.1, enquanto a implementação real da V1 usa REST sobre Fastify e o repositório não contém servidor tRPC. Manter duas stacks como contratos públicos criaria duas fontes de verdade.\n\n### Decisão\n\n1. REST sobre Fastify é o contrato externo canónico da OryonOS V1.\n2. OpenAPI 3.1 é a representação pública máquina-legível desse contrato.\n3. Schemas Zod em `packages/contracts` são a fonte de verdade executável para entradas e saídas públicas.\n4. `packages/contracts/src/public-api.ts` reúne a fronteira HTTP pública e referencia os schemas por capacidade.\n5. `apps/api/src/openapi.ts` gera o documento OpenAPI a partir desse catálogo, sem definições de payload duplicadas.\n6. O SDK oficial pertence ao workspace pnpm e consome os mesmos contracts para tipos e validação de runtime.\n7. tRPC não faz parte da V1. Uma futura introdução de tRPC exige novo ADR e não pode criar um segundo contrato público para os mesmos recursos.\n\n### Consequência\n\nA cadeia canónica passa a ser `Zod Contract → API validation → OpenAPI 3.1 → SDK → UI data access`.\n'''
-              decisions.write_text(text)
           PY
       - name: Add ChannelMember canonicalization migration
         run: |
@@ -93,7 +81,7 @@ jobs:
             END IF;
           END $$;
           SQL
-      - name: Install and refresh lockfile
+      - name: Install dependencies and refresh lockfile
         run: pnpm install
       - run: pnpm db:generate
       - run: pnpm db:validate
