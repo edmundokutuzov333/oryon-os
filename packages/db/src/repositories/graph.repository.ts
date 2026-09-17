@@ -1,5 +1,11 @@
 import { graphNodeKey, validateGraphSelfEdge } from "@oryon/core";
-import type { GraphEdgeCreateInput, GraphNodeRef, GraphRelation, GraphTimelineEvent, GraphTraverseQuery } from "@oryon/contracts/graph";
+import type {
+	GraphEdgeCreateInput,
+	GraphNodeRef,
+	GraphRelation,
+	GraphTimelineEvent,
+	GraphTraverseQuery,
+} from "@oryon/contracts/graph";
 import { Prisma, type PrismaClient } from "../generated/client.js";
 import { appendDomainEvent } from "../outbox.js";
 import { withOrgContext } from "../tenant.js";
@@ -78,13 +84,22 @@ export class GraphRepository {
 		this.db = db;
 	}
 
-	async createEdge(orgId: string, actorId: string, input: GraphEdgeCreateInput): Promise<{ id: string }> {
+	async createEdge(
+		orgId: string,
+		actorId: string,
+		input: GraphEdgeCreateInput,
+	): Promise<{ id: string }> {
 		return withOrgContext(this.db, orgId, async (tx) => {
 			validateGraphSelfEdge(input.from, input.to);
-			if (!graphRelations.has(input.relation)) throw new Error("INVALID_RELATION");
+			if (!graphRelations.has(input.relation))
+				throw new Error("INVALID_RELATION");
 			for (const node of [input.from, input.to]) {
-				if (node.type !== "work_object") throw new Error("GRAPH_NODE_TYPE_UNSUPPORTED");
-				const object = await tx.workObject.findFirst({ where: { orgId, id: node.id, deletedAt: null }, select: { id: true } });
+				if (node.type !== "work_object")
+					throw new Error("GRAPH_NODE_TYPE_UNSUPPORTED");
+				const object = await tx.workObject.findFirst({
+					where: { orgId, id: node.id, deletedAt: null },
+					select: { id: true },
+				});
 				if (!object) throw new Error("NOT_FOUND");
 			}
 
@@ -108,19 +123,56 @@ export class GraphRepository {
 				if (rows.length > 0) throw new Error("CYCLE_DETECTED");
 			}
 
-			const existing = await tx.edge.findFirst({ where: { orgId, fromType: input.from.type, fromId: input.from.id, toType: input.to.type, toId: input.to.id, relation: input.relation, deletedAt: null }, select: { id: true } });
+			const existing = await tx.edge.findFirst({
+				where: {
+					orgId,
+					fromType: input.from.type,
+					fromId: input.from.id,
+					toType: input.to.type,
+					toId: input.to.id,
+					relation: input.relation,
+					deletedAt: null,
+				},
+				select: { id: true },
+			});
 			if (existing) throw new Error("CONFLICT");
-			const row = await tx.edge.create({ data: { orgId, fromType: input.from.type, fromId: input.from.id, toType: input.to.type, toId: input.to.id, relation: input.relation, lagDays: input.lagDays ?? null, metadata: input.metadata as Prisma.InputJsonValue, createdBy: actorId } });
-			await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "Edge", subjectId: row.id, name: "graph.edge.created", payload: { from: input.from, to: input.to, relation: input.relation } });
+			const row = await tx.edge.create({
+				data: {
+					orgId,
+					fromType: input.from.type,
+					fromId: input.from.id,
+					toType: input.to.type,
+					toId: input.to.id,
+					relation: input.relation,
+					lagDays: input.lagDays ?? null,
+					metadata: input.metadata as Prisma.InputJsonValue,
+					createdBy: actorId,
+				},
+			});
+			await appendDomainEvent(tx, {
+				orgId,
+				actorId,
+				actorType: "MEMBER",
+				subjectType: "Edge",
+				subjectId: row.id,
+				name: "graph.edge.created",
+				payload: { from: input.from, to: input.to, relation: input.relation },
+			});
 			return { id: row.id };
 		});
 	}
 
-	async traverse(orgId: string, query: GraphTraverseQuery): Promise<GraphTraverseResult> {
+	async traverse(
+		orgId: string,
+		query: GraphTraverseQuery,
+	): Promise<GraphTraverseResult> {
 		return withOrgContext(this.db, orgId, async (tx) => {
 			const root: GraphNodeRef = { type: query.rootType, id: query.rootId };
 			const relation = relationValue(query.relation);
-			const relationSql = relation === null ? Prisma.sql`` : Prisma.sql`AND e.relation = ${relation}::"EdgeRelation"`;
+			const relationSql =
+				relation === null
+					? Prisma.sql``
+					: Prisma.sql`AND e.relation = ${relation}::"EdgeRelation"`;
 			const rows = await tx.$queryRaw<RawReachability[]>(Prisma.sql`
 				WITH RECURSIVE walk(node_type, node_id, depth, path) AS (
 					SELECT ${root.type}, ${root.id}, 0, ARRAY[${graphNodeKey(root)}]::text[]
@@ -147,12 +199,32 @@ export class GraphRepository {
 			`);
 
 			const nodeRefs = rows.map((row) => ({ type: row.type, id: row.id }));
-			const workObjectIds = unique(nodeRefs.filter((node) => node.type === "work_object").map((node) => node.id));
-			const workObjects = workObjectIds.length === 0
-				? []
-				: await tx.workObject.findMany({ where: { orgId, id: { in: workObjectIds }, deletedAt: null }, select: { id: true, humanId: true, title: true, status: true, statusCategory: true, priority: true, typeKey: true, ownerId: true, workspaceId: true } });
+			const workObjectIds = unique(
+				nodeRefs
+					.filter((node) => node.type === "work_object")
+					.map((node) => node.id),
+			);
+			const workObjects =
+				workObjectIds.length === 0
+					? []
+					: await tx.workObject.findMany({
+							where: { orgId, id: { in: workObjectIds }, deletedAt: null },
+							select: {
+								id: true,
+								humanId: true,
+								title: true,
+								status: true,
+								statusCategory: true,
+								priority: true,
+								typeKey: true,
+								ownerId: true,
+								workspaceId: true,
+							},
+						});
 
-			const reachableKeys = new Set(nodeRefs.map((node) => keyPair(node.type, node.id)));
+			const reachableKeys = new Set(
+				nodeRefs.map((node) => keyPair(node.type, node.id)),
+			);
 			const edgeWhere: Prisma.EdgeWhereInput = {
 				orgId,
 				deletedAt: null,
@@ -162,28 +234,89 @@ export class GraphRepository {
 					{ toType: "work_object", toId: { in: workObjectIds } },
 				],
 			};
-			const rawEdges = workObjectIds.length === 0 ? [] : await tx.edge.findMany({ where: edgeWhere, orderBy: { createdAt: "asc" } });
-			const edges = rawEdges.filter((edge) => reachableKeys.has(keyPair(edge.fromType, edge.fromId)) && reachableKeys.has(keyPair(edge.toType, edge.toId))).map((edge) => ({ id: edge.id, orgId: edge.orgId, from: { type: edge.fromType, id: edge.fromId }, to: { type: edge.toType, id: edge.toId }, relation: edge.relation, lagDays: edge.lagDays, metadata: edge.metadata, createdAt: edge.createdAt }));
+			const rawEdges =
+				workObjectIds.length === 0
+					? []
+					: await tx.edge.findMany({
+							where: edgeWhere,
+							orderBy: { createdAt: "asc" },
+						});
+			const edges = rawEdges
+				.filter(
+					(edge) =>
+						reachableKeys.has(keyPair(edge.fromType, edge.fromId)) &&
+						reachableKeys.has(keyPair(edge.toType, edge.toId)),
+				)
+				.map((edge) => ({
+					id: edge.id,
+					orgId: edge.orgId,
+					from: { type: edge.fromType, id: edge.fromId },
+					to: { type: edge.toType, id: edge.toId },
+					relation: edge.relation,
+					lagDays: edge.lagDays,
+					metadata: edge.metadata,
+					createdAt: edge.createdAt,
+				}));
 
 			let timeline: GraphTimelineEvent[] = [];
 			if (query.includeTimeline && workObjectIds.length > 0) {
 				const [events, transitions] = await Promise.all([
-					tx.domainEvent.findMany({ where: { orgId, subjectType: "WorkObject", subjectId: { in: workObjectIds } }, orderBy: { createdAt: "desc" }, take: 200 }),
-					tx.statusTransition.findMany({ where: { orgId, objectId: { in: workObjectIds } }, orderBy: { createdAt: "desc" }, take: 200 }),
+					tx.domainEvent.findMany({
+						where: {
+							orgId,
+							subjectType: "WorkObject",
+							subjectId: { in: workObjectIds },
+						},
+						orderBy: { createdAt: "desc" },
+						take: 200,
+					}),
+					tx.statusTransition.findMany({
+						where: { orgId, objectId: { in: workObjectIds } },
+						orderBy: { createdAt: "desc" },
+						take: 200,
+					}),
 				]);
 				timeline = [
-					...events.map((event) => ({ id: event.id, kind: "DOMAIN_EVENT" as const, node: { type: "work_object", id: event.subjectId }, name: event.name, fromStatus: null, toStatus: null, comment: null, actorId: event.actorId, occurredAt: event.createdAt.toISOString() })),
-					...transitions.map((transition) => ({ id: transition.id, kind: "STATUS_TRANSITION" as const, node: { type: "work_object", id: transition.objectId }, name: "work_object.status_changed", fromStatus: transition.fromStatus, toStatus: transition.toStatus, comment: transition.comment, actorId: transition.actorId, occurredAt: transition.createdAt.toISOString() })),
-				].sort((left, right) => right.occurredAt.localeCompare(left.occurredAt)).slice(0, 300);
+					...events.map((event) => ({
+						id: event.id,
+						kind: "DOMAIN_EVENT" as const,
+						node: { type: "work_object", id: event.subjectId },
+						name: event.name,
+						fromStatus: null,
+						toStatus: null,
+						comment: null,
+						actorId: event.actorId,
+						occurredAt: event.createdAt.toISOString(),
+					})),
+					...transitions.map((transition) => ({
+						id: transition.id,
+						kind: "STATUS_TRANSITION" as const,
+						node: { type: "work_object", id: transition.objectId },
+						name: "work_object.status_changed",
+						fromStatus: transition.fromStatus,
+						toStatus: transition.toStatus,
+						comment: transition.comment,
+						actorId: transition.actorId,
+						occurredAt: transition.createdAt.toISOString(),
+					})),
+				]
+					.sort((left, right) =>
+						right.occurredAt.localeCompare(left.occurredAt),
+					)
+					.slice(0, 300);
 			}
 
 			return {
 				root,
 				nodeRefs,
 				edges,
-				workObjects: workObjects.map((object) => ({ type: "work_object" as const, ...object })),
+				workObjects: workObjects.map((object) => ({
+					type: "work_object" as const,
+					...object,
+				})),
 				timeline,
-				truncated: query.depth > 0 && rows.some((row) => row.depth === query.depth),
+				truncated:
+					query.depth > 0 && rows.some((row) => row.depth === query.depth),
 			};
 		});
 	}

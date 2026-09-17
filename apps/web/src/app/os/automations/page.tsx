@@ -1,2 +1,4 @@
 import { AutomationsStudio } from "./AutomationsStudio";
-export default function AutomationsPage() { return <AutomationsStudio />; }
+export default function AutomationsPage() {
+	return <AutomationsStudio />;
+}

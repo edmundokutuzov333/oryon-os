@@ -42,7 +42,15 @@ export const GraphWorkObjectNodeSchema = z.object({
 	humanId: z.string().min(1),
 	title: z.string().min(1),
 	status: z.string().min(1),
-	statusCategory: z.enum(["BACKLOG", "TODO", "IN_PROGRESS", "BLOCKED", "IN_REVIEW", "DONE", "CANCELLED"]),
+	statusCategory: z.enum([
+		"BACKLOG",
+		"TODO",
+		"IN_PROGRESS",
+		"BLOCKED",
+		"IN_REVIEW",
+		"DONE",
+		"CANCELLED",
+	]),
 	priority: z.enum(["LOWEST", "LOW", "NORMAL", "HIGH", "URGENT"]),
 	typeKey: z.string().min(1),
 	ownerId: z.string().nullable(),
@@ -50,7 +58,10 @@ export const GraphWorkObjectNodeSchema = z.object({
 	permissions: z.object({ read: z.boolean() }),
 });
 
-export const GraphNodeSchema = z.union([GraphWorkObjectNodeSchema, GraphNodeRefSchema]);
+export const GraphNodeSchema = z.union([
+	GraphWorkObjectNodeSchema,
+	GraphNodeRefSchema,
+]);
 
 export const GraphEdgeSchema = z.object({
 	id: z.string().min(1),

@@ -13,11 +13,7 @@ export async function getApiHealth(): Promise<HealthResponse> {
 	}
 
 	const payload: unknown = await response.json();
-	if (
-		typeof payload !== "object" ||
-		payload === null ||
-		!("data" in payload)
-	) {
+	if (typeof payload !== "object" || payload === null || !("data" in payload)) {
 		throw new Error("Invalid Oryon API health envelope");
 	}
 

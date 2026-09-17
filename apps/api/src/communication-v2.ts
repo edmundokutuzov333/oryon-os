@@ -1,40 +1,700 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { can } from "@oryon/core";
 import { getPrisma } from "@oryon/db";
-import { CommunicationEnhancedRepository, PermissionRepository } from "@oryon/db/repositories";
-import { CatchUpQuerySchema, ChannelCreateInputSchema, ChannelSchema, CommunicationEventSchema, DirectChannelCreateInputSchema, MessageConversionInputSchema, MessageConversionResponseSchema, MessageCreateInputSchema, MessageListQuerySchema, MessageSchema, MessageUpdateInputSchema, NotificationListQuerySchema, NotificationSchema, ReactionInputSchema } from "@oryon/contracts/communication";
+import {
+	CommunicationEnhancedRepository,
+	PermissionRepository,
+} from "@oryon/db/repositories";
+import {
+	CatchUpQuerySchema,
+	ChannelCreateInputSchema,
+	ChannelSchema,
+	CommunicationEventSchema,
+	DirectChannelCreateInputSchema,
+	MessageConversionInputSchema,
+	MessageConversionResponseSchema,
+	MessageCreateInputSchema,
+	MessageListQuerySchema,
+	MessageSchema,
+	MessageUpdateInputSchema,
+	NotificationListQuerySchema,
+	NotificationSchema,
+	ReactionInputSchema,
+} from "@oryon/contracts/communication";
 import { authenticate, AUTH_COOKIE_NAME } from "./auth.js";
 import type { CommunicationIO } from "./communication.js";
 
 const repository = new CommunicationEnhancedRepository(getPrisma());
 const permissions = new PermissionRepository();
 
-function header(request: FastifyRequest, name: string): string | undefined { const value = request.headers[name]; return typeof value === "string" && value.length > 0 ? value : undefined; }
-function orgId(request: FastifyRequest): string { const value = header(request, "x-oryon-org"); if (!value) throw new Error("ORG_HEADER_MISSING"); return value; }
-function token(request: FastifyRequest): { value: string; mode: "bearer" | "session" } { const auth = header(request, "authorization"); if (auth?.startsWith("Bearer ")) return { value: auth.slice(7).trim(), mode: "bearer" }; const raw = header(request, "cookie"); if (raw) for (const part of raw.split(";")) { const separator = part.indexOf("="); if (separator > 0 && part.slice(0, separator).trim() === AUTH_COOKIE_NAME) return { value: decodeURIComponent(part.slice(separator + 1).trim()), mode: "session" }; } throw new Error("UNAUTHENTICATED"); }
-async function user(request: FastifyRequest, organizationId: string) { const auth = token(request); const current = await authenticate(auth.value, auth.mode); if (current.orgId !== organizationId) throw new Error("UNAUTHENTICATED"); return current; }
-function mutation(request: FastifyRequest): void { if (!header(request, "idempotency-key")) throw new Error("IDEMPOTENCY_KEY_MISSING"); }
-function envelope(request: FastifyRequest, data: unknown) { return { data, meta: { requestId: request.id, durationMs: 0 } }; }
-function fail(request: FastifyRequest, reply: { code(status: number): { send(payload: unknown): unknown } }, error: unknown) { const message = error instanceof Error ? error.message : "Communication operation failed"; const status = message === "UNAUTHENTICATED" ? 401 : message === "PERMISSION_DENIED" ? 403 : ["NOT_FOUND", "CHANNEL_NOT_FOUND", "USER_NOT_FOUND", "FILE_NOT_FOUND", "OBJECT_TYPE_NOT_FOUND", "WORKSPACE_NOT_FOUND"].includes(message) ? 404 : ["CONFLICT", "PARENT_MESSAGE_NOT_FOUND"].includes(message) ? 409 : message === "ORG_HEADER_MISSING" || message === "IDEMPOTENCY_KEY_MISSING" ? 400 : 400; const code = status === 401 ? "UNAUTHENTICATED" : status === 403 ? "PERMISSION_DENIED" : status === 404 ? "NOT_FOUND" : status === 409 ? "CONFLICT" : message === "ORG_HEADER_MISSING" ? "ORG_HEADER_MISSING" : "VALIDATION_FAILED"; return reply.code(status).send({ error: { code, httpStatus: status, message, requestId: request.id } }); }
-async function allowCollection(organizationId: string, userId: string, resourceType: string, action: "create") { const snapshot = await permissions.getSnapshot(organizationId, userId, resourceType, "__collection__"); return can({ orgId: organizationId, ...snapshot }, { orgId: organizationId, type: resourceType, id: "__collection__", workspaceId: null, projectId: null, ownerId: null, teamId: null, classification: null }, action).allowed; }
-function messageResponse(message: Awaited<ReturnType<CommunicationEnhancedRepository["createMessage"]>>, userId: string) { const grouped = new Map<string, { emoji: string; count: number; reacted: boolean }>(); for (const reaction of message.reactions) { const value = grouped.get(reaction.emoji); if (value) { value.count += 1; value.reacted ||= reaction.userId === userId; } else grouped.set(reaction.emoji, { emoji: reaction.emoji, count: 1, reacted: reaction.userId === userId }); } return MessageSchema.parse({ ...message, scheduledFor: message.scheduledFor?.toISOString() ?? null, resolvedAt: message.resolvedAt?.toISOString() ?? null, pinnedAt: message.pinnedAt?.toISOString() ?? null, editedAt: message.editedAt?.toISOString() ?? null, createdAt: message.createdAt.toISOString(), author: { id: message.author.id, name: message.author.name, displayName: message.author.displayName, avatarUrl: message.author.avatarUrl, presence: message.author.presence }, reactions: [...grouped.values()], permissions: { read: true, update: message.authorId === userId, delete: message.authorId === userId, react: true, reply: true, convert: true } }); }
-function channelResponse(row: { channel: Awaited<ReturnType<CommunicationEnhancedRepository["listChannelsDetailed"]>>[number]["channel"]; memberCount: number; unreadCount: number }, userId: string) { return ChannelSchema.parse({ ...row.channel, archivedAt: row.channel.archivedAt?.toISOString() ?? null, createdAt: row.channel.createdAt.toISOString(), memberCount: row.memberCount, unreadCount: row.unreadCount, permissions: { read: true, post: true, manage: row.channel.createdBy === userId } }); }
+function header(request: FastifyRequest, name: string): string | undefined {
+	const value = request.headers[name];
+	return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+function orgId(request: FastifyRequest): string {
+	const value = header(request, "x-oryon-org");
+	if (!value) throw new Error("ORG_HEADER_MISSING");
+	return value;
+}
+function token(request: FastifyRequest): {
+	value: string;
+	mode: "bearer" | "session";
+} {
+	const auth = header(request, "authorization");
+	if (auth?.startsWith("Bearer "))
+		return { value: auth.slice(7).trim(), mode: "bearer" };
+	const raw = header(request, "cookie");
+	if (raw)
+		for (const part of raw.split(";")) {
+			const separator = part.indexOf("=");
+			if (separator > 0 && part.slice(0, separator).trim() === AUTH_COOKIE_NAME)
+				return {
+					value: decodeURIComponent(part.slice(separator + 1).trim()),
+					mode: "session",
+				};
+		}
+	throw new Error("UNAUTHENTICATED");
+}
+async function user(request: FastifyRequest, organizationId: string) {
+	const auth = token(request);
+	const current = await authenticate(auth.value, auth.mode);
+	if (current.orgId !== organizationId) throw new Error("UNAUTHENTICATED");
+	return current;
+}
+function mutation(request: FastifyRequest): void {
+	if (!header(request, "idempotency-key"))
+		throw new Error("IDEMPOTENCY_KEY_MISSING");
+}
+function envelope(request: FastifyRequest, data: unknown) {
+	return { data, meta: { requestId: request.id, durationMs: 0 } };
+}
+function fail(
+	request: FastifyRequest,
+	reply: { code(status: number): { send(payload: unknown): unknown } },
+	error: unknown,
+) {
+	const message =
+		error instanceof Error ? error.message : "Communication operation failed";
+	const status =
+		message === "UNAUTHENTICATED"
+			? 401
+			: message === "PERMISSION_DENIED"
+				? 403
+				: [
+							"NOT_FOUND",
+							"CHANNEL_NOT_FOUND",
+							"USER_NOT_FOUND",
+							"FILE_NOT_FOUND",
+							"OBJECT_TYPE_NOT_FOUND",
+							"WORKSPACE_NOT_FOUND",
+						].includes(message)
+					? 404
+					: ["CONFLICT", "PARENT_MESSAGE_NOT_FOUND"].includes(message)
+						? 409
+						: message === "ORG_HEADER_MISSING" ||
+								message === "IDEMPOTENCY_KEY_MISSING"
+							? 400
+							: 400;
+	const code =
+		status === 401
+			? "UNAUTHENTICATED"
+			: status === 403
+				? "PERMISSION_DENIED"
+				: status === 404
+					? "NOT_FOUND"
+					: status === 409
+						? "CONFLICT"
+						: message === "ORG_HEADER_MISSING"
+							? "ORG_HEADER_MISSING"
+							: "VALIDATION_FAILED";
+	return reply
+		.code(status)
+		.send({
+			error: { code, httpStatus: status, message, requestId: request.id },
+		});
+}
+async function allowCollection(
+	organizationId: string,
+	userId: string,
+	resourceType: string,
+	action: "create",
+) {
+	const snapshot = await permissions.getSnapshot(
+		organizationId,
+		userId,
+		resourceType,
+		"__collection__",
+	);
+	return can(
+		{ orgId: organizationId, ...snapshot },
+		{
+			orgId: organizationId,
+			type: resourceType,
+			id: "__collection__",
+			workspaceId: null,
+			projectId: null,
+			ownerId: null,
+			teamId: null,
+			classification: null,
+		},
+		action,
+	).allowed;
+}
+function messageResponse(
+	message: Awaited<
+		ReturnType<CommunicationEnhancedRepository["createMessage"]>
+	>,
+	userId: string,
+) {
+	const grouped = new Map<
+		string,
+		{ emoji: string; count: number; reacted: boolean }
+	>();
+	for (const reaction of message.reactions) {
+		const value = grouped.get(reaction.emoji);
+		if (value) {
+			value.count += 1;
+			value.reacted ||= reaction.userId === userId;
+		} else
+			grouped.set(reaction.emoji, {
+				emoji: reaction.emoji,
+				count: 1,
+				reacted: reaction.userId === userId,
+			});
+	}
+	return MessageSchema.parse({
+		...message,
+		scheduledFor: message.scheduledFor?.toISOString() ?? null,
+		resolvedAt: message.resolvedAt?.toISOString() ?? null,
+		pinnedAt: message.pinnedAt?.toISOString() ?? null,
+		editedAt: message.editedAt?.toISOString() ?? null,
+		createdAt: message.createdAt.toISOString(),
+		author: {
+			id: message.author.id,
+			name: message.author.name,
+			displayName: message.author.displayName,
+			avatarUrl: message.author.avatarUrl,
+			presence: message.author.presence,
+		},
+		reactions: [...grouped.values()],
+		permissions: {
+			read: true,
+			update: message.authorId === userId,
+			delete: message.authorId === userId,
+			react: true,
+			reply: true,
+			convert: true,
+		},
+	});
+}
+function channelResponse(
+	row: {
+		channel: Awaited<
+			ReturnType<CommunicationEnhancedRepository["listChannelsDetailed"]>
+		>[number]["channel"];
+		memberCount: number;
+		unreadCount: number;
+	},
+	userId: string,
+) {
+	return ChannelSchema.parse({
+		...row.channel,
+		archivedAt: row.channel.archivedAt?.toISOString() ?? null,
+		createdAt: row.channel.createdAt.toISOString(),
+		memberCount: row.memberCount,
+		unreadCount: row.unreadCount,
+		permissions: {
+			read: true,
+			post: true,
+			manage: row.channel.createdBy === userId,
+		},
+	});
+}
 
-export async function registerCommunicationRoutesV2(app: FastifyInstance, io: CommunicationIO): Promise<void> {
-  app.get("/v1/channels", async (request, reply) => { try { const organizationId = orgId(request); const current = await user(request, organizationId); const rows = await repository.listChannelsDetailed(organizationId, current.userId); return reply.send(envelope(request, rows.map((row) => channelResponse(row, current.userId)))); } catch (error) { return fail(request, reply, error); } });
-  app.post("/v1/channels", async (request, reply) => { try { mutation(request); const organizationId = orgId(request); const current = await user(request, organizationId); if (!(await allowCollection(organizationId, current.userId, "channel", "create"))) throw new Error("PERMISSION_DENIED"); const input = ChannelCreateInputSchema.parse(request.body); const row = await repository.createChannel(organizationId, current.userId, input); const payload = channelResponse({ channel: row, memberCount: 1, unreadCount: 0 }, current.userId); io.to(`org:${organizationId}`).emit("channel.updated", CommunicationEventSchema.parse({ event: "channel.updated", channelId: row.id, messageId: null, notificationId: null, payload })); return reply.code(201).send(envelope(request, payload)); } catch (error) { return fail(request, reply, error); } });
-  app.post("/v1/channels/direct", async (request, reply) => { try { mutation(request); const organizationId = orgId(request); const current = await user(request, organizationId); if (!(await allowCollection(organizationId, current.userId, "channel", "create"))) throw new Error("PERMISSION_DENIED"); const input = DirectChannelCreateInputSchema.parse(request.body); const existing = await repository.findDirectChannel(organizationId, [current.userId, ...input.userIds]); const row = existing ?? await repository.createDirectChannel(organizationId, current.userId, input); const payload = ChannelSchema.parse({ ...row, archivedAt: row.archivedAt?.toISOString() ?? null, createdAt: row.createdAt.toISOString(), memberCount: row.kind === "DM" ? 2 : input.userIds.length + 1, unreadCount: 0, permissions: { read: true, post: true, manage: row.createdBy === current.userId } }); return reply.send(envelope(request, payload)); } catch (error) { return fail(request, reply, error); } });
-  app.get("/v1/people", async (request, reply) => { try { const organizationId = orgId(request); const current = await user(request, organizationId); const query = request.query as { q?: string; limit?: string }; const rows = await repository.listPeople(organizationId, query.q?.trim() || undefined, Number(query.limit ?? "20")); return reply.send(envelope(request, rows)); } catch (error) { return fail(request, reply, error); } });
-  app.get("/v1/channels/:channelId/messages", async (request, reply) => { try { const organizationId = orgId(request); const current = await user(request, organizationId); const channelId = (request.params as { channelId: string }).channelId; const membership = await repository.getMembership(organizationId, channelId, current.userId); if (!membership) throw new Error("NOT_FOUND"); const snapshot = await permissions.getSnapshot(organizationId, current.userId, "channel", channelId); if (!can({ orgId: organizationId, ...snapshot }, { orgId: organizationId, type: "channel", id: channelId, workspaceId: membership.channel.workspaceId, projectId: null, ownerId: null, teamId: null, classification: null }, "read").allowed) throw new Error("NOT_FOUND"); const query = MessageListQuerySchema.parse(request.query); const result = await repository.listMessages(organizationId, channelId, current.userId, query.limit, query.cursor, query.parentId); return reply.send(envelope(request, { items: result.messages.map((message) => messageResponse(message as Awaited<ReturnType<CommunicationEnhancedRepository["createMessage"]>>, current.userId)), nextCursor: result.nextCursor })); } catch (error) { return fail(request, reply, error); } });
-  app.get("/v1/channels/:channelId/catch-up", async (request, reply) => { try { const organizationId = orgId(request); const current = await user(request, organizationId); const channelId = (request.params as { channelId: string }).channelId; const membership = await repository.getMembership(organizationId, channelId, current.userId); if (!membership) throw new Error("NOT_FOUND"); const query = CatchUpQuerySchema.parse(request.query); const rows = await repository.catchUp(organizationId, channelId, current.userId, query.since ? new Date(query.since) : undefined, query.limit); return reply.send(envelope(request, rows.map((message) => messageResponse(message as Awaited<ReturnType<CommunicationEnhancedRepository["createMessage"]>>, current.userId)))); } catch (error) { return fail(request, reply, error); } });
-  app.post("/v1/channels/:channelId/messages", async (request, reply) => { try { mutation(request); const organizationId = orgId(request); const current = await user(request, organizationId); const channelId = (request.params as { channelId: string }).channelId; const membership = await repository.getMembership(organizationId, channelId, current.userId); if (!membership) throw new Error("PERMISSION_DENIED"); const snapshot = await permissions.getSnapshot(organizationId, current.userId, "channel", channelId); const resource = { orgId: organizationId, type: "channel", id: channelId, workspaceId: membership.channel.workspaceId, projectId: null, ownerId: null, teamId: null, classification: null }; if (!can({ orgId: organizationId, ...snapshot }, resource, "comment").allowed) throw new Error("PERMISSION_DENIED"); const input = MessageCreateInputSchema.parse(request.body); const message = await repository.createMessage(organizationId, current.userId, channelId, input); const payload = messageResponse(message, current.userId); io.to(`channel:${channelId}`).emit("message.created", payload); for (const mentionedUserId of [...new Set(input.mentions)].filter((id) => id !== current.userId)) { io.to(`user:${mentionedUserId}`).emit("notification.created", { kind: "MENTION", messageId: message.id, channelId }); } return reply.code(201).send(envelope(request, payload)); } catch (error) { return fail(request, reply, error); } });
-  app.patch("/v1/messages/:messageId", async (request, reply) => { try { mutation(request); const organizationId = orgId(request); const current = await user(request, organizationId); const input = MessageUpdateInputSchema.parse(request.body); const result = await repository.updateMessage(organizationId, current.userId, (request.params as { messageId: string }).messageId, input); const payload = messageResponse(result, current.userId); io.to(`channel:${result.channelId}`).emit("message.updated", payload); return reply.send(envelope(request, payload)); } catch (error) { return fail(request, reply, error); } });
-  app.delete("/v1/messages/:messageId", async (request, reply) => { try { mutation(request); const organizationId = orgId(request); const current = await user(request, organizationId); const result = await repository.softDeleteMessage(organizationId, current.userId, (request.params as { messageId: string }).messageId); io.to(`channel:${result.channelId}`).emit("message.deleted", { messageId: result.id, channelId: result.channelId }); return reply.send(envelope(request, { deleted: true })); } catch (error) { return fail(request, reply, error); } });
-  app.post("/v1/messages/:messageId/reactions", async (request, reply) => { try { mutation(request); const organizationId = orgId(request); const current = await user(request, organizationId); const input = ReactionInputSchema.parse(request.body); const result = await repository.addReaction(organizationId, current.userId, (request.params as { messageId: string }).messageId, input); io.to(`channel:${result.channelId}`).emit("reaction.updated", { messageId: (request.params as { messageId: string }).messageId, emoji: input.emoji, action: "add" }); return reply.send(envelope(request, { added: true })); } catch (error) { return fail(request, reply, error); } });
-  app.delete("/v1/messages/:messageId/reactions/:emoji", async (request, reply) => { try { mutation(request); const organizationId = orgId(request); const current = await user(request, organizationId); const emoji = decodeURIComponent((request.params as { emoji: string }).emoji); const result = await repository.removeReaction(organizationId, current.userId, (request.params as { messageId: string }).messageId, emoji); io.to(`channel:${result.channelId}`).emit("reaction.updated", { messageId: (request.params as { messageId: string }).messageId, emoji, action: "remove" }); return reply.send(envelope(request, { removed: true })); } catch (error) { return fail(request, reply, error); } });
-  app.get("/v1/notifications", async (request, reply) => { try { const organizationId = orgId(request); const current = await user(request, organizationId); const query = NotificationListQuerySchema.parse(request.query); const rows = await repository.listNotifications(organizationId, current.userId, query.unreadOnly, query.limit); return reply.send(envelope(request, rows.map((row) => NotificationSchema.parse({ ...row, readAt: row.readAt?.toISOString() ?? null, archivedAt: row.archivedAt?.toISOString() ?? null, deliverAt: row.deliverAt.toISOString(), createdAt: row.createdAt.toISOString() })))); } catch (error) { return fail(request, reply, error); } });
-  app.post("/v1/notifications/:notificationId/read", async (request, reply) => { try { mutation(request); const organizationId = orgId(request); const current = await user(request, organizationId); const row = await repository.markNotificationRead(organizationId, current.userId, (request.params as { notificationId: string }).notificationId); return reply.send(envelope(request, NotificationSchema.parse({ ...row, readAt: row.readAt?.toISOString() ?? null, archivedAt: row.archivedAt?.toISOString() ?? null, deliverAt: row.deliverAt.toISOString(), createdAt: row.createdAt.toISOString() }))); } catch (error) { return fail(request, reply, error); } });
-  app.post("/v1/notifications/read-all", async (request, reply) => { try { mutation(request); const organizationId = orgId(request); const current = await user(request, organizationId); const result = await repository.markAllNotificationsRead(organizationId, current.userId); return reply.send(envelope(request, { updated: result.count })); } catch (error) { return fail(request, reply, error); } });
-  app.post("/v1/channels/:channelId/read", async (request, reply) => { try { mutation(request); const organizationId = orgId(request); const current = await user(request, organizationId); const channelId = (request.params as { channelId: string }).channelId; const membership = await repository.getMembership(organizationId, channelId, current.userId); if (!membership) throw new Error("NOT_FOUND"); const result = await repository.markChannelRead(organizationId, current.userId, channelId); return reply.send(envelope(request, { channelId, lastReadAt: result.lastReadAt.toISOString() })); } catch (error) { return fail(request, reply, error); } });
-  app.post("/v1/messages/:messageId/convert", async (request, reply) => { try { mutation(request); const organizationId = orgId(request); const current = await user(request, organizationId); if (!(await allowCollection(organizationId, current.userId, "work_object", "create"))) throw new Error("PERMISSION_DENIED"); const input = MessageConversionInputSchema.parse(request.body); const result = await repository.convertMessageToWorkObject(organizationId, current.userId, (request.params as { messageId: string }).messageId, input); io.to(`org:${organizationId}`).emit("message.updated", { messageId: result.messageId, convertedTo: result.workObjectId }); return reply.send(envelope(request, MessageConversionResponseSchema.parse(result))); } catch (error) { return fail(request, reply, error); } });
+export async function registerCommunicationRoutesV2(
+	app: FastifyInstance,
+	io: CommunicationIO,
+): Promise<void> {
+	app.get("/v1/channels", async (request, reply) => {
+		try {
+			const organizationId = orgId(request);
+			const current = await user(request, organizationId);
+			const rows = await repository.listChannelsDetailed(
+				organizationId,
+				current.userId,
+			);
+			return reply.send(
+				envelope(
+					request,
+					rows.map((row) => channelResponse(row, current.userId)),
+				),
+			);
+		} catch (error) {
+			return fail(request, reply, error);
+		}
+	});
+	app.post("/v1/channels", async (request, reply) => {
+		try {
+			mutation(request);
+			const organizationId = orgId(request);
+			const current = await user(request, organizationId);
+			if (
+				!(await allowCollection(
+					organizationId,
+					current.userId,
+					"channel",
+					"create",
+				))
+			)
+				throw new Error("PERMISSION_DENIED");
+			const input = ChannelCreateInputSchema.parse(request.body);
+			const row = await repository.createChannel(
+				organizationId,
+				current.userId,
+				input,
+			);
+			const payload = channelResponse(
+				{ channel: row, memberCount: 1, unreadCount: 0 },
+				current.userId,
+			);
+			io.to(`org:${organizationId}`).emit(
+				"channel.updated",
+				CommunicationEventSchema.parse({
+					event: "channel.updated",
+					channelId: row.id,
+					messageId: null,
+					notificationId: null,
+					payload,
+				}),
+			);
+			return reply.code(201).send(envelope(request, payload));
+		} catch (error) {
+			return fail(request, reply, error);
+		}
+	});
+	app.post("/v1/channels/direct", async (request, reply) => {
+		try {
+			mutation(request);
+			const organizationId = orgId(request);
+			const current = await user(request, organizationId);
+			if (
+				!(await allowCollection(
+					organizationId,
+					current.userId,
+					"channel",
+					"create",
+				))
+			)
+				throw new Error("PERMISSION_DENIED");
+			const input = DirectChannelCreateInputSchema.parse(request.body);
+			const existing = await repository.findDirectChannel(organizationId, [
+				current.userId,
+				...input.userIds,
+			]);
+			const row =
+				existing ??
+				(await repository.createDirectChannel(
+					organizationId,
+					current.userId,
+					input,
+				));
+			const payload = ChannelSchema.parse({
+				...row,
+				archivedAt: row.archivedAt?.toISOString() ?? null,
+				createdAt: row.createdAt.toISOString(),
+				memberCount: row.kind === "DM" ? 2 : input.userIds.length + 1,
+				unreadCount: 0,
+				permissions: {
+					read: true,
+					post: true,
+					manage: row.createdBy === current.userId,
+				},
+			});
+			return reply.send(envelope(request, payload));
+		} catch (error) {
+			return fail(request, reply, error);
+		}
+	});
+	app.get("/v1/people", async (request, reply) => {
+		try {
+			const organizationId = orgId(request);
+			const current = await user(request, organizationId);
+			const query = request.query as { q?: string; limit?: string };
+			const rows = await repository.listPeople(
+				organizationId,
+				query.q?.trim() || undefined,
+				Number(query.limit ?? "20"),
+			);
+			return reply.send(envelope(request, rows));
+		} catch (error) {
+			return fail(request, reply, error);
+		}
+	});
+	app.get("/v1/channels/:channelId/messages", async (request, reply) => {
+		try {
+			const organizationId = orgId(request);
+			const current = await user(request, organizationId);
+			const channelId = (request.params as { channelId: string }).channelId;
+			const membership = await repository.getMembership(
+				organizationId,
+				channelId,
+				current.userId,
+			);
+			if (!membership) throw new Error("NOT_FOUND");
+			const snapshot = await permissions.getSnapshot(
+				organizationId,
+				current.userId,
+				"channel",
+				channelId,
+			);
+			if (
+				!can(
+					{ orgId: organizationId, ...snapshot },
+					{
+						orgId: organizationId,
+						type: "channel",
+						id: channelId,
+						workspaceId: membership.channel.workspaceId,
+						projectId: null,
+						ownerId: null,
+						teamId: null,
+						classification: null,
+					},
+					"read",
+				).allowed
+			)
+				throw new Error("NOT_FOUND");
+			const query = MessageListQuerySchema.parse(request.query);
+			const result = await repository.listMessages(
+				organizationId,
+				channelId,
+				current.userId,
+				query.limit,
+				query.cursor,
+				query.parentId,
+			);
+			return reply.send(
+				envelope(request, {
+					items: result.messages.map((message) =>
+						messageResponse(
+							message as Awaited<
+								ReturnType<CommunicationEnhancedRepository["createMessage"]>
+							>,
+							current.userId,
+						),
+					),
+					nextCursor: result.nextCursor,
+				}),
+			);
+		} catch (error) {
+			return fail(request, reply, error);
+		}
+	});
+	app.get("/v1/channels/:channelId/catch-up", async (request, reply) => {
+		try {
+			const organizationId = orgId(request);
+			const current = await user(request, organizationId);
+			const channelId = (request.params as { channelId: string }).channelId;
+			const membership = await repository.getMembership(
+				organizationId,
+				channelId,
+				current.userId,
+			);
+			if (!membership) throw new Error("NOT_FOUND");
+			const query = CatchUpQuerySchema.parse(request.query);
+			const rows = await repository.catchUp(
+				organizationId,
+				channelId,
+				current.userId,
+				query.since ? new Date(query.since) : undefined,
+				query.limit,
+			);
+			return reply.send(
+				envelope(
+					request,
+					rows.map((message) =>
+						messageResponse(
+							message as Awaited<
+								ReturnType<CommunicationEnhancedRepository["createMessage"]>
+							>,
+							current.userId,
+						),
+					),
+				),
+			);
+		} catch (error) {
+			return fail(request, reply, error);
+		}
+	});
+	app.post("/v1/channels/:channelId/messages", async (request, reply) => {
+		try {
+			mutation(request);
+			const organizationId = orgId(request);
+			const current = await user(request, organizationId);
+			const channelId = (request.params as { channelId: string }).channelId;
+			const membership = await repository.getMembership(
+				organizationId,
+				channelId,
+				current.userId,
+			);
+			if (!membership) throw new Error("PERMISSION_DENIED");
+			const snapshot = await permissions.getSnapshot(
+				organizationId,
+				current.userId,
+				"channel",
+				channelId,
+			);
+			const resource = {
+				orgId: organizationId,
+				type: "channel",
+				id: channelId,
+				workspaceId: membership.channel.workspaceId,
+				projectId: null,
+				ownerId: null,
+				teamId: null,
+				classification: null,
+			};
+			if (
+				!can({ orgId: organizationId, ...snapshot }, resource, "comment")
+					.allowed
+			)
+				throw new Error("PERMISSION_DENIED");
+			const input = MessageCreateInputSchema.parse(request.body);
+			const message = await repository.createMessage(
+				organizationId,
+				current.userId,
+				channelId,
+				input,
+			);
+			const payload = messageResponse(message, current.userId);
+			io.to(`channel:${channelId}`).emit("message.created", payload);
+			for (const mentionedUserId of [...new Set(input.mentions)].filter(
+				(id) => id !== current.userId,
+			)) {
+				io.to(`user:${mentionedUserId}`).emit("notification.created", {
+					kind: "MENTION",
+					messageId: message.id,
+					channelId,
+				});
+			}
+			return reply.code(201).send(envelope(request, payload));
+		} catch (error) {
+			return fail(request, reply, error);
+		}
+	});
+	app.patch("/v1/messages/:messageId", async (request, reply) => {
+		try {
+			mutation(request);
+			const organizationId = orgId(request);
+			const current = await user(request, organizationId);
+			const input = MessageUpdateInputSchema.parse(request.body);
+			const result = await repository.updateMessage(
+				organizationId,
+				current.userId,
+				(request.params as { messageId: string }).messageId,
+				input,
+			);
+			const payload = messageResponse(result, current.userId);
+			io.to(`channel:${result.channelId}`).emit("message.updated", payload);
+			return reply.send(envelope(request, payload));
+		} catch (error) {
+			return fail(request, reply, error);
+		}
+	});
+	app.delete("/v1/messages/:messageId", async (request, reply) => {
+		try {
+			mutation(request);
+			const organizationId = orgId(request);
+			const current = await user(request, organizationId);
+			const result = await repository.softDeleteMessage(
+				organizationId,
+				current.userId,
+				(request.params as { messageId: string }).messageId,
+			);
+			io.to(`channel:${result.channelId}`).emit("message.deleted", {
+				messageId: result.id,
+				channelId: result.channelId,
+			});
+			return reply.send(envelope(request, { deleted: true }));
+		} catch (error) {
+			return fail(request, reply, error);
+		}
+	});
+	app.post("/v1/messages/:messageId/reactions", async (request, reply) => {
+		try {
+			mutation(request);
+			const organizationId = orgId(request);
+			const current = await user(request, organizationId);
+			const input = ReactionInputSchema.parse(request.body);
+			const result = await repository.addReaction(
+				organizationId,
+				current.userId,
+				(request.params as { messageId: string }).messageId,
+				input,
+			);
+			io.to(`channel:${result.channelId}`).emit("reaction.updated", {
+				messageId: (request.params as { messageId: string }).messageId,
+				emoji: input.emoji,
+				action: "add",
+			});
+			return reply.send(envelope(request, { added: true }));
+		} catch (error) {
+			return fail(request, reply, error);
+		}
+	});
+	app.delete(
+		"/v1/messages/:messageId/reactions/:emoji",
+		async (request, reply) => {
+			try {
+				mutation(request);
+				const organizationId = orgId(request);
+				const current = await user(request, organizationId);
+				const emoji = decodeURIComponent(
+					(request.params as { emoji: string }).emoji,
+				);
+				const result = await repository.removeReaction(
+					organizationId,
+					current.userId,
+					(request.params as { messageId: string }).messageId,
+					emoji,
+				);
+				io.to(`channel:${result.channelId}`).emit("reaction.updated", {
+					messageId: (request.params as { messageId: string }).messageId,
+					emoji,
+					action: "remove",
+				});
+				return reply.send(envelope(request, { removed: true }));
+			} catch (error) {
+				return fail(request, reply, error);
+			}
+		},
+	);
+	app.get("/v1/notifications", async (request, reply) => {
+		try {
+			const organizationId = orgId(request);
+			const current = await user(request, organizationId);
+			const query = NotificationListQuerySchema.parse(request.query);
+			const rows = await repository.listNotifications(
+				organizationId,
+				current.userId,
+				query.unreadOnly,
+				query.limit,
+			);
+			return reply.send(
+				envelope(
+					request,
+					rows.map((row) =>
+						NotificationSchema.parse({
+							...row,
+							readAt: row.readAt?.toISOString() ?? null,
+							archivedAt: row.archivedAt?.toISOString() ?? null,
+							deliverAt: row.deliverAt.toISOString(),
+							createdAt: row.createdAt.toISOString(),
+						}),
+					),
+				),
+			);
+		} catch (error) {
+			return fail(request, reply, error);
+		}
+	});
+	app.post("/v1/notifications/:notificationId/read", async (request, reply) => {
+		try {
+			mutation(request);
+			const organizationId = orgId(request);
+			const current = await user(request, organizationId);
+			const row = await repository.markNotificationRead(
+				organizationId,
+				current.userId,
+				(request.params as { notificationId: string }).notificationId,
+			);
+			return reply.send(
+				envelope(
+					request,
+					NotificationSchema.parse({
+						...row,
+						readAt: row.readAt?.toISOString() ?? null,
+						archivedAt: row.archivedAt?.toISOString() ?? null,
+						deliverAt: row.deliverAt.toISOString(),
+						createdAt: row.createdAt.toISOString(),
+					}),
+				),
+			);
+		} catch (error) {
+			return fail(request, reply, error);
+		}
+	});
+	app.post("/v1/notifications/read-all", async (request, reply) => {
+		try {
+			mutation(request);
+			const organizationId = orgId(request);
+			const current = await user(request, organizationId);
+			const result = await repository.markAllNotificationsRead(
+				organizationId,
+				current.userId,
+			);
+			return reply.send(envelope(request, { updated: result.count }));
+		} catch (error) {
+			return fail(request, reply, error);
+		}
+	});
+	app.post("/v1/channels/:channelId/read", async (request, reply) => {
+		try {
+			mutation(request);
+			const organizationId = orgId(request);
+			const current = await user(request, organizationId);
+			const channelId = (request.params as { channelId: string }).channelId;
+			const membership = await repository.getMembership(
+				organizationId,
+				channelId,
+				current.userId,
+			);
+			if (!membership) throw new Error("NOT_FOUND");
+			const result = await repository.markChannelRead(
+				organizationId,
+				current.userId,
+				channelId,
+			);
+			return reply.send(
+				envelope(request, {
+					channelId,
+					lastReadAt: result.lastReadAt.toISOString(),
+				}),
+			);
+		} catch (error) {
+			return fail(request, reply, error);
+		}
+	});
+	app.post("/v1/messages/:messageId/convert", async (request, reply) => {
+		try {
+			mutation(request);
+			const organizationId = orgId(request);
+			const current = await user(request, organizationId);
+			if (
+				!(await allowCollection(
+					organizationId,
+					current.userId,
+					"work_object",
+					"create",
+				))
+			)
+				throw new Error("PERMISSION_DENIED");
+			const input = MessageConversionInputSchema.parse(request.body);
+			const result = await repository.convertMessageToWorkObject(
+				organizationId,
+				current.userId,
+				(request.params as { messageId: string }).messageId,
+				input,
+			);
+			io.to(`org:${organizationId}`).emit("message.updated", {
+				messageId: result.messageId,
+				convertedTo: result.workObjectId,
+			});
+			return reply.send(
+				envelope(request, MessageConversionResponseSchema.parse(result)),
+			);
+		} catch (error) {
+			return fail(request, reply, error);
+		}
+	});
 }

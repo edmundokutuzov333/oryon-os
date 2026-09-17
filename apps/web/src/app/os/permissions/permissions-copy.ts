@@ -1,7 +1,9 @@
 export const permissionsCopy = {
 	eyebrow: "CONTROLO DE ACESSO",
 	title: "Permissões",
-	subtitle: "Veja exactamente o que uma pessoa pode fazer, o que fica mascarado e o que pode sair da organização.",	evaluate: "Avaliar acesso",
+	subtitle:
+		"Veja exactamente o que uma pessoa pode fazer, o que fica mascarado e o que pode sair da organização.",
+	evaluate: "Avaliar acesso",
 	viewAs: "Ver como",
 	exposure: "Exposição",
 	resourceType: "Tipo de recurso",

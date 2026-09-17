@@ -1,0 +1,31 @@
+{
+  "name": "turbo",
+  "version": "2.10.13",
+  "description": "Turborepo is the build system for coding agents.",
+  "homepage": "https://turborepo.dev",
+  "bugs": "https://github.com/vercel/turborepo/issues",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/turborepo"
+  },
+  "bin": {
+    "turbo": "./bin/turbo"
+  },
+  "files": [
+    "bin",
+    "schema.json"
+  ],
+  "main": "./bin/turbo",
+  "optionalDependencies": {
+    "@turbo/darwin-64": "2.10.13",
+    "@turbo/darwin-arm64": "2.10.13",
+    "@turbo/linux-64": "2.10.13",
+    "@turbo/linux-arm64": "2.10.13",
+    "@turbo/windows-64": "2.10.13",
+    "@turbo/windows-arm64": "2.10.13"
+  },
+  "scripts": {
+    "postversion": "node bump-version.js"
+  }
+}

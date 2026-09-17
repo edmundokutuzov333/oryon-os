@@ -38,7 +38,8 @@ const missingOrganizationRelations = organizationRelations.filter(
 );
 if (missingOrganizationRelations.length > 0) {
 	const anchor = "  meetings   Meeting[]\n";
-	if (!source.includes(anchor)) throw new Error("Organization relation anchor not found");
+	if (!source.includes(anchor))
+		throw new Error("Organization relation anchor not found");
 	source = source.replace(
 		anchor,
 		`${anchor}${missingOrganizationRelations.map((relation) => `  ${relation}\n`).join("")}`,
@@ -57,7 +58,8 @@ const missingUserRelations = userRelations.filter(
 );
 if (missingUserRelations.length > 0) {
 	const anchor = "  auditLogs AuditLog[]\n";
-	if (!source.includes(anchor)) throw new Error("User relation anchor not found");
+	if (!source.includes(anchor))
+		throw new Error("User relation anchor not found");
 	source = source.replace(
 		anchor,
 		`${anchor}${missingUserRelations.map((relation) => `  ${relation}\n`).join("")}`,
@@ -67,7 +69,15 @@ if (missingUserRelations.length > 0) {
 writeFileSync(path, source);
 execFileSync(
 	"pnpm",
-	["--filter", "@oryon/db", "exec", "prisma", "format", "--schema", "prisma/schema.prisma"],
+	[
+		"--filter",
+		"@oryon/db",
+		"exec",
+		"prisma",
+		"format",
+		"--schema",
+		"prisma/schema.prisma",
+	],
 	{ stdio: "inherit" },
 );
 console.log(`Normalized Prisma schema syntax and relation metadata in ${path}`);

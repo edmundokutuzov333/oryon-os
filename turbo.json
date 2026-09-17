@@ -1,6 +1,11 @@
 {
 	"$schema": "https://turborepo.com/schema.json",
-	"globalPassThroughEnv": ["S3_BUCKET", "ORYON_E2E_BASE_URL", "ORYON_E2E_ORG", "ORYON_E2E_API_KEY"],
+	"globalPassThroughEnv": [
+		"S3_BUCKET",
+		"ORYON_E2E_BASE_URL",
+		"ORYON_E2E_ORG",
+		"ORYON_E2E_API_KEY"
+	],
 	"tasks": {
 		"dev": {
 			"cache": false,

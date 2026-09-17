@@ -8,13 +8,33 @@ async function authHeaders(): Promise<Record<string, string> | null> {
 	const store = await cookies();
 	const session = store.get(cookieName)?.value;
 	const organization = store.get("oryon_org")?.value;
-	return session && organization ? { "X-Oryon-Org": organization, Cookie: `${cookieName}=${encodeURIComponent(session)}` } : null;
+	return session && organization
+		? {
+				"X-Oryon-Org": organization,
+				Cookie: `${cookieName}=${encodeURIComponent(session)}`,
+			}
+		: null;
 }
 
 export async function GET(request: Request): Promise<NextResponse> {
 	const headers = await authHeaders();
-	if (!headers) return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: "Authentication required" } }, { status: 401 });
+	if (!headers)
+		return NextResponse.json(
+			{
+				error: { code: "UNAUTHENTICATED", message: "Authentication required" },
+			},
+			{ status: 401 },
+		);
 	const url = new URL(request.url);
-	const response = await fetch(`${apiUrl}/v1/search/hybrid?${url.searchParams.toString()}`, { headers, cache: "no-store" });
-	return new NextResponse(await response.text(), { status: response.status, headers: { "Content-Type": response.headers.get("content-type") ?? "application/json" } });
+	const response = await fetch(
+		`${apiUrl}/v1/search/hybrid?${url.searchParams.toString()}`,
+		{ headers, cache: "no-store" },
+	);
+	return new NextResponse(await response.text(), {
+		status: response.status,
+		headers: {
+			"Content-Type":
+				response.headers.get("content-type") ?? "application/json",
+		},
+	});
 }

@@ -1,1 +1,32 @@
-{"name":"@oryon/api","private":true,"version":"0.1.0","type":"module","scripts":{"dev":"tsx watch src/server.ts","build":"tsc --outDir dist","typecheck":"tsc --noEmit","lint":"biome check .","test":"vitest run","gen:openapi":"tsx src/openapi.ts"},"dependencies":{"@oryon/ai":"workspace:*","@oryon/contracts":"workspace:*","@oryon/core":"workspace:*","@oryon/db":"workspace:*","@oryon/search":"workspace:*","@oryon/storage":"workspace:*","fastify":"^5.5.0","livekit-server-sdk":"^2.19.0","redis":"^5.8.0","socket.io":"^4.8.3"},"devDependencies":{"tsx":"^4.20.0","typescript":"^5.9.2","vitest":"^3.2.0","@biomejs/biome":"^2.2.0"}}
+{
+	"name": "@oryon/api",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"scripts": {
+		"dev": "tsx watch src/server.ts",
+		"build": "tsc --outDir dist",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"test": "vitest run",
+		"gen:openapi": "tsx src/openapi.ts"
+	},
+	"dependencies": {
+		"@oryon/ai": "workspace:*",
+		"@oryon/contracts": "workspace:*",
+		"@oryon/core": "workspace:*",
+		"@oryon/db": "workspace:*",
+		"@oryon/search": "workspace:*",
+		"@oryon/storage": "workspace:*",
+		"fastify": "^5.5.0",
+		"livekit-server-sdk": "^2.19.0",
+		"redis": "^5.8.0",
+		"socket.io": "^4.8.3"
+	},
+	"devDependencies": {
+		"tsx": "^4.20.0",
+		"typescript": "^5.9.2",
+		"vitest": "^3.2.0",
+		"@biomejs/biome": "^2.2.0"
+	}
+}

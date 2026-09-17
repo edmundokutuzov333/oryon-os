@@ -5,7 +5,13 @@ export interface DomainEventInput {
 	readonly name: string;
 	readonly version?: number;
 	readonly actorId?: string;
-	readonly actorType: "MEMBER" | "GUEST" | "CLIENT" | "VENDOR" | "AGENT" | "SERVICE_ACCOUNT";
+	readonly actorType:
+		| "MEMBER"
+		| "GUEST"
+		| "CLIENT"
+		| "VENDOR"
+		| "AGENT"
+		| "SERVICE_ACCOUNT";
 	readonly subjectType: string;
 	readonly subjectId: string;
 	readonly payload: Prisma.InputJsonValue;
@@ -27,7 +33,8 @@ export async function appendDomainEvent(
 		payload: input.payload,
 	};
 	if (input.actorId !== undefined) data.actorId = input.actorId;
-	if (input.correlationId !== undefined) data.correlationId = input.correlationId;
+	if (input.correlationId !== undefined)
+		data.correlationId = input.correlationId;
 	if (input.causationId !== undefined) data.causationId = input.causationId;
 
 	return tx.domainEvent.create({

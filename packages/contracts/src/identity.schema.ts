@@ -10,9 +10,24 @@ export const IdentityUserSchema = z.object({
 	jobTitle: z.string().nullable(),
 	timezone: z.string().min(1),
 	locale: z.string().min(1),
-	type: z.enum(["MEMBER", "GUEST", "CLIENT", "VENDOR", "AGENT", "SERVICE_ACCOUNT"]),
+	type: z.enum([
+		"MEMBER",
+		"GUEST",
+		"CLIENT",
+		"VENDOR",
+		"AGENT",
+		"SERVICE_ACCOUNT",
+	]),
 	status: z.enum(["INVITED", "ACTIVE", "SUSPENDED", "DEACTIVATED"]),
-	presence: z.enum(["ONLINE", "AWAY", "BUSY", "IN_MEETING", "FOCUS", "DND", "OFFLINE"]),
+	presence: z.enum([
+		"ONLINE",
+		"AWAY",
+		"BUSY",
+		"IN_MEETING",
+		"FOCUS",
+		"DND",
+		"OFFLINE",
+	]),
 });
 
 export const IdentityOrganizationSchema = z.object({

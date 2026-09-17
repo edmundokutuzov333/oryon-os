@@ -16,14 +16,39 @@ export type AiPolicyRecord = {
 export class AiRepository {
 	constructor(private readonly db: PrismaClient) {}
 
-	async getContext(orgId: string): Promise<{ plan: string; policies: AiPolicyRecord[] }> {
+	async getContext(
+		orgId: string,
+	): Promise<{ plan: string; policies: AiPolicyRecord[] }> {
 		return withOrgContext(this.db, orgId, async (tx) => {
 			const [org, policies] = await Promise.all([
-				tx.organization.findFirst({ where: { id: orgId }, select: { plan: true } }),
-				tx.modelPolicy.findMany({ where: { orgId }, orderBy: { key: "asc" }, select: { id: true, key: true, name: true, routingRules: true, allowedModels: true, fallbackModel: true, maxClassification: true, residencyRegion: true, monthlyCapCents: true } }),
+				tx.organization.findFirst({
+					where: { id: orgId },
+					select: { plan: true },
+				}),
+				tx.modelPolicy.findMany({
+					where: { orgId },
+					orderBy: { key: "asc" },
+					select: {
+						id: true,
+						key: true,
+						name: true,
+						routingRules: true,
+						allowedModels: true,
+						fallbackModel: true,
+						maxClassification: true,
+						residencyRegion: true,
+						monthlyCapCents: true,
+					},
+				}),
 			]);
 			if (!org) throw new Error("ORG_NOT_FOUND");
-			return { plan: org.plan, policies: policies.map((policy) => ({ ...policy, residencyRegion: policy.residencyRegion })) };
+			return {
+				plan: org.plan,
+				policies: policies.map((policy) => ({
+					...policy,
+					residencyRegion: policy.residencyRegion,
+				})),
+			};
 		});
 	}
 }

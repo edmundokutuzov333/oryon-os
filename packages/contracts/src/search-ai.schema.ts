@@ -1,7 +1,11 @@
 import { z } from "zod";
 
 export const AiSearchModeSchema = z.enum(["SEARCH", "ANSWER"]);
-export const SearchDocumentTypeSchema = z.enum(["work_object", "page", "file_asset"]);
+export const SearchDocumentTypeSchema = z.enum([
+	"work_object",
+	"page",
+	"file_asset",
+]);
 export const SearchQuerySchema = z.object({
 	q: z.string().trim().min(1).max(500),
 	limit: z.coerce.number().int().min(1).max(50).default(20),
@@ -44,7 +48,11 @@ export const AiSearchResponseSchema = z.object({
 	answer: z.string().min(1),
 	citations: z.array(SearchCitationSchema).min(1),
 	model: z.string().min(1).nullable(),
-	retrieval: z.object({ lexical: z.number().int().nonnegative(), semantic: z.number().int().nonnegative(), fused: z.number().int().nonnegative() }),
+	retrieval: z.object({
+		lexical: z.number().int().nonnegative(),
+		semantic: z.number().int().nonnegative(),
+		fused: z.number().int().nonnegative(),
+	}),
 	memoryUsed: z.boolean(),
 });
 export const SearchReindexResponseSchema = z.object({

@@ -10,19 +10,39 @@ async function authHeaders() {
 	const session = store.get(cookieName)?.value;
 	const organization = store.get("oryon_org")?.value;
 	if (!session || !organization) return null;
-	return { "Content-Type": "application/json", "X-Oryon-Org": organization, Cookie: `${cookieName}=${encodeURIComponent(session)}` };
+	return {
+		"Content-Type": "application/json",
+		"X-Oryon-Org": organization,
+		Cookie: `${cookieName}=${encodeURIComponent(session)}`,
+	};
 }
 
 export async function GET() {
 	const headers = await authHeaders();
-	if (!headers) return NextResponse.json({ error: { message: "UNAUTHENTICATED" } }, { status: 401 });
-	const response = await fetch(`${apiUrl}/v1/object-types`, { headers, cache: "no-store" });
+	if (!headers)
+		return NextResponse.json(
+			{ error: { message: "UNAUTHENTICATED" } },
+			{ status: 401 },
+		);
+	const response = await fetch(`${apiUrl}/v1/object-types`, {
+		headers,
+		cache: "no-store",
+	});
 	return NextResponse.json(await response.json(), { status: response.status });
 }
 
 export async function POST(request: Request) {
 	const headers = await authHeaders();
-	if (!headers) return NextResponse.json({ error: { message: "UNAUTHENTICATED" } }, { status: 401 });
-	const response = await fetch(`${apiUrl}/v1/object-types`, { method: "POST", headers: { ...headers, "Idempotency-Key": randomUUID() }, body: await request.text(), cache: "no-store" });
+	if (!headers)
+		return NextResponse.json(
+			{ error: { message: "UNAUTHENTICATED" } },
+			{ status: 401 },
+		);
+	const response = await fetch(`${apiUrl}/v1/object-types`, {
+		method: "POST",
+		headers: { ...headers, "Idempotency-Key": randomUUID() },
+		body: await request.text(),
+		cache: "no-store",
+	});
 	return NextResponse.json(await response.json(), { status: response.status });
 }

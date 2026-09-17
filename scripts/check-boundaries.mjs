@@ -20,7 +20,12 @@ async function walk(dir, ignoredDirs = []) {
 	const entries = await readdir(dir, { withFileTypes: true });
 	const files = [];
 	for (const entry of entries) {
-		if (entry.name === "node_modules" || entry.name === ".next" || entry.name === "dist") continue;
+		if (
+			entry.name === "node_modules" ||
+			entry.name === ".next" ||
+			entry.name === "dist"
+		)
+			continue;
 		const full = path.join(dir, entry.name);
 		if (entry.isDirectory()) {
 			const relative = path.relative(root, full).split(path.sep).join("/");
@@ -40,9 +45,9 @@ for (const rule of rules) {
 		const source = await readFile(file, "utf8");
 		for (const forbidden of rule.forbidden) {
 			if (
-				new RegExp(`(?:from|import\\()\\s*[\\\"']${forbidden.replaceAll("/", "\\/")}\\b`).test(
-					source,
-				)
+				new RegExp(
+					`(?:from|import\\()\\s*[\\\"']${forbidden.replaceAll("/", "\\/")}\\b`,
+				).test(source)
 			) {
 				violations.push(`${path.relative(root, file)} imports ${forbidden}`);
 			}

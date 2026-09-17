@@ -9,12 +9,21 @@ export class IdentityRepository {
 	findActiveUserByEmail(orgId: string, email: string) {
 		return withOrgContext(this.db, orgId, async (tx) =>
 			tx.user.findFirst({
-				where: { orgId, email: email.toLowerCase(), deletedAt: null, status: "ACTIVE" },
+				where: {
+					orgId,
+					email: email.toLowerCase(),
+					deletedAt: null,
+					status: "ACTIVE",
+				},
 			}),
 		);
 	}
 
-	async markAuthenticated(orgId: string, userId: string, sessionId: string): Promise<void> {
+	async markAuthenticated(
+		orgId: string,
+		userId: string,
+		sessionId: string,
+	): Promise<void> {
 		await withOrgContext(this.db, orgId, async (tx) => {
 			const now = new Date();
 			await tx.user.updateMany({
@@ -39,7 +48,10 @@ export class IdentityRepository {
 			const [user, organization, workspaces, memberships] = await Promise.all([
 				tx.user.findFirst({ where: { id: userId, orgId, deletedAt: null } }),
 				tx.organization.findFirst({ where: { id: orgId, deletedAt: null } }),
-				tx.workspace.findMany({ where: { orgId, deletedAt: null }, orderBy: { name: "asc" } }),
+				tx.workspace.findMany({
+					where: { orgId, deletedAt: null },
+					orderBy: { name: "asc" },
+				}),
 				tx.teamMember.findMany({
 					where: { orgId, userId },
 					include: { team: true },

@@ -1,1 +1,4 @@
-export { meetingRepository as meetingStore, roomRepository as roomStore } from "./instances.js";
+export {
+	meetingRepository as meetingStore,
+	roomRepository as roomStore,
+} from "./instances.js";

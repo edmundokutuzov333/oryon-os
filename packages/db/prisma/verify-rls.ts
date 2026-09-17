@@ -12,22 +12,58 @@ function assert(condition: boolean, message: string): asserts condition {
 
 async function main(): Promise<void> {
 	await prisma.$transaction(async (tx) => {
-		await tx.$executeRawUnsafe("SELECT set_config('app.org_id', $1, true)", ORG_A);
-		const ownRows = await tx.$queryRawUnsafe<Array<{ id: string }>>("SELECT id FROM organizations WHERE id = $1", ORG_A);
-		assert(ownRows.length === 1, "RLS failed: tenant can not read its own organization");
+		await tx.$executeRawUnsafe(
+			"SELECT set_config('app.org_id', $1, true)",
+			ORG_A,
+		);
+		const ownRows = await tx.$queryRawUnsafe<Array<{ id: string }>>(
+			"SELECT id FROM organizations WHERE id = $1",
+			ORG_A,
+		);
+		assert(
+			ownRows.length === 1,
+			"RLS failed: tenant can not read its own organization",
+		);
 
-		const crossRows = await tx.$queryRawUnsafe<Array<{ id: string }>>("SELECT id FROM organizations WHERE id = $1", ORG_B);
-		assert(crossRows.length === 0, "RLS failed: tenant can read another organization");
+		const crossRows = await tx.$queryRawUnsafe<Array<{ id: string }>>(
+			"SELECT id FROM organizations WHERE id = $1",
+			ORG_B,
+		);
+		assert(
+			crossRows.length === 0,
+			"RLS failed: tenant can read another organization",
+		);
 
-		const ownObjects = await tx.$queryRawUnsafe<Array<{ id: string }>>("SELECT id FROM work_objects WHERE org_id = $1", ORG_A);
-		assert(ownObjects.some((row) => row.id === "obj_demo_task_0001"), "RLS failed: tenant can not read its own work object");
+		const ownObjects = await tx.$queryRawUnsafe<Array<{ id: string }>>(
+			"SELECT id FROM work_objects WHERE org_id = $1",
+			ORG_A,
+		);
+		assert(
+			ownObjects.some((row) => row.id === "obj_demo_task_0001"),
+			"RLS failed: tenant can not read its own work object",
+		);
 
-		const crossObjects = await tx.$queryRawUnsafe<Array<{ id: string }>>("SELECT id FROM work_objects WHERE org_id = $1", ORG_B);
-		assert(crossObjects.length === 0, "RLS failed: tenant can read another organization's work objects");
+		const crossObjects = await tx.$queryRawUnsafe<Array<{ id: string }>>(
+			"SELECT id FROM work_objects WHERE org_id = $1",
+			ORG_B,
+		);
+		assert(
+			crossObjects.length === 0,
+			"RLS failed: tenant can read another organization's work objects",
+		);
 
-		await tx.$executeRawUnsafe("SELECT set_config('app.org_id', $1, true)", ORG_B);
-		const isolatedObjects = await tx.$queryRawUnsafe<Array<{ id: string }>>("SELECT id FROM work_objects WHERE id = $1", "obj_demo_task_0001");
-		assert(isolatedObjects.length === 0, "RLS failed: switching tenant context exposed tenant A data");
+		await tx.$executeRawUnsafe(
+			"SELECT set_config('app.org_id', $1, true)",
+			ORG_B,
+		);
+		const isolatedObjects = await tx.$queryRawUnsafe<Array<{ id: string }>>(
+			"SELECT id FROM work_objects WHERE id = $1",
+			"obj_demo_task_0001",
+		);
+		assert(
+			isolatedObjects.length === 0,
+			"RLS failed: switching tenant context exposed tenant A data",
+		);
 	});
 
 	console.log(`RLS verification passed for ${ORG_A} and ${ORG_B}`);

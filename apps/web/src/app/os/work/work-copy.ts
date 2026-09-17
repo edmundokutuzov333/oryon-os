@@ -1,7 +1,9 @@
 export const workCopy = {
 	eyebrow: "WORK OBJECT ENGINE",
 	title: "Trabalho universal",
-	subtitle: "Crie e opere qualquer tipo de trabalho no mesmo motor, com estados, responsáveis, contexto e campos personalizados.",	objects: "Objectos",
+	subtitle:
+		"Crie e opere qualquer tipo de trabalho no mesmo motor, com estados, responsáveis, contexto e campos personalizados.",
+	objects: "Objectos",
 	types: "Tipos",
 	newObject: "Novo objecto",
 	newType: "Novo tipo",
@@ -24,7 +26,9 @@ export const workCopy = {
 	noTypes: "Ainda não existem tipos disponíveis.",
 	selectedObject: "Objecto seleccionado",
 	engineStatus: "Motor operacional",
-	engineDescription: "O mesmo modelo suporta trabalho nativo e tipos criados pela empresa.",	key: "Chave",
+	engineDescription:
+		"O mesmo modelo suporta trabalho nativo e tipos criados pela empresa.",
+	key: "Chave",
 	name: "Nome",
 	pluralName: "Nome plural",
 	idPrefix: "Prefixo",
@@ -42,7 +46,8 @@ export const workCopy = {
 	initial: "Estado inicial",
 	invalidStatusModel: "Defina pelo menos um estado válido.",
 	success: "Operação concluída.",
-	error: "Não foi possível concluir a operação.",	back: "Voltar",
+	error: "Não foi possível concluir a operação.",
+	back: "Voltar",
 	permissionDenied: "Não tem permissão para esta operação.",
 	chooseType: "Escolha um tipo",
 	chooseStatus: "Escolha um estado",
@@ -56,5 +61,20 @@ export const workCopy = {
 	loading: "A carregar...",
 };
 
-export const priorityOptions = ["LOWEST", "LOW", "NORMAL", "HIGH", "URGENT"] as const;
-export const fieldTypeOptions = ["TEXT", "NUMBER", "BOOLEAN", "DATE", "SELECT", "MULTI_SELECT", "USER", "OBJECT"] as const;
+export const priorityOptions = [
+	"LOWEST",
+	"LOW",
+	"NORMAL",
+	"HIGH",
+	"URGENT",
+] as const;
+export const fieldTypeOptions = [
+	"TEXT",
+	"NUMBER",
+	"BOOLEAN",
+	"DATE",
+	"SELECT",
+	"MULTI_SELECT",
+	"USER",
+	"OBJECT",
+] as const;

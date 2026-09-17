@@ -1,1 +1,74 @@
-.oryon-home{display:grid;gap:var(--space-4)}.oryon-home-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--space-4)}.oryon-home-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(320px,1fr);gap:var(--space-4)}.oryon-home-label{display:block;margin-bottom:var(--space-2);color:var(--text-tertiary);font-size:var(--text-caption)}.oryon-home-grid h2{margin:0;font-size:var(--text-h2);line-height:1.2;font-weight:500;letter-spacing:-.02em}.oryon-home-grid .oryon-inverted-panel h2{font:500 var(--text-display-l)/1 var(--font-mono);letter-spacing:-.03em}.oryon-home-muted{margin:var(--space-2) 0 0;color:var(--text-secondary);font-size:var(--text-body)}.oryon-home-list{display:grid;gap:var(--space-1);margin-top:var(--space-5);padding-top:var(--space-3);border-top:1px solid var(--border-subtle)}.oryon-home-list>div{display:flex;justify-content:space-between;gap:var(--space-3);padding:var(--space-2) 0;color:var(--text-secondary);font-size:var(--text-body-sm)}.oryon-home-list>div span:last-child{color:var(--text-tertiary);font-family:var(--font-mono);font-size:var(--text-caption)}@media(max-width:1024px){.oryon-home-grid{grid-template-columns:1fr}}@media(max-width:768px){.oryon-home-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:480px){.oryon-home-metrics{grid-template-columns:1fr}.oryon-home-grid .oryon-inverted-panel{margin:0 var(--space-1)}}
+.oryon-home {
+	display: grid;
+	gap: var(--space-4);
+}
+.oryon-home-metrics {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: var(--space-4);
+}
+.oryon-home-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1.2fr) minmax(320px, 1fr);
+	gap: var(--space-4);
+}
+.oryon-home-label {
+	display: block;
+	margin-bottom: var(--space-2);
+	color: var(--text-tertiary);
+	font-size: var(--text-caption);
+}
+.oryon-home-grid h2 {
+	margin: 0;
+	font-size: var(--text-h2);
+	line-height: 1.2;
+	font-weight: 500;
+	letter-spacing: -0.02em;
+}
+.oryon-home-grid .oryon-inverted-panel h2 {
+	font: 500 var(--text-display-l) / 1 var(--font-mono);
+	letter-spacing: -0.03em;
+}
+.oryon-home-muted {
+	margin: var(--space-2) 0 0;
+	color: var(--text-secondary);
+	font-size: var(--text-body);
+}
+.oryon-home-list {
+	display: grid;
+	gap: var(--space-1);
+	margin-top: var(--space-5);
+	padding-top: var(--space-3);
+	border-top: 1px solid var(--border-subtle);
+}
+.oryon-home-list > div {
+	display: flex;
+	justify-content: space-between;
+	gap: var(--space-3);
+	padding: var(--space-2) 0;
+	color: var(--text-secondary);
+	font-size: var(--text-body-sm);
+}
+.oryon-home-list > div span:last-child {
+	color: var(--text-tertiary);
+	font-family: var(--font-mono);
+	font-size: var(--text-caption);
+}
+@media (max-width: 1024px) {
+	.oryon-home-grid {
+		grid-template-columns: 1fr;
+	}
+}
+@media (max-width: 768px) {
+	.oryon-home-metrics {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+@media (max-width: 480px) {
+	.oryon-home-metrics {
+		grid-template-columns: 1fr;
+	}
+	.oryon-home-grid .oryon-inverted-panel {
+		margin: 0 var(--space-1);
+	}
+}

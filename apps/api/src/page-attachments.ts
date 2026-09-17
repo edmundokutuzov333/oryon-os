@@ -2,21 +2,171 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { FileAssetSchema } from "@oryon/contracts/docs-files";
 import { can } from "@oryon/core";
 import { getPrisma } from "@oryon/db";
-import { DocsFilesRepository, PageAttachmentsRepository, PermissionRepository } from "@oryon/db/repositories";
+import {
+	DocsFilesRepository,
+	PageAttachmentsRepository,
+	PermissionRepository,
+} from "@oryon/db/repositories";
 import { authenticate, AUTH_COOKIE_NAME } from "./auth.js";
 
 const attachments = new PageAttachmentsRepository(getPrisma());
 const pages = new DocsFilesRepository(getPrisma());
 const permissions = new PermissionRepository();
-function header(request: FastifyRequest, name: string): string | undefined { const value = request.headers[name]; return typeof value === "string" && value.length > 0 ? value : undefined; }
-function orgId(request: FastifyRequest): string { const value = header(request, "x-oryon-org"); if (!value) throw new Error("ORG_HEADER_MISSING"); return value; }
-function authToken(request: FastifyRequest): { token: string; mode: "bearer" | "session" } { const auth = header(request, "authorization"); if (auth?.startsWith("Bearer ")) return { token: auth.slice(7).trim(), mode: "bearer" }; const raw = header(request, "cookie"); if (raw) for (const part of raw.split(";")) { const separator = part.indexOf("="); if (separator > 0 && part.slice(0, separator).trim() === AUTH_COOKIE_NAME) return { token: decodeURIComponent(part.slice(separator + 1).trim()), mode: "session" }; } throw new Error("UNAUTHENTICATED"); }
-async function session(request: FastifyRequest, organizationId: string) { const auth = authToken(request); const current = await authenticate(auth.token, auth.mode); if (current.orgId !== organizationId) throw new Error("UNAUTHENTICATED"); return current; }
-function envelope(request: FastifyRequest, data: unknown) { return { data, meta: { requestId: request.id, durationMs: 0 } }; }
-function fail(request: FastifyRequest, reply: { code: (status: number) => { send: (value: unknown) => unknown } }, error: unknown) { const message = error instanceof Error ? error.message : "Attachment operation failed"; const status = message === "UNAUTHENTICATED" ? 401 : message === "PERMISSION_DENIED" ? 403 : ["NOT_FOUND", "FILE_NOT_FOUND"].includes(message) ? 404 : message === "CONFLICT" ? 409 : 400; const code = status === 401 ? "UNAUTHENTICATED" : status === 403 ? "PERMISSION_DENIED" : status === 404 ? "NOT_FOUND" : status === 409 ? "CONFLICT" : "VALIDATION_FAILED"; return reply.code(status).send({ error: { code, httpStatus: status, message, requestId: request.id } }); }
-async function canPage(organizationId: string, userId: string, pageId: string, action: "read" | "update") { const page = await pages.findPage(organizationId, pageId); if (!page) throw new Error("NOT_FOUND"); const snapshot = await permissions.getSnapshot(organizationId, userId, "page", pageId, page.classification); const resource = { orgId: organizationId, type: "page", id: pageId, workspaceId: page.workspaceId, projectId: null, ownerId: page.ownerId, teamId: null, classification: page.classification }; if (!can({ orgId: organizationId, ...snapshot }, resource, action).allowed) throw new Error("NOT_FOUND"); return page; }
-function fileResponse(file: Awaited<ReturnType<PageAttachmentsRepository["list"]>>[number]) { return FileAssetSchema.parse({ id: file.file.id, name: file.file.name, mimeType: file.file.mimeType, sizeBytes: file.file.sizeBytes.toString(), storageKey: file.file.storageKey, version: file.file.version, classification: file.file.classification, checksumSha256: file.file.checksumSha256, createdAt: file.file.createdAt.toISOString(), downloadUrl: null, permissions: { read: true, update: false, export: false, delete: false } }); }
-export async function registerPageAttachmentRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/v1/pages/:id/attachments", async (request, reply) => { try { const organizationId = orgId(request); const user = await session(request, organizationId); const { id } = request.params as { id: string }; await canPage(organizationId, user.userId, id, "read"); const rows = await attachments.list(organizationId, id); return reply.send(envelope(request, rows.filter((row) => !row.file.deletedAt).map(fileResponse))); } catch (error) { return fail(request, reply, error); } });
-  app.post("/v1/pages/:id/attachments", async (request, reply) => { try { if (!header(request, "idempotency-key")) throw new Error("IDEMPOTENCY_KEY_MISSING"); const organizationId = orgId(request); const user = await session(request, organizationId); const { id } = request.params as { id: string }; await canPage(organizationId, user.userId, id, "update"); const body = request.body as { fileId?: string }; if (!body.fileId) throw new Error("VALIDATION_FAILED"); const attachment = await attachments.attach(organizationId, user.userId, id, body.fileId); return reply.code(201).send(envelope(request, fileResponse(attachment))); } catch (error) { return fail(request, reply, error); } });
+function header(request: FastifyRequest, name: string): string | undefined {
+	const value = request.headers[name];
+	return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+function orgId(request: FastifyRequest): string {
+	const value = header(request, "x-oryon-org");
+	if (!value) throw new Error("ORG_HEADER_MISSING");
+	return value;
+}
+function authToken(request: FastifyRequest): {
+	token: string;
+	mode: "bearer" | "session";
+} {
+	const auth = header(request, "authorization");
+	if (auth?.startsWith("Bearer "))
+		return { token: auth.slice(7).trim(), mode: "bearer" };
+	const raw = header(request, "cookie");
+	if (raw)
+		for (const part of raw.split(";")) {
+			const separator = part.indexOf("=");
+			if (separator > 0 && part.slice(0, separator).trim() === AUTH_COOKIE_NAME)
+				return {
+					token: decodeURIComponent(part.slice(separator + 1).trim()),
+					mode: "session",
+				};
+		}
+	throw new Error("UNAUTHENTICATED");
+}
+async function session(request: FastifyRequest, organizationId: string) {
+	const auth = authToken(request);
+	const current = await authenticate(auth.token, auth.mode);
+	if (current.orgId !== organizationId) throw new Error("UNAUTHENTICATED");
+	return current;
+}
+function envelope(request: FastifyRequest, data: unknown) {
+	return { data, meta: { requestId: request.id, durationMs: 0 } };
+}
+function fail(
+	request: FastifyRequest,
+	reply: { code: (status: number) => { send: (value: unknown) => unknown } },
+	error: unknown,
+) {
+	const message =
+		error instanceof Error ? error.message : "Attachment operation failed";
+	const status =
+		message === "UNAUTHENTICATED"
+			? 401
+			: message === "PERMISSION_DENIED"
+				? 403
+				: ["NOT_FOUND", "FILE_NOT_FOUND"].includes(message)
+					? 404
+					: message === "CONFLICT"
+						? 409
+						: 400;
+	const code =
+		status === 401
+			? "UNAUTHENTICATED"
+			: status === 403
+				? "PERMISSION_DENIED"
+				: status === 404
+					? "NOT_FOUND"
+					: status === 409
+						? "CONFLICT"
+						: "VALIDATION_FAILED";
+	return reply
+		.code(status)
+		.send({
+			error: { code, httpStatus: status, message, requestId: request.id },
+		});
+}
+async function canPage(
+	organizationId: string,
+	userId: string,
+	pageId: string,
+	action: "read" | "update",
+) {
+	const page = await pages.findPage(organizationId, pageId);
+	if (!page) throw new Error("NOT_FOUND");
+	const snapshot = await permissions.getSnapshot(
+		organizationId,
+		userId,
+		"page",
+		pageId,
+		page.classification,
+	);
+	const resource = {
+		orgId: organizationId,
+		type: "page",
+		id: pageId,
+		workspaceId: page.workspaceId,
+		projectId: null,
+		ownerId: page.ownerId,
+		teamId: null,
+		classification: page.classification,
+	};
+	if (!can({ orgId: organizationId, ...snapshot }, resource, action).allowed)
+		throw new Error("NOT_FOUND");
+	return page;
+}
+function fileResponse(
+	file: Awaited<ReturnType<PageAttachmentsRepository["list"]>>[number],
+) {
+	return FileAssetSchema.parse({
+		id: file.file.id,
+		name: file.file.name,
+		mimeType: file.file.mimeType,
+		sizeBytes: file.file.sizeBytes.toString(),
+		storageKey: file.file.storageKey,
+		version: file.file.version,
+		classification: file.file.classification,
+		checksumSha256: file.file.checksumSha256,
+		createdAt: file.file.createdAt.toISOString(),
+		downloadUrl: null,
+		permissions: { read: true, update: false, export: false, delete: false },
+	});
+}
+export async function registerPageAttachmentRoutes(
+	app: FastifyInstance,
+): Promise<void> {
+	app.get("/v1/pages/:id/attachments", async (request, reply) => {
+		try {
+			const organizationId = orgId(request);
+			const user = await session(request, organizationId);
+			const { id } = request.params as { id: string };
+			await canPage(organizationId, user.userId, id, "read");
+			const rows = await attachments.list(organizationId, id);
+			return reply.send(
+				envelope(
+					request,
+					rows.filter((row) => !row.file.deletedAt).map(fileResponse),
+				),
+			);
+		} catch (error) {
+			return fail(request, reply, error);
+		}
+	});
+	app.post("/v1/pages/:id/attachments", async (request, reply) => {
+		try {
+			if (!header(request, "idempotency-key"))
+				throw new Error("IDEMPOTENCY_KEY_MISSING");
+			const organizationId = orgId(request);
+			const user = await session(request, organizationId);
+			const { id } = request.params as { id: string };
+			await canPage(organizationId, user.userId, id, "update");
+			const body = request.body as { fileId?: string };
+			if (!body.fileId) throw new Error("VALIDATION_FAILED");
+			const attachment = await attachments.attach(
+				organizationId,
+				user.userId,
+				id,
+				body.fileId,
+			);
+			return reply.code(201).send(envelope(request, fileResponse(attachment)));
+		} catch (error) {
+			return fail(request, reply, error);
+		}
+	});
 }

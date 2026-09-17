@@ -2,8 +2,148 @@ import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
 import { IconButton } from "./primitives.js";
-export function Sheet({ open, onOpenChange, title, children }: { open: boolean; onOpenChange: (open: boolean) => void; title: string; children: ReactNode }) { return <AnimatePresence>{open ? <div className="oryon-overlay" role="presentation" onMouseDown={() => onOpenChange(false)}><motion.aside className="oryon-sheet" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ duration: 0.36 }} role="dialog" aria-modal="true" aria-label={title} onMouseDown={(event) => event.stopPropagation()}><header><h2>{title}</h2><IconButton label="Fechar" onClick={() => onOpenChange(false)}><X size={18} strokeWidth={1.5} /></IconButton></header>{children}</motion.aside></div> : null}</AnimatePresence>; }
-export function Drawer(props: { open: boolean; onOpenChange: (open: boolean) => void; title: string; children: ReactNode }) { return <Sheet {...props} />; }
-export function Modal({ open, onOpenChange, title, children }: { open: boolean; onOpenChange: (open: boolean) => void; title: string; children: ReactNode }) { return <AnimatePresence>{open ? <div className="oryon-overlay" role="presentation" onMouseDown={() => onOpenChange(false)}><motion.div className="oryon-modal" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.22 }} role="dialog" aria-modal="true" aria-label={title} onMouseDown={(event) => event.stopPropagation()}><header><h2>{title}</h2><IconButton label="Fechar" onClick={() => onOpenChange(false)}><X size={18} strokeWidth={1.5} /></IconButton></header>{children}</motion.div></div> : null}</AnimatePresence>; }
-export function Popover({ open, anchorLabel, children }: { open: boolean; anchorLabel: string; children: ReactNode }) { return <span className="oryon-popover-wrap"><button type="button" className="oryon-popover-anchor">{anchorLabel}</button><AnimatePresence>{open ? <motion.div className="oryon-popover" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.14 }}>{children}</motion.div> : null}</AnimatePresence></span>; }
-export function ContextMenu({ items }: { items: Array<{ label: string; onSelect: () => void; disabled?: boolean }> }) { return <div className="oryon-context-menu" role="menu">{items.map((item) => <button key={item.label} type="button" role="menuitem" disabled={item.disabled} onClick={item.onSelect}>{item.label}</button>)}</div>; }
+export function Sheet({
+	open,
+	onOpenChange,
+	title,
+	children,
+}: {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+	title: string;
+	children: ReactNode;
+}) {
+	return (
+		<AnimatePresence>
+			{open ? (
+				<div
+					className="oryon-overlay"
+					role="presentation"
+					onMouseDown={() => onOpenChange(false)}
+				>
+					<motion.aside
+						className="oryon-sheet"
+						initial={{ x: "100%" }}
+						animate={{ x: 0 }}
+						exit={{ x: "100%" }}
+						transition={{ duration: 0.36 }}
+						role="dialog"
+						aria-modal="true"
+						aria-label={title}
+						onMouseDown={(event) => event.stopPropagation()}
+					>
+						<header>
+							<h2>{title}</h2>
+							<IconButton label="Fechar" onClick={() => onOpenChange(false)}>
+								<X size={18} strokeWidth={1.5} />
+							</IconButton>
+						</header>
+						{children}
+					</motion.aside>
+				</div>
+			) : null}
+		</AnimatePresence>
+	);
+}
+export function Drawer(props: {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+	title: string;
+	children: ReactNode;
+}) {
+	return <Sheet {...props} />;
+}
+export function Modal({
+	open,
+	onOpenChange,
+	title,
+	children,
+}: {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+	title: string;
+	children: ReactNode;
+}) {
+	return (
+		<AnimatePresence>
+			{open ? (
+				<div
+					className="oryon-overlay"
+					role="presentation"
+					onMouseDown={() => onOpenChange(false)}
+				>
+					<motion.div
+						className="oryon-modal"
+						initial={{ opacity: 0, scale: 0.98 }}
+						animate={{ opacity: 1, scale: 1 }}
+						exit={{ opacity: 0, scale: 0.98 }}
+						transition={{ duration: 0.22 }}
+						role="dialog"
+						aria-modal="true"
+						aria-label={title}
+						onMouseDown={(event) => event.stopPropagation()}
+					>
+						<header>
+							<h2>{title}</h2>
+							<IconButton label="Fechar" onClick={() => onOpenChange(false)}>
+								<X size={18} strokeWidth={1.5} />
+							</IconButton>
+						</header>
+						{children}
+					</motion.div>
+				</div>
+			) : null}
+		</AnimatePresence>
+	);
+}
+export function Popover({
+	open,
+	anchorLabel,
+	children,
+}: {
+	open: boolean;
+	anchorLabel: string;
+	children: ReactNode;
+}) {
+	return (
+		<span className="oryon-popover-wrap">
+			<button type="button" className="oryon-popover-anchor">
+				{anchorLabel}
+			</button>
+			<AnimatePresence>
+				{open ? (
+					<motion.div
+						className="oryon-popover"
+						initial={{ opacity: 0, y: -4 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0, y: -4 }}
+						transition={{ duration: 0.14 }}
+					>
+						{children}
+					</motion.div>
+				) : null}
+			</AnimatePresence>
+		</span>
+	);
+}
+export function ContextMenu({
+	items,
+}: {
+	items: Array<{ label: string; onSelect: () => void; disabled?: boolean }>;
+}) {
+	return (
+		<div className="oryon-context-menu" role="menu">
+			{items.map((item) => (
+				<button
+					key={item.label}
+					type="button"
+					role="menuitem"
+					disabled={item.disabled}
+					onClick={item.onSelect}
+				>
+					{item.label}
+				</button>
+			))}
+		</div>
+	);
+}

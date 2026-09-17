@@ -2,13 +2,15 @@ export const authCopy = {
 	mark: "O",
 	eyebrow: "ORYON OS",
 	title: "Entre no sistema operativo da sua empresa.",
-	subtitle: "Use o seu email empresarial. Vamos enviar um acesso seguro e de uso único.",
+	subtitle:
+		"Use o seu email empresarial. Vamos enviar um acesso seguro e de uso único.",
 	organization: "ID da organização",
 	email: "Email empresarial",
 	continue: "Enviar acesso",
 	sending: "A enviar...",
 	sentTitle: "Verifique o seu email.",
-	sentBody: "O acesso enviado é válido por alguns minutos e só pode ser usado uma vez.",
+	sentBody:
+		"O acesso enviado é válido por alguns minutos e só pode ser usado uma vez.",
 	devToken: "Token de desenvolvimento",
 	openAccess: "Abrir acesso",
 	loading: "A validar acesso...",

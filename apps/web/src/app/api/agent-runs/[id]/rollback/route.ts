@@ -1,4 +1,36 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-const apiUrl = process.env.ORYON_API_URL ?? "http://localhost:4000"; const cookieName = process.env.ORYON_AUTH_COOKIE_NAME ?? "oryon_session";
-export async function POST(request: Request, context: { params: Promise<{ id: string }> }) { const store = await cookies(); const session = store.get(cookieName)?.value; const org = store.get("oryon_org")?.value; if (!session || !org) return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: "Authentication required" } }, { status: 401 }); const headers: Record<string, string> = { "X-Oryon-Org": org, Cookie: `${cookieName}=${encodeURIComponent(session)}`, "Idempotency-Key": request.headers.get("idempotency-key") ?? crypto.randomUUID() }; const response = await fetch(`${apiUrl}/v1/agent-runs/${(await context.params).id}/rollback`, { method: "POST", headers, cache: "no-store" }); return new NextResponse(await response.text(), { status: response.status, headers: { "Content-Type": response.headers.get("content-type") ?? "application/json" } }); }
+const apiUrl = process.env.ORYON_API_URL ?? "http://localhost:4000";
+const cookieName = process.env.ORYON_AUTH_COOKIE_NAME ?? "oryon_session";
+export async function POST(
+	request: Request,
+	context: { params: Promise<{ id: string }> },
+) {
+	const store = await cookies();
+	const session = store.get(cookieName)?.value;
+	const org = store.get("oryon_org")?.value;
+	if (!session || !org)
+		return NextResponse.json(
+			{
+				error: { code: "UNAUTHENTICATED", message: "Authentication required" },
+			},
+			{ status: 401 },
+		);
+	const headers: Record<string, string> = {
+		"X-Oryon-Org": org,
+		Cookie: `${cookieName}=${encodeURIComponent(session)}`,
+		"Idempotency-Key":
+			request.headers.get("idempotency-key") ?? crypto.randomUUID(),
+	};
+	const response = await fetch(
+		`${apiUrl}/v1/agent-runs/${(await context.params).id}/rollback`,
+		{ method: "POST", headers, cache: "no-store" },
+	);
+	return new NextResponse(await response.text(), {
+		status: response.status,
+		headers: {
+			"Content-Type":
+				response.headers.get("content-type") ?? "application/json",
+		},
+	});
+}

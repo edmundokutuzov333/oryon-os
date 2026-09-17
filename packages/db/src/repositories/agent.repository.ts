@@ -2,18 +2,351 @@ import { randomUUID } from "node:crypto";
 import { Prisma, type PrismaClient } from "../generated/client.js";
 import { appendDomainEvent } from "../outbox.js";
 import { withOrgContext } from "../tenant.js";
-import type { AgentCreateInput, AgentPatchInput, AgentRunInput } from "@oryon/contracts/agents-automation";
+import type {
+	AgentCreateInput,
+	AgentPatchInput,
+	AgentRunInput,
+} from "@oryon/contracts/agents-automation";
 
 export class AgentRepository {
 	constructor(private readonly db: PrismaClient) {}
-	async list(orgId: string) { return withOrgContext(this.db, orgId, (tx) => tx.agent.findMany({ where: { orgId, deletedAt: null }, include: { principal: true, modelPolicy: true }, orderBy: { name: "asc" } })); }
-	async findById(orgId: string, id: string) { return withOrgContext(this.db, orgId, (tx) => tx.agent.findFirst({ where: { orgId, id, deletedAt: null }, include: { principal: true, modelPolicy: true } })); }
-	async create(orgId: string, actorId: string, input: AgentCreateInput): Promise<{ id: string }> { return withOrgContext(this.db, orgId, async (tx) => { let principalId = input.principalUserId; if (principalId) { const principal = await tx.user.findFirst({ where: { id: principalId, orgId, status: "ACTIVE", deletedAt: null }, select: { id: true } }); if (!principal) throw new Error("PRINCIPAL_NOT_FOUND"); } else { const principal = await tx.user.create({ data: { orgId, email: `${input.key.replace(/[^a-z0-9]/g, "-")}@agents.oryon.local`, name: input.name, type: "AGENT", status: "ACTIVE", locale: "pt-MZ", timezone: "Africa/Maputo" }, select: { id: true } }); principalId = principal.id; await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "User", subjectId: principal.id, name: "agent.principal.created", payload: { agentKey: input.key, name: input.name } as Prisma.InputJsonValue }); } const row = await tx.agent.create({ data: { orgId, key: input.key, name: input.name, description: input.description ?? null, principalId: principalId as string, systemPrompt: input.systemPrompt, modelPolicyId: input.modelPolicyId ?? null, knowledgeScope: input.knowledgeScope as Prisma.InputJsonValue, tools: input.tools as Prisma.InputJsonValue, triggers: input.triggers as Prisma.InputJsonValue, schedule: input.schedule ?? null, checkpointPolicy: input.checkpointPolicy, budgetCapCents: input.budgetCapCents == null ? null : BigInt(input.budgetCapCents), status: "ACTIVE" } }); await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "Agent", subjectId: row.id, name: "agent.created", payload: { key: row.key, name: row.name, principalId: row.principalId } as Prisma.InputJsonValue }); return { id: row.id }; }); }
-	async update(orgId: string, actorId: string, id: string, input: AgentPatchInput): Promise<void> { await withOrgContext(this.db, orgId, async (tx) => { const current = await tx.agent.findFirst({ where: { id, orgId, deletedAt: null } }); if (!current) throw new Error("NOT_FOUND"); const data: Prisma.AgentUpdateInput = {}; if (input.name !== undefined) data.name = input.name; if (input.description !== undefined) data.description = input.description; if (input.systemPrompt !== undefined) data.systemPrompt = input.systemPrompt; if (input.modelPolicyId !== undefined) data.modelPolicy = input.modelPolicyId ? { connect: { id: input.modelPolicyId } } : { disconnect: true }; if (input.knowledgeScope !== undefined) data.knowledgeScope = input.knowledgeScope as Prisma.InputJsonValue; if (input.tools !== undefined) data.tools = input.tools as Prisma.InputJsonValue; if (input.triggers !== undefined) data.triggers = input.triggers as Prisma.InputJsonValue; if (input.schedule !== undefined) data.schedule = input.schedule; if (input.checkpointPolicy !== undefined) data.checkpointPolicy = input.checkpointPolicy; if (input.budgetCapCents !== undefined) data.budgetCapCents = input.budgetCapCents == null ? null : BigInt(input.budgetCapCents); await tx.agent.update({ where: { id }, data }); await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "Agent", subjectId: id, name: "agent.updated", payload: { changed: Object.keys(data) } as Prisma.InputJsonValue }); }); }
-	async setStatus(orgId: string, actorId: string, id: string, status: "DRAFT" | "ACTIVE" | "PAUSED" | "ARCHIVED"): Promise<void> { await withOrgContext(this.db, orgId, async (tx) => { const row = await tx.agent.findFirst({ where: { id, orgId, deletedAt: null } }); if (!row) throw new Error("NOT_FOUND"); await tx.agent.update({ where: { id }, data: { status } }); await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "Agent", subjectId: id, name: "agent.status.changed", payload: { from: row.status, to: status } as Prisma.InputJsonValue }); }); }
-	async createRun(orgId: string, actorId: string, agentId: string, input: AgentRunInput, requestId?: string): Promise<{ id: string }> { return withOrgContext(this.db, orgId, async (tx) => { const agent = await tx.agent.findFirst({ where: { id: agentId, orgId, deletedAt: null, status: "ACTIVE" }, select: { id: true, principalId: true } }); if (!agent) throw new Error("NOT_FOUND"); const id = randomUUID(); await tx.agentRun.create({ data: { id, orgId, agentId, triggeredBy: actorId, triggerType: input.triggerType, inputJson: input.input as Prisma.InputJsonValue, stepsJson: [], toolCallsJson: [], readResources: [], writtenResources: [], modelKey: input.preferredModel ?? null } }); await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "AgentRun", subjectId: id, name: "agent.run.created", correlationId: requestId, payload: { agentId, principalId: agent.principalId, triggerType: input.triggerType } as Prisma.InputJsonValue }); return { id }; }); }
-	async findRun(orgId: string, id: string) { return withOrgContext(this.db, orgId, (tx) => tx.agentRun.findFirst({ where: { id, orgId }, include: { agent: { include: { principal: true, modelPolicy: true } } } })); }
-	async listRunnable(orgId: string, limit = 100) { return withOrgContext(this.db, orgId, (tx) => tx.agentRun.findMany({ where: { orgId, state: "RUNNING", OR: [{ checkpointState: null }, { checkpointState: "APPROVED" }] }, orderBy: { startedAt: "asc" }, take: Math.min(limit, 200), select: { id: true } })); }
-	async appendRunState(orgId: string, id: string, patch: { state?: "RUNNING" | "WAITING" | "SUCCEEDED" | "FAILED" | "CANCELLED" | "ROLLED_BACK"; checkpointState?: "WAITING" | "APPROVED" | "REJECTED" | null; checkpointApproverId?: string | null; modelKey?: string | null; inputTokens?: number | null; outputTokens?: number | null; costCents?: bigint | null; rollbackToken?: string | null; rolledBackAt?: Date | null; finishedAt?: Date | null; steps?: unknown; toolCalls?: unknown; readResources?: unknown; writtenResources?: unknown; output?: unknown; }): Promise<void> { await withOrgContext(this.db, orgId, async (tx) => { const row = await tx.agentRun.findFirst({ where: { id, orgId }, select: { agentId: true, triggeredBy: true } }); if (!row) throw new Error("NOT_FOUND"); const data: Prisma.AgentRunUpdateInput = {}; if (patch.state !== undefined) data.state = patch.state; if (patch.checkpointState !== undefined) data.checkpointState = patch.checkpointState; if (patch.checkpointApproverId !== undefined) data.checkpointApproverId = patch.checkpointApproverId; if (patch.modelKey !== undefined) data.modelKey = patch.modelKey; if (patch.inputTokens !== undefined) data.inputTokens = patch.inputTokens; if (patch.outputTokens !== undefined) data.outputTokens = patch.outputTokens; if (patch.costCents !== undefined) data.costCents = patch.costCents; if (patch.rollbackToken !== undefined) data.rollbackToken = patch.rollbackToken; if (patch.rolledBackAt !== undefined) data.rolledBackAt = patch.rolledBackAt; if (patch.finishedAt !== undefined) data.finishedAt = patch.finishedAt; if (patch.steps !== undefined) data.stepsJson = patch.steps as Prisma.InputJsonValue; if (patch.toolCalls !== undefined) data.toolCallsJson = patch.toolCalls as Prisma.InputJsonValue; if (patch.readResources !== undefined) data.readResources = patch.readResources as Prisma.InputJsonValue; if (patch.writtenResources !== undefined) data.writtenResources = patch.writtenResources as Prisma.InputJsonValue; if (patch.output !== undefined) data.outputJson = patch.output === null ? Prisma.JsonNull : patch.output as Prisma.InputJsonValue; await tx.agentRun.update({ where: { id }, data }); await appendDomainEvent(tx, { orgId, actorId: row.triggeredBy ?? undefined, actorType: row.triggeredBy ? "MEMBER" : "AGENT", subjectType: "AgentRun", subjectId: id, name: "agent.run.updated", payload: { state: patch.state ?? null, changed: Object.keys(data) } as Prisma.InputJsonValue }); }); }
-	async checkpointDecision(orgId: string, actorId: string, runId: string, decision: "APPROVE" | "REJECT", comment?: string): Promise<void> { await withOrgContext(this.db, orgId, async (tx) => { const run = await tx.agentRun.findFirst({ where: { id: runId, orgId, checkpointState: "WAITING" } }); if (!run) throw new Error("CHECKPOINT_NOT_FOUND"); const next = decision === "APPROVE" ? "APPROVED" : "REJECTED"; await tx.agentRun.update({ where: { id: runId }, data: { checkpointState: next, checkpointApproverId: actorId, state: decision === "APPROVE" ? "RUNNING" : "CANCELLED" } }); await appendDomainEvent(tx, { orgId, actorId, actorType: "MEMBER", subjectType: "AgentRun", subjectId: runId, name: "agent.checkpoint.decided", payload: { decision, comment: comment ?? null } as Prisma.InputJsonValue }); }); }
+	async list(orgId: string) {
+		return withOrgContext(this.db, orgId, (tx) =>
+			tx.agent.findMany({
+				where: { orgId, deletedAt: null },
+				include: { principal: true, modelPolicy: true },
+				orderBy: { name: "asc" },
+			}),
+		);
+	}
+	async findById(orgId: string, id: string) {
+		return withOrgContext(this.db, orgId, (tx) =>
+			tx.agent.findFirst({
+				where: { orgId, id, deletedAt: null },
+				include: { principal: true, modelPolicy: true },
+			}),
+		);
+	}
+	async create(
+		orgId: string,
+		actorId: string,
+		input: AgentCreateInput,
+	): Promise<{ id: string }> {
+		return withOrgContext(this.db, orgId, async (tx) => {
+			let principalId = input.principalUserId;
+			if (principalId) {
+				const principal = await tx.user.findFirst({
+					where: { id: principalId, orgId, status: "ACTIVE", deletedAt: null },
+					select: { id: true },
+				});
+				if (!principal) throw new Error("PRINCIPAL_NOT_FOUND");
+			} else {
+				const principal = await tx.user.create({
+					data: {
+						orgId,
+						email: `${input.key.replace(/[^a-z0-9]/g, "-")}@agents.oryon.local`,
+						name: input.name,
+						type: "AGENT",
+						status: "ACTIVE",
+						locale: "pt-MZ",
+						timezone: "Africa/Maputo",
+					},
+					select: { id: true },
+				});
+				principalId = principal.id;
+				await appendDomainEvent(tx, {
+					orgId,
+					actorId,
+					actorType: "MEMBER",
+					subjectType: "User",
+					subjectId: principal.id,
+					name: "agent.principal.created",
+					payload: {
+						agentKey: input.key,
+						name: input.name,
+					} as Prisma.InputJsonValue,
+				});
+			}
+			const row = await tx.agent.create({
+				data: {
+					orgId,
+					key: input.key,
+					name: input.name,
+					description: input.description ?? null,
+					principalId: principalId as string,
+					systemPrompt: input.systemPrompt,
+					modelPolicyId: input.modelPolicyId ?? null,
+					knowledgeScope: input.knowledgeScope as Prisma.InputJsonValue,
+					tools: input.tools as Prisma.InputJsonValue,
+					triggers: input.triggers as Prisma.InputJsonValue,
+					schedule: input.schedule ?? null,
+					checkpointPolicy: input.checkpointPolicy,
+					budgetCapCents:
+						input.budgetCapCents == null ? null : BigInt(input.budgetCapCents),
+					status: "ACTIVE",
+				},
+			});
+			await appendDomainEvent(tx, {
+				orgId,
+				actorId,
+				actorType: "MEMBER",
+				subjectType: "Agent",
+				subjectId: row.id,
+				name: "agent.created",
+				payload: {
+					key: row.key,
+					name: row.name,
+					principalId: row.principalId,
+				} as Prisma.InputJsonValue,
+			});
+			return { id: row.id };
+		});
+	}
+	async update(
+		orgId: string,
+		actorId: string,
+		id: string,
+		input: AgentPatchInput,
+	): Promise<void> {
+		await withOrgContext(this.db, orgId, async (tx) => {
+			const current = await tx.agent.findFirst({
+				where: { id, orgId, deletedAt: null },
+			});
+			if (!current) throw new Error("NOT_FOUND");
+			const data: Prisma.AgentUpdateInput = {};
+			if (input.name !== undefined) data.name = input.name;
+			if (input.description !== undefined) data.description = input.description;
+			if (input.systemPrompt !== undefined)
+				data.systemPrompt = input.systemPrompt;
+			if (input.modelPolicyId !== undefined)
+				data.modelPolicy = input.modelPolicyId
+					? { connect: { id: input.modelPolicyId } }
+					: { disconnect: true };
+			if (input.knowledgeScope !== undefined)
+				data.knowledgeScope = input.knowledgeScope as Prisma.InputJsonValue;
+			if (input.tools !== undefined)
+				data.tools = input.tools as Prisma.InputJsonValue;
+			if (input.triggers !== undefined)
+				data.triggers = input.triggers as Prisma.InputJsonValue;
+			if (input.schedule !== undefined) data.schedule = input.schedule;
+			if (input.checkpointPolicy !== undefined)
+				data.checkpointPolicy = input.checkpointPolicy;
+			if (input.budgetCapCents !== undefined)
+				data.budgetCapCents =
+					input.budgetCapCents == null ? null : BigInt(input.budgetCapCents);
+			await tx.agent.update({ where: { id }, data });
+			await appendDomainEvent(tx, {
+				orgId,
+				actorId,
+				actorType: "MEMBER",
+				subjectType: "Agent",
+				subjectId: id,
+				name: "agent.updated",
+				payload: { changed: Object.keys(data) } as Prisma.InputJsonValue,
+			});
+		});
+	}
+	async setStatus(
+		orgId: string,
+		actorId: string,
+		id: string,
+		status: "DRAFT" | "ACTIVE" | "PAUSED" | "ARCHIVED",
+	): Promise<void> {
+		await withOrgContext(this.db, orgId, async (tx) => {
+			const row = await tx.agent.findFirst({
+				where: { id, orgId, deletedAt: null },
+			});
+			if (!row) throw new Error("NOT_FOUND");
+			await tx.agent.update({ where: { id }, data: { status } });
+			await appendDomainEvent(tx, {
+				orgId,
+				actorId,
+				actorType: "MEMBER",
+				subjectType: "Agent",
+				subjectId: id,
+				name: "agent.status.changed",
+				payload: { from: row.status, to: status } as Prisma.InputJsonValue,
+			});
+		});
+	}
+	async createRun(
+		orgId: string,
+		actorId: string,
+		agentId: string,
+		input: AgentRunInput,
+		requestId?: string,
+	): Promise<{ id: string }> {
+		return withOrgContext(this.db, orgId, async (tx) => {
+			const agent = await tx.agent.findFirst({
+				where: { id: agentId, orgId, deletedAt: null, status: "ACTIVE" },
+				select: { id: true, principalId: true },
+			});
+			if (!agent) throw new Error("NOT_FOUND");
+			const id = randomUUID();
+			await tx.agentRun.create({
+				data: {
+					id,
+					orgId,
+					agentId,
+					triggeredBy: actorId,
+					triggerType: input.triggerType,
+					inputJson: input.input as Prisma.InputJsonValue,
+					stepsJson: [],
+					toolCallsJson: [],
+					readResources: [],
+					writtenResources: [],
+					modelKey: input.preferredModel ?? null,
+				},
+			});
+			await appendDomainEvent(tx, {
+				orgId,
+				actorId,
+				actorType: "MEMBER",
+				subjectType: "AgentRun",
+				subjectId: id,
+				name: "agent.run.created",
+				correlationId: requestId,
+				payload: {
+					agentId,
+					principalId: agent.principalId,
+					triggerType: input.triggerType,
+				} as Prisma.InputJsonValue,
+			});
+			return { id };
+		});
+	}
+	async findRun(orgId: string, id: string) {
+		return withOrgContext(this.db, orgId, (tx) =>
+			tx.agentRun.findFirst({
+				where: { id, orgId },
+				include: { agent: { include: { principal: true, modelPolicy: true } } },
+			}),
+		);
+	}
+	async listRunnable(orgId: string, limit = 100) {
+		return withOrgContext(this.db, orgId, (tx) =>
+			tx.agentRun.findMany({
+				where: {
+					orgId,
+					state: "RUNNING",
+					OR: [{ checkpointState: null }, { checkpointState: "APPROVED" }],
+				},
+				orderBy: { startedAt: "asc" },
+				take: Math.min(limit, 200),
+				select: { id: true },
+			}),
+		);
+	}
+	async appendRunState(
+		orgId: string,
+		id: string,
+		patch: {
+			state?:
+				| "RUNNING"
+				| "WAITING"
+				| "SUCCEEDED"
+				| "FAILED"
+				| "CANCELLED"
+				| "ROLLED_BACK";
+			checkpointState?: "WAITING" | "APPROVED" | "REJECTED" | null;
+			checkpointApproverId?: string | null;
+			modelKey?: string | null;
+			inputTokens?: number | null;
+			outputTokens?: number | null;
+			costCents?: bigint | null;
+			rollbackToken?: string | null;
+			rolledBackAt?: Date | null;
+			finishedAt?: Date | null;
+			steps?: unknown;
+			toolCalls?: unknown;
+			readResources?: unknown;
+			writtenResources?: unknown;
+			output?: unknown;
+		},
+	): Promise<void> {
+		await withOrgContext(this.db, orgId, async (tx) => {
+			const row = await tx.agentRun.findFirst({
+				where: { id, orgId },
+				select: { agentId: true, triggeredBy: true },
+			});
+			if (!row) throw new Error("NOT_FOUND");
+			const data: Prisma.AgentRunUpdateInput = {};
+			if (patch.state !== undefined) data.state = patch.state;
+			if (patch.checkpointState !== undefined)
+				data.checkpointState = patch.checkpointState;
+			if (patch.checkpointApproverId !== undefined)
+				data.checkpointApproverId = patch.checkpointApproverId;
+			if (patch.modelKey !== undefined) data.modelKey = patch.modelKey;
+			if (patch.inputTokens !== undefined) data.inputTokens = patch.inputTokens;
+			if (patch.outputTokens !== undefined)
+				data.outputTokens = patch.outputTokens;
+			if (patch.costCents !== undefined) data.costCents = patch.costCents;
+			if (patch.rollbackToken !== undefined)
+				data.rollbackToken = patch.rollbackToken;
+			if (patch.rolledBackAt !== undefined)
+				data.rolledBackAt = patch.rolledBackAt;
+			if (patch.finishedAt !== undefined) data.finishedAt = patch.finishedAt;
+			if (patch.steps !== undefined)
+				data.stepsJson = patch.steps as Prisma.InputJsonValue;
+			if (patch.toolCalls !== undefined)
+				data.toolCallsJson = patch.toolCalls as Prisma.InputJsonValue;
+			if (patch.readResources !== undefined)
+				data.readResources = patch.readResources as Prisma.InputJsonValue;
+			if (patch.writtenResources !== undefined)
+				data.writtenResources = patch.writtenResources as Prisma.InputJsonValue;
+			if (patch.output !== undefined)
+				data.outputJson =
+					patch.output === null
+						? Prisma.JsonNull
+						: (patch.output as Prisma.InputJsonValue);
+			await tx.agentRun.update({ where: { id }, data });
+			await appendDomainEvent(tx, {
+				orgId,
+				actorId: row.triggeredBy ?? undefined,
+				actorType: row.triggeredBy ? "MEMBER" : "AGENT",
+				subjectType: "AgentRun",
+				subjectId: id,
+				name: "agent.run.updated",
+				payload: {
+					state: patch.state ?? null,
+					changed: Object.keys(data),
+				} as Prisma.InputJsonValue,
+			});
+		});
+	}
+	async checkpointDecision(
+		orgId: string,
+		actorId: string,
+		runId: string,
+		decision: "APPROVE" | "REJECT",
+		comment?: string,
+	): Promise<void> {
+		await withOrgContext(this.db, orgId, async (tx) => {
+			const run = await tx.agentRun.findFirst({
+				where: { id: runId, orgId, checkpointState: "WAITING" },
+			});
+			if (!run) throw new Error("CHECKPOINT_NOT_FOUND");
+			const next = decision === "APPROVE" ? "APPROVED" : "REJECTED";
+			await tx.agentRun.update({
+				where: { id: runId },
+				data: {
+					checkpointState: next,
+					checkpointApproverId: actorId,
+					state: decision === "APPROVE" ? "RUNNING" : "CANCELLED",
+				},
+			});
+			await appendDomainEvent(tx, {
+				orgId,
+				actorId,
+				actorType: "MEMBER",
+				subjectType: "AgentRun",
+				subjectId: runId,
+				name: "agent.checkpoint.decided",
+				payload: {
+					decision,
+					comment: comment ?? null,
+				} as Prisma.InputJsonValue,
+			});
+		});
+	}
 }

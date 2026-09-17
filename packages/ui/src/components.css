@@ -1,3 +1,1097 @@
 @import "./tokens/tokens.css";
 
-.oryon-app-shell{min-height:100dvh;background:var(--bg-canvas);color:var(--text-primary)}.oryon-app-content{width:min(calc(100% - var(--space-12)),1680px);margin:0 auto;padding:calc(56px + var(--space-8)) var(--space-6) var(--space-12)}.oryon-floating-topbar{position:fixed;z-index:50;top:var(--space-4);left:50%;transform:translateX(-50%);width:min(calc(100% - var(--space-8)),1680px);min-height:56px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:var(--space-2);padding:var(--space-2);border:1px solid var(--border-default);border-radius:var(--radius-full);background:var(--bg-chrome);box-shadow:var(--shadow-chrome)}.oryon-topbar-zone{display:flex;align-items:center;gap:var(--space-2);min-width:0}.oryon-topbar-actions{justify-content:flex-end}.oryon-brand{display:inline-flex;align-items:center;min-height:40px;padding:0 var(--space-4);border-radius:var(--radius-full);color:var(--text-primary);font-size:var(--text-body);font-weight:600;text-decoration:none;white-space:nowrap}.oryon-brand:hover{background:var(--bg-surface-hover)}.oryon-segmented-nav{display:flex;justify-content:center;gap:var(--space-1);padding:4px;border-radius:var(--radius-full);background:var(--bg-surface);overflow-x:auto;scrollbar-width:none}.oryon-segmented-nav::-webkit-scrollbar{display:none}.oryon-segmented-nav a,.oryon-segmented-tabs button{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);min-height:36px;padding:0 var(--space-4);border:0;border-radius:var(--radius-full);background:transparent;color:var(--text-secondary);font-size:var(--text-body-sm);font-weight:500;text-decoration:none;white-space:nowrap;cursor:pointer;transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out)}.oryon-segmented-nav a:hover,.oryon-segmented-tabs button:hover{background:var(--bg-surface-hover);color:var(--text-primary)}.oryon-segmented-nav a.active,.oryon-segmented-tabs button[aria-selected=true]{background:var(--color-acid-500);color:var(--text-on-acid)}.oryon-icon-button-rail{display:flex;align-items:center;gap:var(--space-1);padding:4px;border-radius:var(--radius-full);background:var(--bg-surface)}.oryon-icon-button{display:inline-grid;place-items:center;border:0;border-radius:var(--radius-full);background:transparent;color:var(--text-secondary);cursor:pointer;transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out),filter var(--dur-fast) var(--ease-out)}.oryon-icon-button:hover{background:var(--bg-surface-hover);color:var(--text-primary)}.oryon-icon-button-sm{width:32px;height:32px}.oryon-icon-button-md{width:40px;height:40px}.oryon-icon-button-lg{width:48px;height:48px}.oryon-icon-button-surface{background:var(--bg-surface-raise);color:var(--text-primary)}.oryon-icon-button-acid{background:var(--color-acid-500);color:var(--text-on-acid)}.oryon-icon-button-inverted{background:var(--color-ink-000);color:var(--text-on-inverted)}.oryon-icon-button-danger{background:var(--color-danger);color:var(--color-ink-000)}.oryon-user-chip{display:flex;align-items:center;gap:var(--space-2);min-height:40px;padding:4px 10px 4px 4px;border-radius:var(--radius-full);background:var(--bg-surface);color:var(--text-secondary);font-size:var(--text-body-sm);white-space:nowrap}.oryon-user-name{max-width:20ch;overflow:hidden;text-overflow:ellipsis}.oryon-avatar{display:inline-grid;place-items:center;flex:0 0 auto;border:2px solid var(--bg-surface);border-radius:var(--radius-full);background:var(--bg-surface-raise);color:var(--text-secondary);font-weight:500;line-height:1}.oryon-avatar-sm{width:24px;height:24px;font-size:var(--text-micro)}.oryon-avatar-md{width:32px;height:32px;font-size:var(--text-caption)}.oryon-avatar-lg{width:40px;height:40px;font-size:var(--text-body-sm)}.oryon-avatar-agent{border-color:var(--color-info);color:var(--color-info)}.oryon-popover-wrap{position:relative;display:inline-flex}.oryon-app-launcher{position:absolute;top:calc(100% + var(--space-2));left:0;display:grid;grid-template-columns:repeat(3,minmax(100px,1fr));gap:var(--space-2);width:360px;padding:var(--space-3);border:1px solid var(--border-default);border-radius:var(--radius-xl);background:var(--bg-surface);box-shadow:var(--shadow-overlay)}.oryon-app-launcher a{display:grid;gap:var(--space-2);padding:var(--space-3);border-radius:var(--radius-md);color:var(--text-secondary);font-size:var(--text-caption);text-decoration:none}.oryon-app-launcher a:hover{background:var(--bg-surface-hover);color:var(--text-primary)}.oryon-launcher-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:var(--radius-md);background:var(--bg-surface-raise);color:var(--text-primary)}.oryon-command-backdrop,.oryon-overlay{position:fixed;z-index:100;inset:0;display:grid;place-items:start center;padding:12vh var(--space-4);background:rgba(11,11,12,.72);backdrop-filter:blur(8px)}.oryon-command-palette{width:min(640px,100%);border-radius:var(--radius-xl);background:var(--bg-surface);box-shadow:var(--shadow-overlay);overflow:hidden}.oryon-command-search{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-3);border-bottom:1px solid var(--border-subtle)}.oryon-search-field{display:flex;align-items:center;gap:var(--space-2);flex:1;min-height:36px;padding:0 var(--space-3);border:1px solid var(--border-subtle);border-radius:var(--radius-full);background:var(--bg-surface);color:var(--text-tertiary)}.oryon-search-field:focus-within{box-shadow:var(--elev-3)}.oryon-search-field input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--text-primary);font-size:var(--text-body)}.oryon-search-field input::placeholder{color:var(--text-tertiary)}.oryon-command-results{max-height:min(60vh,560px);padding:var(--space-2);overflow:auto}.oryon-command-results section>p{padding:var(--space-2) var(--space-3);margin:0;color:var(--text-tertiary);font-size:var(--text-caption)}.oryon-command-results a,.oryon-command-results button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-3);border:0;border-radius:var(--radius-md);background:transparent;color:var(--text-secondary);text-align:left;text-decoration:none;cursor:pointer}.oryon-command-results a:hover,.oryon-command-results button:hover{background:var(--bg-surface-hover);color:var(--text-primary)}.oryon-command-results kbd,.oryon-command-footer kbd{font-family:var(--font-mono);font-size:var(--text-micro);padding:2px 6px;border-radius:var(--radius-xs);background:var(--bg-surface-raise);color:var(--text-tertiary)}.oryon-command-empty{padding:var(--space-8) var(--space-4);text-align:center;color:var(--text-tertiary)}.oryon-command-footer{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-3) var(--space-4);border-top:1px solid var(--border-subtle);color:var(--text-tertiary);font-size:var(--text-caption)}.oryon-command-footer span:first-child{display:flex;align-items:center;gap:var(--space-2);margin-right:auto}.oryon-page-header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:var(--space-4);margin-bottom:var(--space-6)}.oryon-page-header h1{margin:0;font-size:var(--text-h1);line-height:1.1;font-weight:400;letter-spacing:-.02em}.oryon-page-header p{margin:var(--space-2) 0 0;max-width:72ch;color:var(--text-secondary);font-size:var(--text-body)}.oryon-page-back{display:grid;place-items:center;width:40px;height:40px;border-radius:var(--radius-full);background:var(--bg-surface);color:var(--text-primary);text-decoration:none}.oryon-page-actions{display:flex;align-items:center;gap:var(--space-2)}.oryon-button{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);padding:0 var(--space-5);border:0;border-radius:var(--radius-full);font-size:var(--text-body);font-weight:500;cursor:pointer;transition:filter var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out)}.oryon-button-sm{height:32px}.oryon-button-md{height:40px}.oryon-button-lg{height:48px}.oryon-button-primary{background:var(--color-acid-500);color:var(--text-on-acid)}.oryon-button-primary:hover{filter:brightness(1.08)}.oryon-button-inverted{background:var(--color-ink-000);color:var(--text-on-inverted)}.oryon-button-secondary{background:var(--bg-surface-raise);color:var(--text-primary)}.oryon-button-secondary:hover,.oryon-button-ghost:hover,.oryon-button-outline:hover{background:var(--bg-surface-hover)}.oryon-button-ghost{background:transparent;color:var(--text-secondary)}.oryon-button-outline{background:transparent;color:var(--text-primary);box-shadow:var(--elev-2)}.oryon-button-danger{background:var(--color-danger);color:var(--color-ink-000)}.oryon-button:disabled,.oryon-icon-button:disabled{cursor:not-allowed;opacity:.55}.oryon-spin{animation:oryon-spin 900ms linear infinite}@keyframes oryon-spin{to{transform:rotate(360deg)}}.oryon-field,.oryon-select-wrap{display:grid;gap:var(--space-2)}.oryon-field-label{color:var(--text-tertiary);font-size:var(--text-caption)}.oryon-field-hint{color:var(--text-tertiary);font-size:var(--text-caption)}.oryon-field-error{color:var(--color-danger);font-size:var(--text-caption)}.oryon-input,.oryon-select-pill{width:100%;min-height:40px;box-sizing:border-box;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--text-primary);padding:0 var(--space-3);box-shadow:var(--elev-1);outline:0}.oryon-textarea{padding:var(--space-3);resize:vertical;min-height:96px}.oryon-number{font-family:var(--font-mono)}.oryon-select-shell{position:relative;display:block}.oryon-select-shell select{appearance:none;padding-right:var(--space-8)}.oryon-select-shell svg{position:absolute;right:var(--space-3);top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text-tertiary)}.oryon-toggle,.oryon-check,.oryon-radio-group label{display:inline-flex;align-items:center;gap:var(--space-2);color:var(--text-secondary);font-size:var(--text-body)}.oryon-toggle input,.oryon-check input,.oryon-radio-group input{position:absolute;opacity:0;pointer-events:none}.oryon-toggle-track{display:inline-flex;align-items:center;width:44px;height:24px;padding:3px;border-radius:var(--radius-full);background:var(--bg-surface-raise);box-shadow:var(--elev-1)}.oryon-toggle-thumb{width:18px;height:18px;border-radius:var(--radius-full);background:var(--text-tertiary);transition:transform var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out)}.oryon-toggle input:checked+.oryon-toggle-track{background:var(--color-acid-500)}.oryon-toggle input:checked+.oryon-toggle-track .oryon-toggle-thumb{transform:translateX(20px);background:var(--text-on-acid)}.oryon-check-box{display:grid;place-items:center;width:18px;height:18px;border:1px solid var(--border-strong);border-radius:var(--radius-xs);background:var(--bg-surface);color:var(--text-on-acid)}.oryon-check input:checked+.oryon-check-box{border-color:var(--color-acid-500);background:var(--color-acid-500)}.oryon-radio-group{display:grid;gap:var(--space-2);margin:0;padding:0;border:0}.oryon-radio-group legend{margin-bottom:var(--space-2);color:var(--text-tertiary);font-size:var(--text-caption)}.oryon-segmented-tabs{display:inline-flex;gap:var(--space-1);padding:4px;border-radius:var(--radius-full);background:var(--bg-surface)}.oryon-card{position:relative;padding:var(--space-5);border-radius:var(--radius-lg);background:var(--bg-surface);box-shadow:var(--elev-1)}.oryon-card-interactive{cursor:pointer;transition:background var(--dur-fast) var(--ease-out)}.oryon-card-interactive:hover{background:var(--bg-surface-hover)}.oryon-card-selected{box-shadow:var(--elev-3)}.oryon-card-selected::before{content:"";position:absolute;left:0;top:var(--space-5);bottom:var(--space-5);width:2px;border-radius:var(--radius-full);background:var(--color-acid-500)}.oryon-inverted-panel{padding:var(--space-6);border-radius:var(--radius-xl);background:var(--bg-inverted);box-shadow:var(--shadow-inverted)}.oryon-metric-card{display:grid;gap:var(--space-2);padding:var(--space-5);border-radius:var(--radius-lg);background:var(--bg-surface);box-shadow:var(--elev-1)}.oryon-metric-card>span{color:var(--text-tertiary);font-size:var(--text-caption)}.oryon-metric-card>strong{color:var(--text-primary);font:500 var(--text-metric-xl)/1 var(--font-mono);letter-spacing:-.03em}.oryon-metric-emphasis{background:var(--bg-surface-raise)}.oryon-metric-emphasis>strong{color:var(--color-acid-500)}.oryon-metric-compact>strong{font-size:var(--text-metric-l)}.oryon-progress{display:grid;gap:var(--space-2)}.oryon-progress-track{height:4px;overflow:hidden;border-radius:var(--radius-full);background:rgba(255,255,255,.08)}.oryon-progress-track span{display:block;height:100%;border-radius:inherit;background:var(--color-acid-500);transition:width var(--dur-slow) var(--ease-out)}.oryon-progress-segments{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:var(--space-2)}.oryon-progress-segments span{display:grid;gap:2px;color:var(--text-tertiary);font-size:var(--text-micro)}.oryon-progress-segments b{font-family:var(--font-mono);color:var(--text-secondary)}.oryon-avatar-stack{display:flex;align-items:center}.oryon-avatar-stack .oryon-avatar,.oryon-avatar-overflow{margin-left:-8px}.oryon-avatar-stack .oryon-avatar:first-child,.oryon-avatar-overflow:first-child{margin-left:0}.oryon-avatar-overflow{display:grid;place-items:center;width:32px;height:32px;border:2px solid var(--bg-surface);border-radius:var(--radius-full);background:var(--bg-surface-raise);color:var(--text-secondary);font:500 var(--text-micro)/1 var(--font-mono)}.oryon-status-chip{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:var(--radius-full);font-size:var(--text-micro);font-weight:500}.oryon-status-positive{background:var(--color-positive-surface);color:var(--color-positive)}.oryon-status-warning{background:var(--color-warning-surface);color:var(--color-warning)}.oryon-status-danger{background:var(--color-danger-surface);color:var(--color-danger)}.oryon-status-info{background:var(--color-info-surface);color:var(--color-info)}.oryon-status-neutral{background:var(--bg-surface-raise);color:var(--text-secondary)}.oryon-count-badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 6px;border-radius:var(--radius-xs);background:var(--bg-surface-raise);color:var(--text-secondary);font:500 var(--text-micro)/1 var(--font-mono)}.oryon-data-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:var(--space-3);width:100%;min-height:64px;padding:var(--space-3) var(--space-4);border:0;border-radius:var(--radius-md);background:transparent;color:inherit;text-align:left;cursor:pointer;box-sizing:border-box}.oryon-data-row:hover{background:var(--bg-surface-hover)}.oryon-data-row-selected{box-shadow:var(--elev-3);background:var(--bg-surface-raise)}.oryon-data-row-selected::before{content:"";width:2px;align-self:stretch;border-radius:var(--radius-full);background:var(--color-acid-500)}.oryon-data-row-copy{display:grid;gap:2px;min-width:0}.oryon-data-row-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--text-body);font-weight:500}.oryon-data-row-copy small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-tertiary);font-size:var(--text-caption)}.oryon-data-row>code{font:500 var(--text-metric-s)/1.2 var(--font-mono);color:var(--text-secondary);text-align:right}.oryon-line-item{display:grid;gap:var(--space-1);padding:var(--space-4);border-radius:var(--radius-md);background:var(--bg-surface-raise)}.oryon-line-item strong{font:500 var(--text-metric-m)/1.1 var(--font-mono);letter-spacing:-.01em}.oryon-line-item span{color:var(--text-tertiary);font-size:var(--text-caption)}.oryon-add-tile{display:inline-grid;place-items:center;gap:var(--space-2);min-height:64px;padding:var(--space-4);border:1px dashed var(--border-default);border-radius:var(--radius-md);background:transparent;color:var(--text-secondary);cursor:pointer}.oryon-add-tile span{font-size:20px;line-height:1}.oryon-add-tile:hover{background:var(--bg-surface-hover)}.oryon-entity-card{display:flex;align-items:center;gap:var(--space-3);min-width:0;width:100%;padding:var(--space-3);border:0;border-radius:var(--radius-md);background:transparent;color:inherit;text-align:left;cursor:pointer}.oryon-entity-card:hover{background:var(--bg-surface-hover)}.oryon-entity-card span:last-child{display:grid;min-width:0}.oryon-entity-card strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--text-body);font-weight:500}.oryon-entity-card small{color:var(--text-tertiary);font-size:var(--text-caption)}.oryon-feedback{display:flex;gap:var(--space-3);padding:var(--space-5);border-radius:var(--radius-lg);background:var(--bg-surface);box-shadow:var(--elev-1)}.oryon-feedback h3{margin:0;font-size:var(--text-h3);font-weight:500}.oryon-feedback p{margin:var(--space-2) 0 var(--space-4);color:var(--text-secondary);font-size:var(--text-body)}.oryon-feedback-error{color:var(--color-danger)}.oryon-feedback-error h3,.oryon-feedback-error p{color:var(--text-primary)}.oryon-skeleton{display:block;min-height:16px;border-radius:var(--radius-md);background:linear-gradient(90deg,var(--bg-surface-raise),var(--bg-surface-hover),var(--bg-surface-raise));background-size:200% 100%;animation:oryon-skeleton 1.4s linear infinite}@keyframes oryon-skeleton{to{background-position:-200% 0}}.oryon-toast{position:fixed;z-index:120;right:var(--space-4);bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-radius:var(--radius-lg);background:var(--bg-surface);box-shadow:var(--shadow-overlay);color:var(--text-primary)}.oryon-tooltip-wrap{position:relative;display:inline-flex}.oryon-tooltip{position:absolute;bottom:calc(100% + var(--space-2));left:50%;transform:translateX(-50%);width:max-content;max-width:240px;padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);background:var(--bg-surface-raise);box-shadow:var(--elev-2);color:var(--text-primary);font-size:var(--text-caption);opacity:0;pointer-events:none;transition:opacity var(--dur-fast) var(--ease-out)}.oryon-tooltip-wrap:hover .oryon-tooltip,.oryon-tooltip-wrap:focus-within .oryon-tooltip{opacity:1}.oryon-context-menu,.oryon-popover{padding:var(--space-2);border:1px solid var(--border-default);border-radius:var(--radius-md);background:var(--bg-surface-raise);box-shadow:var(--shadow-overlay)}.oryon-context-menu{display:grid;min-width:180px}.oryon-context-menu button,.oryon-popover-anchor{min-height:36px;padding:0 var(--space-3);border:0;border-radius:var(--radius-md);background:transparent;color:var(--text-secondary);text-align:left;cursor:pointer}.oryon-context-menu button:hover{background:var(--bg-surface-hover);color:var(--text-primary)}.oryon-sheet{align-self:stretch;width:min(480px,100%);margin-left:auto;padding:var(--space-5);border-radius:var(--radius-xl) 0 0 var(--radius-xl);background:var(--bg-surface);box-shadow:var(--shadow-overlay)}.oryon-sheet header,.oryon-modal header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-5)}.oryon-sheet h2,.oryon-modal h2{margin:0;font-size:var(--text-h2);font-weight:500;letter-spacing:-.02em}.oryon-modal{width:min(640px,100%);padding:var(--space-6);border-radius:var(--radius-xl);background:var(--bg-surface);box-shadow:var(--shadow-overlay)}@media(min-width:1440px){.oryon-topbar-zone{background:var(--bg-surface);border-radius:var(--radius-full);padding:4px}}@media(max-width:1024px){.oryon-app-content{width:min(calc(100% - var(--space-8)),1680px)}.oryon-floating-topbar{grid-template-columns:auto 1fr;width:calc(100% - var(--space-8))}.oryon-topbar-actions{grid-column:2}.oryon-user-name{display:none}}@media(max-width:768px){.oryon-app-content{width:100%;padding:calc(48px + var(--space-6)) var(--space-4) var(--space-10)}.oryon-floating-topbar{top:var(--space-3);width:calc(100% - var(--space-6));min-height:48px}.oryon-segmented-nav{justify-content:flex-start}.oryon-segmented-nav a{min-height:44px}.oryon-topbar-actions{display:none}.oryon-page-header{grid-template-columns:1fr;align-items:start}.oryon-page-actions{width:100%;flex-wrap:wrap}.oryon-data-row{grid-template-columns:auto minmax(0,1fr) auto}.oryon-data-row>span:nth-last-of-type(1){grid-column:2}.oryon-data-row>code{grid-column:3;grid-row:1}.oryon-command-backdrop,.oryon-overlay{padding:8vh var(--space-3)}.oryon-command-palette{border-radius:var(--radius-lg)}}@media(max-width:480px){.oryon-brand{padding:0 var(--space-3)}.oryon-segmented-nav a{padding:0 var(--space-3)}.oryon-app-launcher{left:calc(-1 * var(--space-2));width:min(336px,calc(100vw - var(--space-6)));grid-template-columns:repeat(2,minmax(0,1fr))}.oryon-toast{left:var(--space-3);right:var(--space-3);bottom:var(--space-3)}}@media(prefers-reduced-motion:reduce){.oryon-button,.oryon-icon-button,.oryon-segmented-nav a,.oryon-segmented-tabs button,.oryon-toggle-thumb,.oryon-progress-track span,.oryon-skeleton,.oryon-tooltip{transition-duration:var(--dur-instant);animation-duration:var(--dur-instant)}}
+.oryon-app-shell {
+	min-height: 100dvh;
+	background: var(--bg-canvas);
+	color: var(--text-primary);
+}
+.oryon-app-content {
+	width: min(calc(100% - var(--space-12)), 1680px);
+	margin: 0 auto;
+	padding: calc(56px + var(--space-8)) var(--space-6) var(--space-12);
+}
+.oryon-floating-topbar {
+	position: fixed;
+	z-index: 50;
+	top: var(--space-4);
+	left: 50%;
+	transform: translateX(-50%);
+	width: min(calc(100% - var(--space-8)), 1680px);
+	min-height: 56px;
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-2);
+	border: 1px solid var(--border-default);
+	border-radius: var(--radius-full);
+	background: var(--bg-chrome);
+	box-shadow: var(--shadow-chrome);
+}
+.oryon-topbar-zone {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	min-width: 0;
+}
+.oryon-topbar-actions {
+	justify-content: flex-end;
+}
+.oryon-brand {
+	display: inline-flex;
+	align-items: center;
+	min-height: 40px;
+	padding: 0 var(--space-4);
+	border-radius: var(--radius-full);
+	color: var(--text-primary);
+	font-size: var(--text-body);
+	font-weight: 600;
+	text-decoration: none;
+	white-space: nowrap;
+}
+.oryon-brand:hover {
+	background: var(--bg-surface-hover);
+}
+.oryon-segmented-nav {
+	display: flex;
+	justify-content: center;
+	gap: var(--space-1);
+	padding: 4px;
+	border-radius: var(--radius-full);
+	background: var(--bg-surface);
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+.oryon-segmented-nav::-webkit-scrollbar {
+	display: none;
+}
+.oryon-segmented-nav a,
+.oryon-segmented-tabs button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-2);
+	min-height: 36px;
+	padding: 0 var(--space-4);
+	border: 0;
+	border-radius: var(--radius-full);
+	background: transparent;
+	color: var(--text-secondary);
+	font-size: var(--text-body-sm);
+	font-weight: 500;
+	text-decoration: none;
+	white-space: nowrap;
+	cursor: pointer;
+	transition:
+		background var(--dur-fast) var(--ease-out),
+		color var(--dur-fast) var(--ease-out);
+}
+.oryon-segmented-nav a:hover,
+.oryon-segmented-tabs button:hover {
+	background: var(--bg-surface-hover);
+	color: var(--text-primary);
+}
+.oryon-segmented-nav a.active,
+.oryon-segmented-tabs button[aria-selected="true"] {
+	background: var(--color-acid-500);
+	color: var(--text-on-acid);
+}
+.oryon-icon-button-rail {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	padding: 4px;
+	border-radius: var(--radius-full);
+	background: var(--bg-surface);
+}
+.oryon-icon-button {
+	display: inline-grid;
+	place-items: center;
+	border: 0;
+	border-radius: var(--radius-full);
+	background: transparent;
+	color: var(--text-secondary);
+	cursor: pointer;
+	transition:
+		background var(--dur-fast) var(--ease-out),
+		color var(--dur-fast) var(--ease-out),
+		filter var(--dur-fast) var(--ease-out);
+}
+.oryon-icon-button:hover {
+	background: var(--bg-surface-hover);
+	color: var(--text-primary);
+}
+.oryon-icon-button-sm {
+	width: 32px;
+	height: 32px;
+}
+.oryon-icon-button-md {
+	width: 40px;
+	height: 40px;
+}
+.oryon-icon-button-lg {
+	width: 48px;
+	height: 48px;
+}
+.oryon-icon-button-surface {
+	background: var(--bg-surface-raise);
+	color: var(--text-primary);
+}
+.oryon-icon-button-acid {
+	background: var(--color-acid-500);
+	color: var(--text-on-acid);
+}
+.oryon-icon-button-inverted {
+	background: var(--color-ink-000);
+	color: var(--text-on-inverted);
+}
+.oryon-icon-button-danger {
+	background: var(--color-danger);
+	color: var(--color-ink-000);
+}
+.oryon-user-chip {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	min-height: 40px;
+	padding: 4px 10px 4px 4px;
+	border-radius: var(--radius-full);
+	background: var(--bg-surface);
+	color: var(--text-secondary);
+	font-size: var(--text-body-sm);
+	white-space: nowrap;
+}
+.oryon-user-name {
+	max-width: 20ch;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.oryon-avatar {
+	display: inline-grid;
+	place-items: center;
+	flex: 0 0 auto;
+	border: 2px solid var(--bg-surface);
+	border-radius: var(--radius-full);
+	background: var(--bg-surface-raise);
+	color: var(--text-secondary);
+	font-weight: 500;
+	line-height: 1;
+}
+.oryon-avatar-sm {
+	width: 24px;
+	height: 24px;
+	font-size: var(--text-micro);
+}
+.oryon-avatar-md {
+	width: 32px;
+	height: 32px;
+	font-size: var(--text-caption);
+}
+.oryon-avatar-lg {
+	width: 40px;
+	height: 40px;
+	font-size: var(--text-body-sm);
+}
+.oryon-avatar-agent {
+	border-color: var(--color-info);
+	color: var(--color-info);
+}
+.oryon-popover-wrap {
+	position: relative;
+	display: inline-flex;
+}
+.oryon-app-launcher {
+	position: absolute;
+	top: calc(100% + var(--space-2));
+	left: 0;
+	display: grid;
+	grid-template-columns: repeat(3, minmax(100px, 1fr));
+	gap: var(--space-2);
+	width: 360px;
+	padding: var(--space-3);
+	border: 1px solid var(--border-default);
+	border-radius: var(--radius-xl);
+	background: var(--bg-surface);
+	box-shadow: var(--shadow-overlay);
+}
+.oryon-app-launcher a {
+	display: grid;
+	gap: var(--space-2);
+	padding: var(--space-3);
+	border-radius: var(--radius-md);
+	color: var(--text-secondary);
+	font-size: var(--text-caption);
+	text-decoration: none;
+}
+.oryon-app-launcher a:hover {
+	background: var(--bg-surface-hover);
+	color: var(--text-primary);
+}
+.oryon-launcher-icon {
+	display: grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	border-radius: var(--radius-md);
+	background: var(--bg-surface-raise);
+	color: var(--text-primary);
+}
+.oryon-command-backdrop,
+.oryon-overlay {
+	position: fixed;
+	z-index: 100;
+	inset: 0;
+	display: grid;
+	place-items: start center;
+	padding: 12vh var(--space-4);
+	background: rgba(11, 11, 12, 0.72);
+	backdrop-filter: blur(8px);
+}
+.oryon-command-palette {
+	width: min(640px, 100%);
+	border-radius: var(--radius-xl);
+	background: var(--bg-surface);
+	box-shadow: var(--shadow-overlay);
+	overflow: hidden;
+}
+.oryon-command-search {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-3);
+	border-bottom: 1px solid var(--border-subtle);
+}
+.oryon-search-field {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	flex: 1;
+	min-height: 36px;
+	padding: 0 var(--space-3);
+	border: 1px solid var(--border-subtle);
+	border-radius: var(--radius-full);
+	background: var(--bg-surface);
+	color: var(--text-tertiary);
+}
+.oryon-search-field:focus-within {
+	box-shadow: var(--elev-3);
+}
+.oryon-search-field input {
+	width: 100%;
+	min-width: 0;
+	border: 0;
+	outline: 0;
+	background: transparent;
+	color: var(--text-primary);
+	font-size: var(--text-body);
+}
+.oryon-search-field input::placeholder {
+	color: var(--text-tertiary);
+}
+.oryon-command-results {
+	max-height: min(60vh, 560px);
+	padding: var(--space-2);
+	overflow: auto;
+}
+.oryon-command-results section > p {
+	padding: var(--space-2) var(--space-3);
+	margin: 0;
+	color: var(--text-tertiary);
+	font-size: var(--text-caption);
+}
+.oryon-command-results a,
+.oryon-command-results button {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-4);
+	padding: var(--space-3);
+	border: 0;
+	border-radius: var(--radius-md);
+	background: transparent;
+	color: var(--text-secondary);
+	text-align: left;
+	text-decoration: none;
+	cursor: pointer;
+}
+.oryon-command-results a:hover,
+.oryon-command-results button:hover {
+	background: var(--bg-surface-hover);
+	color: var(--text-primary);
+}
+.oryon-command-results kbd,
+.oryon-command-footer kbd {
+	font-family: var(--font-mono);
+	font-size: var(--text-micro);
+	padding: 2px 6px;
+	border-radius: var(--radius-xs);
+	background: var(--bg-surface-raise);
+	color: var(--text-tertiary);
+}
+.oryon-command-empty {
+	padding: var(--space-8) var(--space-4);
+	text-align: center;
+	color: var(--text-tertiary);
+}
+.oryon-command-footer {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-3) var(--space-4);
+	border-top: 1px solid var(--border-subtle);
+	color: var(--text-tertiary);
+	font-size: var(--text-caption);
+}
+.oryon-command-footer span:first-child {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	margin-right: auto;
+}
+.oryon-page-header {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: center;
+	gap: var(--space-4);
+	margin-bottom: var(--space-6);
+}
+.oryon-page-header h1 {
+	margin: 0;
+	font-size: var(--text-h1);
+	line-height: 1.1;
+	font-weight: 400;
+	letter-spacing: -0.02em;
+}
+.oryon-page-header p {
+	margin: var(--space-2) 0 0;
+	max-width: 72ch;
+	color: var(--text-secondary);
+	font-size: var(--text-body);
+}
+.oryon-page-back {
+	display: grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	border-radius: var(--radius-full);
+	background: var(--bg-surface);
+	color: var(--text-primary);
+	text-decoration: none;
+}
+.oryon-page-actions {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
+.oryon-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-2);
+	padding: 0 var(--space-5);
+	border: 0;
+	border-radius: var(--radius-full);
+	font-size: var(--text-body);
+	font-weight: 500;
+	cursor: pointer;
+	transition:
+		filter var(--dur-fast) var(--ease-out),
+		background var(--dur-fast) var(--ease-out);
+}
+.oryon-button-sm {
+	height: 32px;
+}
+.oryon-button-md {
+	height: 40px;
+}
+.oryon-button-lg {
+	height: 48px;
+}
+.oryon-button-primary {
+	background: var(--color-acid-500);
+	color: var(--text-on-acid);
+}
+.oryon-button-primary:hover {
+	filter: brightness(1.08);
+}
+.oryon-button-inverted {
+	background: var(--color-ink-000);
+	color: var(--text-on-inverted);
+}
+.oryon-button-secondary {
+	background: var(--bg-surface-raise);
+	color: var(--text-primary);
+}
+.oryon-button-secondary:hover,
+.oryon-button-ghost:hover,
+.oryon-button-outline:hover {
+	background: var(--bg-surface-hover);
+}
+.oryon-button-ghost {
+	background: transparent;
+	color: var(--text-secondary);
+}
+.oryon-button-outline {
+	background: transparent;
+	color: var(--text-primary);
+	box-shadow: var(--elev-2);
+}
+.oryon-button-danger {
+	background: var(--color-danger);
+	color: var(--color-ink-000);
+}
+.oryon-button:disabled,
+.oryon-icon-button:disabled {
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+.oryon-spin {
+	animation: oryon-spin 900ms linear infinite;
+}
+@keyframes oryon-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+.oryon-field,
+.oryon-select-wrap {
+	display: grid;
+	gap: var(--space-2);
+}
+.oryon-field-label {
+	color: var(--text-tertiary);
+	font-size: var(--text-caption);
+}
+.oryon-field-hint {
+	color: var(--text-tertiary);
+	font-size: var(--text-caption);
+}
+.oryon-field-error {
+	color: var(--color-danger);
+	font-size: var(--text-caption);
+}
+.oryon-input,
+.oryon-select-pill {
+	width: 100%;
+	min-height: 40px;
+	box-sizing: border-box;
+	border: 1px solid var(--border-default);
+	border-radius: var(--radius-sm);
+	background: var(--bg-surface);
+	color: var(--text-primary);
+	padding: 0 var(--space-3);
+	box-shadow: var(--elev-1);
+	outline: 0;
+}
+.oryon-textarea {
+	padding: var(--space-3);
+	resize: vertical;
+	min-height: 96px;
+}
+.oryon-number {
+	font-family: var(--font-mono);
+}
+.oryon-select-shell {
+	position: relative;
+	display: block;
+}
+.oryon-select-shell select {
+	appearance: none;
+	padding-right: var(--space-8);
+}
+.oryon-select-shell svg {
+	position: absolute;
+	right: var(--space-3);
+	top: 50%;
+	transform: translateY(-50%);
+	pointer-events: none;
+	color: var(--text-tertiary);
+}
+.oryon-toggle,
+.oryon-check,
+.oryon-radio-group label {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	color: var(--text-secondary);
+	font-size: var(--text-body);
+}
+.oryon-toggle input,
+.oryon-check input,
+.oryon-radio-group input {
+	position: absolute;
+	opacity: 0;
+	pointer-events: none;
+}
+.oryon-toggle-track {
+	display: inline-flex;
+	align-items: center;
+	width: 44px;
+	height: 24px;
+	padding: 3px;
+	border-radius: var(--radius-full);
+	background: var(--bg-surface-raise);
+	box-shadow: var(--elev-1);
+}
+.oryon-toggle-thumb {
+	width: 18px;
+	height: 18px;
+	border-radius: var(--radius-full);
+	background: var(--text-tertiary);
+	transition:
+		transform var(--dur-fast) var(--ease-out),
+		background var(--dur-fast) var(--ease-out);
+}
+.oryon-toggle input:checked + .oryon-toggle-track {
+	background: var(--color-acid-500);
+}
+.oryon-toggle input:checked + .oryon-toggle-track .oryon-toggle-thumb {
+	transform: translateX(20px);
+	background: var(--text-on-acid);
+}
+.oryon-check-box {
+	display: grid;
+	place-items: center;
+	width: 18px;
+	height: 18px;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-xs);
+	background: var(--bg-surface);
+	color: var(--text-on-acid);
+}
+.oryon-check input:checked + .oryon-check-box {
+	border-color: var(--color-acid-500);
+	background: var(--color-acid-500);
+}
+.oryon-radio-group {
+	display: grid;
+	gap: var(--space-2);
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+.oryon-radio-group legend {
+	margin-bottom: var(--space-2);
+	color: var(--text-tertiary);
+	font-size: var(--text-caption);
+}
+.oryon-segmented-tabs {
+	display: inline-flex;
+	gap: var(--space-1);
+	padding: 4px;
+	border-radius: var(--radius-full);
+	background: var(--bg-surface);
+}
+.oryon-card {
+	position: relative;
+	padding: var(--space-5);
+	border-radius: var(--radius-lg);
+	background: var(--bg-surface);
+	box-shadow: var(--elev-1);
+}
+.oryon-card-interactive {
+	cursor: pointer;
+	transition: background var(--dur-fast) var(--ease-out);
+}
+.oryon-card-interactive:hover {
+	background: var(--bg-surface-hover);
+}
+.oryon-card-selected {
+	box-shadow: var(--elev-3);
+}
+.oryon-card-selected::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: var(--space-5);
+	bottom: var(--space-5);
+	width: 2px;
+	border-radius: var(--radius-full);
+	background: var(--color-acid-500);
+}
+.oryon-inverted-panel {
+	padding: var(--space-6);
+	border-radius: var(--radius-xl);
+	background: var(--bg-inverted);
+	box-shadow: var(--shadow-inverted);
+}
+.oryon-metric-card {
+	display: grid;
+	gap: var(--space-2);
+	padding: var(--space-5);
+	border-radius: var(--radius-lg);
+	background: var(--bg-surface);
+	box-shadow: var(--elev-1);
+}
+.oryon-metric-card > span {
+	color: var(--text-tertiary);
+	font-size: var(--text-caption);
+}
+.oryon-metric-card > strong {
+	color: var(--text-primary);
+	font: 500 var(--text-metric-xl) / 1 var(--font-mono);
+	letter-spacing: -0.03em;
+}
+.oryon-metric-emphasis {
+	background: var(--bg-surface-raise);
+}
+.oryon-metric-emphasis > strong {
+	color: var(--color-acid-500);
+}
+.oryon-metric-compact > strong {
+	font-size: var(--text-metric-l);
+}
+.oryon-progress {
+	display: grid;
+	gap: var(--space-2);
+}
+.oryon-progress-track {
+	height: 4px;
+	overflow: hidden;
+	border-radius: var(--radius-full);
+	background: rgba(255, 255, 255, 0.08);
+}
+.oryon-progress-track span {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	background: var(--color-acid-500);
+	transition: width var(--dur-slow) var(--ease-out);
+}
+.oryon-progress-segments {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+	gap: var(--space-2);
+}
+.oryon-progress-segments span {
+	display: grid;
+	gap: 2px;
+	color: var(--text-tertiary);
+	font-size: var(--text-micro);
+}
+.oryon-progress-segments b {
+	font-family: var(--font-mono);
+	color: var(--text-secondary);
+}
+.oryon-avatar-stack {
+	display: flex;
+	align-items: center;
+}
+.oryon-avatar-stack .oryon-avatar,
+.oryon-avatar-overflow {
+	margin-left: -8px;
+}
+.oryon-avatar-stack .oryon-avatar:first-child,
+.oryon-avatar-overflow:first-child {
+	margin-left: 0;
+}
+.oryon-avatar-overflow {
+	display: grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	border: 2px solid var(--bg-surface);
+	border-radius: var(--radius-full);
+	background: var(--bg-surface-raise);
+	color: var(--text-secondary);
+	font: 500 var(--text-micro) / 1 var(--font-mono);
+}
+.oryon-status-chip {
+	display: inline-flex;
+	align-items: center;
+	height: 24px;
+	padding: 0 10px;
+	border-radius: var(--radius-full);
+	font-size: var(--text-micro);
+	font-weight: 500;
+}
+.oryon-status-positive {
+	background: var(--color-positive-surface);
+	color: var(--color-positive);
+}
+.oryon-status-warning {
+	background: var(--color-warning-surface);
+	color: var(--color-warning);
+}
+.oryon-status-danger {
+	background: var(--color-danger-surface);
+	color: var(--color-danger);
+}
+.oryon-status-info {
+	background: var(--color-info-surface);
+	color: var(--color-info);
+}
+.oryon-status-neutral {
+	background: var(--bg-surface-raise);
+	color: var(--text-secondary);
+}
+.oryon-count-badge {
+	display: inline-grid;
+	place-items: center;
+	min-width: 18px;
+	height: 18px;
+	padding: 0 6px;
+	border-radius: var(--radius-xs);
+	background: var(--bg-surface-raise);
+	color: var(--text-secondary);
+	font: 500 var(--text-micro) / 1 var(--font-mono);
+}
+.oryon-data-row {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto auto;
+	align-items: center;
+	gap: var(--space-3);
+	width: 100%;
+	min-height: 64px;
+	padding: var(--space-3) var(--space-4);
+	border: 0;
+	border-radius: var(--radius-md);
+	background: transparent;
+	color: inherit;
+	text-align: left;
+	cursor: pointer;
+	box-sizing: border-box;
+}
+.oryon-data-row:hover {
+	background: var(--bg-surface-hover);
+}
+.oryon-data-row-selected {
+	box-shadow: var(--elev-3);
+	background: var(--bg-surface-raise);
+}
+.oryon-data-row-selected::before {
+	content: "";
+	width: 2px;
+	align-self: stretch;
+	border-radius: var(--radius-full);
+	background: var(--color-acid-500);
+}
+.oryon-data-row-copy {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+}
+.oryon-data-row-copy strong {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: var(--text-body);
+	font-weight: 500;
+}
+.oryon-data-row-copy small {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--text-tertiary);
+	font-size: var(--text-caption);
+}
+.oryon-data-row > code {
+	font: 500 var(--text-metric-s) / 1.2 var(--font-mono);
+	color: var(--text-secondary);
+	text-align: right;
+}
+.oryon-line-item {
+	display: grid;
+	gap: var(--space-1);
+	padding: var(--space-4);
+	border-radius: var(--radius-md);
+	background: var(--bg-surface-raise);
+}
+.oryon-line-item strong {
+	font: 500 var(--text-metric-m) / 1.1 var(--font-mono);
+	letter-spacing: -0.01em;
+}
+.oryon-line-item span {
+	color: var(--text-tertiary);
+	font-size: var(--text-caption);
+}
+.oryon-add-tile {
+	display: inline-grid;
+	place-items: center;
+	gap: var(--space-2);
+	min-height: 64px;
+	padding: var(--space-4);
+	border: 1px dashed var(--border-default);
+	border-radius: var(--radius-md);
+	background: transparent;
+	color: var(--text-secondary);
+	cursor: pointer;
+}
+.oryon-add-tile span {
+	font-size: 20px;
+	line-height: 1;
+}
+.oryon-add-tile:hover {
+	background: var(--bg-surface-hover);
+}
+.oryon-entity-card {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	min-width: 0;
+	width: 100%;
+	padding: var(--space-3);
+	border: 0;
+	border-radius: var(--radius-md);
+	background: transparent;
+	color: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+.oryon-entity-card:hover {
+	background: var(--bg-surface-hover);
+}
+.oryon-entity-card span:last-child {
+	display: grid;
+	min-width: 0;
+}
+.oryon-entity-card strong {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: var(--text-body);
+	font-weight: 500;
+}
+.oryon-entity-card small {
+	color: var(--text-tertiary);
+	font-size: var(--text-caption);
+}
+.oryon-feedback {
+	display: flex;
+	gap: var(--space-3);
+	padding: var(--space-5);
+	border-radius: var(--radius-lg);
+	background: var(--bg-surface);
+	box-shadow: var(--elev-1);
+}
+.oryon-feedback h3 {
+	margin: 0;
+	font-size: var(--text-h3);
+	font-weight: 500;
+}
+.oryon-feedback p {
+	margin: var(--space-2) 0 var(--space-4);
+	color: var(--text-secondary);
+	font-size: var(--text-body);
+}
+.oryon-feedback-error {
+	color: var(--color-danger);
+}
+.oryon-feedback-error h3,
+.oryon-feedback-error p {
+	color: var(--text-primary);
+}
+.oryon-skeleton {
+	display: block;
+	min-height: 16px;
+	border-radius: var(--radius-md);
+	background: linear-gradient(
+		90deg,
+		var(--bg-surface-raise),
+		var(--bg-surface-hover),
+		var(--bg-surface-raise)
+	);
+	background-size: 200% 100%;
+	animation: oryon-skeleton 1.4s linear infinite;
+}
+@keyframes oryon-skeleton {
+	to {
+		background-position: -200% 0;
+	}
+}
+.oryon-toast {
+	position: fixed;
+	z-index: 120;
+	right: var(--space-4);
+	bottom: var(--space-4);
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	padding: var(--space-3) var(--space-4);
+	border-radius: var(--radius-lg);
+	background: var(--bg-surface);
+	box-shadow: var(--shadow-overlay);
+	color: var(--text-primary);
+}
+.oryon-tooltip-wrap {
+	position: relative;
+	display: inline-flex;
+}
+.oryon-tooltip {
+	position: absolute;
+	bottom: calc(100% + var(--space-2));
+	left: 50%;
+	transform: translateX(-50%);
+	width: max-content;
+	max-width: 240px;
+	padding: var(--space-2) var(--space-3);
+	border-radius: var(--radius-md);
+	background: var(--bg-surface-raise);
+	box-shadow: var(--elev-2);
+	color: var(--text-primary);
+	font-size: var(--text-caption);
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity var(--dur-fast) var(--ease-out);
+}
+.oryon-tooltip-wrap:hover .oryon-tooltip,
+.oryon-tooltip-wrap:focus-within .oryon-tooltip {
+	opacity: 1;
+}
+.oryon-context-menu,
+.oryon-popover {
+	padding: var(--space-2);
+	border: 1px solid var(--border-default);
+	border-radius: var(--radius-md);
+	background: var(--bg-surface-raise);
+	box-shadow: var(--shadow-overlay);
+}
+.oryon-context-menu {
+	display: grid;
+	min-width: 180px;
+}
+.oryon-context-menu button,
+.oryon-popover-anchor {
+	min-height: 36px;
+	padding: 0 var(--space-3);
+	border: 0;
+	border-radius: var(--radius-md);
+	background: transparent;
+	color: var(--text-secondary);
+	text-align: left;
+	cursor: pointer;
+}
+.oryon-context-menu button:hover {
+	background: var(--bg-surface-hover);
+	color: var(--text-primary);
+}
+.oryon-sheet {
+	align-self: stretch;
+	width: min(480px, 100%);
+	margin-left: auto;
+	padding: var(--space-5);
+	border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+	background: var(--bg-surface);
+	box-shadow: var(--shadow-overlay);
+}
+.oryon-sheet header,
+.oryon-modal header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-3);
+	margin-bottom: var(--space-5);
+}
+.oryon-sheet h2,
+.oryon-modal h2 {
+	margin: 0;
+	font-size: var(--text-h2);
+	font-weight: 500;
+	letter-spacing: -0.02em;
+}
+.oryon-modal {
+	width: min(640px, 100%);
+	padding: var(--space-6);
+	border-radius: var(--radius-xl);
+	background: var(--bg-surface);
+	box-shadow: var(--shadow-overlay);
+}
+@media (min-width: 1440px) {
+	.oryon-topbar-zone {
+		background: var(--bg-surface);
+		border-radius: var(--radius-full);
+		padding: 4px;
+	}
+}
+@media (max-width: 1024px) {
+	.oryon-app-content {
+		width: min(calc(100% - var(--space-8)), 1680px);
+	}
+	.oryon-floating-topbar {
+		grid-template-columns: auto 1fr;
+		width: calc(100% - var(--space-8));
+	}
+	.oryon-topbar-actions {
+		grid-column: 2;
+	}
+	.oryon-user-name {
+		display: none;
+	}
+}
+@media (max-width: 768px) {
+	.oryon-app-content {
+		width: 100%;
+		padding: calc(48px + var(--space-6)) var(--space-4) var(--space-10);
+	}
+	.oryon-floating-topbar {
+		top: var(--space-3);
+		width: calc(100% - var(--space-6));
+		min-height: 48px;
+	}
+	.oryon-segmented-nav {
+		justify-content: flex-start;
+	}
+	.oryon-segmented-nav a {
+		min-height: 44px;
+	}
+	.oryon-topbar-actions {
+		display: none;
+	}
+	.oryon-page-header {
+		grid-template-columns: 1fr;
+		align-items: start;
+	}
+	.oryon-page-actions {
+		width: 100%;
+		flex-wrap: wrap;
+	}
+	.oryon-data-row {
+		grid-template-columns: auto minmax(0, 1fr) auto;
+	}
+	.oryon-data-row > span:nth-last-of-type(1) {
+		grid-column: 2;
+	}
+	.oryon-data-row > code {
+		grid-column: 3;
+		grid-row: 1;
+	}
+	.oryon-command-backdrop,
+	.oryon-overlay {
+		padding: 8vh var(--space-3);
+	}
+	.oryon-command-palette {
+		border-radius: var(--radius-lg);
+	}
+}
+@media (max-width: 480px) {
+	.oryon-brand {
+		padding: 0 var(--space-3);
+	}
+	.oryon-segmented-nav a {
+		padding: 0 var(--space-3);
+	}
+	.oryon-app-launcher {
+		left: calc(-1 * var(--space-2));
+		width: min(336px, calc(100vw - var(--space-6)));
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	.oryon-toast {
+		left: var(--space-3);
+		right: var(--space-3);
+		bottom: var(--space-3);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.oryon-button,
+	.oryon-icon-button,
+	.oryon-segmented-nav a,
+	.oryon-segmented-tabs button,
+	.oryon-toggle-thumb,
+	.oryon-progress-track span,
+	.oryon-skeleton,
+	.oryon-tooltip {
+		transition-duration: var(--dur-instant);
+		animation-duration: var(--dur-instant);
+	}
+}

@@ -1,1 +1,66 @@
-.agents-shell{display:grid;gap:var(--space-6);padding:var(--space-6);max-width:var(--layout-content-max);margin:0 auto}.agents-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(300px,.8fr);gap:var(--space-4)}.agents-card-content{display:grid;gap:var(--space-3);padding:var(--space-4)}.agents-row{display:flex;justify-content:space-between;align-items:center;gap:var(--space-3)}.agents-actions{display:flex;gap:var(--space-2);flex-wrap:wrap}.agents-list{display:grid;gap:var(--space-2)}.agents-meta{color:var(--text-tertiary);font-family:var(--font-mono);font-size:var(--text-micro)}.agents-runtime{display:grid;gap:var(--space-2)}.agents-runtime span{font-family:var(--font-mono);font-size:var(--text-micro);text-transform:uppercase;color:var(--text-tertiary)}.agents-runtime p{margin:0;color:var(--text-secondary);font-size:var(--text-body-sm);line-height:1.5}@media(max-width:768px){.agents-shell{padding:var(--space-4)}.agents-grid{grid-template-columns:1fr}}@media(max-width:480px){.agents-shell{padding:var(--space-3)}}
+.agents-shell {
+	display: grid;
+	gap: var(--space-6);
+	padding: var(--space-6);
+	max-width: var(--layout-content-max);
+	margin: 0 auto;
+}
+.agents-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.8fr);
+	gap: var(--space-4);
+}
+.agents-card-content {
+	display: grid;
+	gap: var(--space-3);
+	padding: var(--space-4);
+}
+.agents-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: var(--space-3);
+}
+.agents-actions {
+	display: flex;
+	gap: var(--space-2);
+	flex-wrap: wrap;
+}
+.agents-list {
+	display: grid;
+	gap: var(--space-2);
+}
+.agents-meta {
+	color: var(--text-tertiary);
+	font-family: var(--font-mono);
+	font-size: var(--text-micro);
+}
+.agents-runtime {
+	display: grid;
+	gap: var(--space-2);
+}
+.agents-runtime span {
+	font-family: var(--font-mono);
+	font-size: var(--text-micro);
+	text-transform: uppercase;
+	color: var(--text-tertiary);
+}
+.agents-runtime p {
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--text-body-sm);
+	line-height: 1.5;
+}
+@media (max-width: 768px) {
+	.agents-shell {
+		padding: var(--space-4);
+	}
+	.agents-grid {
+		grid-template-columns: 1fr;
+	}
+}
+@media (max-width: 480px) {
+	.agents-shell {
+		padding: var(--space-3);
+	}
+}

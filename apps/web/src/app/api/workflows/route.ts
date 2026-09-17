@@ -1,6 +1,45 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-const apiUrl = process.env.ORYON_API_URL ?? "http://localhost:4000"; const cookieName = process.env.ORYON_AUTH_COOKIE_NAME ?? "oryon_session";
-async function forward(request: Request, method: "GET" | "POST") { const store = await cookies(); const session = store.get(cookieName)?.value; const org = store.get("oryon_org")?.value; if (!session || !org) return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: "Authentication required" } }, { status: 401 }); const headers: Record<string, string> = { "X-Oryon-Org": org, Cookie: `${cookieName}=${encodeURIComponent(session)}` }; if (method === "POST") { headers["Content-Type"] = request.headers.get("content-type") ?? "application/json"; headers["Idempotency-Key"] = request.headers.get("idempotency-key") ?? crypto.randomUUID(); } const response = await fetch(`${apiUrl}/v1/workflows`, { method, headers, body: method === "POST" ? await request.text() : undefined, cache: "no-store" }); return new NextResponse(await response.text(), { status: response.status, headers: { "Content-Type": response.headers.get("content-type") ?? "application/json" } }); }
-export async function GET(request: Request) { return forward(request, "GET"); }
-export async function POST(request: Request) { return forward(request, "POST"); }
+const apiUrl = process.env.ORYON_API_URL ?? "http://localhost:4000";
+const cookieName = process.env.ORYON_AUTH_COOKIE_NAME ?? "oryon_session";
+async function forward(request: Request, method: "GET" | "POST") {
+	const store = await cookies();
+	const session = store.get(cookieName)?.value;
+	const org = store.get("oryon_org")?.value;
+	if (!session || !org)
+		return NextResponse.json(
+			{
+				error: { code: "UNAUTHENTICATED", message: "Authentication required" },
+			},
+			{ status: 401 },
+		);
+	const headers: Record<string, string> = {
+		"X-Oryon-Org": org,
+		Cookie: `${cookieName}=${encodeURIComponent(session)}`,
+	};
+	if (method === "POST") {
+		headers["Content-Type"] =
+			request.headers.get("content-type") ?? "application/json";
+		headers["Idempotency-Key"] =
+			request.headers.get("idempotency-key") ?? crypto.randomUUID();
+	}
+	const response = await fetch(`${apiUrl}/v1/workflows`, {
+		method,
+		headers,
+		body: method === "POST" ? await request.text() : undefined,
+		cache: "no-store",
+	});
+	return new NextResponse(await response.text(), {
+		status: response.status,
+		headers: {
+			"Content-Type":
+				response.headers.get("content-type") ?? "application/json",
+		},
+	});
+}
+export async function GET(request: Request) {
+	return forward(request, "GET");
+}
+export async function POST(request: Request) {
+	return forward(request, "POST");
+}

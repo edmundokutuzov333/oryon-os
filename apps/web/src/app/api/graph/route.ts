@@ -9,12 +9,19 @@ async function headersForSession(): Promise<HeadersInit | null> {
 	const session = store.get(cookieName)?.value;
 	const organization = store.get("oryon_org")?.value;
 	if (!session || !organization) return null;
-	return { "X-Oryon-Org": organization, Cookie: `${cookieName}=${encodeURIComponent(session)}` };
+	return {
+		"X-Oryon-Org": organization,
+		Cookie: `${cookieName}=${encodeURIComponent(session)}`,
+	};
 }
 
 export async function GET(request: Request): Promise<Response> {
 	const headers = await headersForSession();
-	if (!headers) return NextResponse.json({ error: { message: "UNAUTHENTICATED" } }, { status: 401 });
+	if (!headers)
+		return NextResponse.json(
+			{ error: { message: "UNAUTHENTICATED" } },
+			{ status: 401 },
+		);
 	const url = new URL(request.url);
 	const target = `${apiUrl}/v1/graph/traverse${url.search}`;
 	const response = await fetch(target, { headers, cache: "no-store" });

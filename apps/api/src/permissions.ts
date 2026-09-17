@@ -16,7 +16,8 @@ const permissions = new PermissionRepository();
 
 function orgIdOf(request: FastifyRequest): string {
 	const value = request.headers["x-oryon-org"];
-	if (typeof value !== "string" || value.length === 0) throw new Error("ORG_HEADER_MISSING");
+	if (typeof value !== "string" || value.length === 0)
+		throw new Error("ORG_HEADER_MISSING");
 	return value;
 }
 function cookieValue(request: FastifyRequest): string | undefined {
@@ -25,13 +26,15 @@ function cookieValue(request: FastifyRequest): string | undefined {
 	for (const item of raw.split(";")) {
 		const separator = item.indexOf("=");
 		if (separator < 0) continue;
-		if (item.slice(0, separator).trim() === AUTH_COOKIE_NAME) return decodeURIComponent(item.slice(separator + 1).trim());
+		if (item.slice(0, separator).trim() === AUTH_COOKIE_NAME)
+			return decodeURIComponent(item.slice(separator + 1).trim());
 	}
 	return undefined;
 }
 function bearerValue(request: FastifyRequest): string | undefined {
 	const value = request.headers.authorization;
-	if (typeof value !== "string" || !value.startsWith("Bearer ")) return undefined;
+	if (typeof value !== "string" || !value.startsWith("Bearer "))
+		return undefined;
 	return value.slice(7).trim();
 }
 async function actor(request: FastifyRequest, orgId: string) {
@@ -44,34 +47,67 @@ async function actor(request: FastifyRequest, orgId: string) {
 }
 function idempotency(request: FastifyRequest): void {
 	const value = request.headers["idempotency-key"];
-	if (typeof value !== "string" || value.length === 0) throw new Error("IDEMPOTENCY_KEY_MISSING");
+	if (typeof value !== "string" || value.length === 0)
+		throw new Error("IDEMPOTENCY_KEY_MISSING");
 }
 function orgResource(orgId: string) {
-	return { orgId, type: "organization", id: orgId, workspaceId: null, projectId: null, ownerId: null, teamId: null, classification: null };
+	return {
+		orgId,
+		type: "organization",
+		id: orgId,
+		workspaceId: null,
+		projectId: null,
+		ownerId: null,
+		teamId: null,
+		classification: null,
+	};
 }
 function envelope(request: FastifyRequest, data: unknown) {
 	return { data, meta: { requestId: request.id, durationMs: 0 } };
 }
-function errorEnvelope(request: FastifyRequest, code: string, httpStatus: number, message: string) {
+function errorEnvelope(
+	request: FastifyRequest,
+	code: string,
+	httpStatus: number,
+	message: string,
+) {
 	return { error: { code, httpStatus, message, requestId: request.id } };
 }
-function statusFor(error: unknown): { code: string; status: number; message: string } {
-	const message = error instanceof Error ? error.message : "Permission evaluation failed";
-	if (message === "ORG_HEADER_MISSING") return { code: "ORG_HEADER_MISSING", status: 400, message };
-	if (message === "IDEMPOTENCY_KEY_MISSING") return { code: "VALIDATION_FAILED", status: 400, message };
-	if (message === "UNAUTHENTICATED") return { code: "UNAUTHENTICATED", status: 401, message };
-	if (message === "permission_denied") return { code: "PERMISSION_DENIED", status: 403, message };
-	if (message === "NOT_FOUND") return { code: "NOT_FOUND", status: 404, message };
+function statusFor(error: unknown): {
+	code: string;
+	status: number;
+	message: string;
+} {
+	const message =
+		error instanceof Error ? error.message : "Permission evaluation failed";
+	if (message === "ORG_HEADER_MISSING")
+		return { code: "ORG_HEADER_MISSING", status: 400, message };
+	if (message === "IDEMPOTENCY_KEY_MISSING")
+		return { code: "VALIDATION_FAILED", status: 400, message };
+	if (message === "UNAUTHENTICATED")
+		return { code: "UNAUTHENTICATED", status: 401, message };
+	if (message === "permission_denied")
+		return { code: "PERMISSION_DENIED", status: 403, message };
+	if (message === "NOT_FOUND")
+		return { code: "NOT_FOUND", status: 404, message };
 	return { code: "VALIDATION_FAILED", status: 400, message };
 }
-function denyUnless(orgId: string, session: { userId: string }, action: "manage" | "view_as") {
-	return permissions.getSnapshot(orgId, session.userId, "organization", orgId).then((snapshot) => {
-		const decision = can({ orgId, ...snapshot }, orgResource(orgId), action);
-		if (!decision.allowed) throw new Error("permission_denied");
-	});
+function denyUnless(
+	orgId: string,
+	session: { userId: string },
+	action: "manage" | "view_as",
+) {
+	return permissions
+		.getSnapshot(orgId, session.userId, "organization", orgId)
+		.then((snapshot) => {
+			const decision = can({ orgId, ...snapshot }, orgResource(orgId), action);
+			if (!decision.allowed) throw new Error("permission_denied");
+		});
 }
 
-export async function registerPermissionRoutes(app: FastifyInstance): Promise<void> {
+export async function registerPermissionRoutes(
+	app: FastifyInstance,
+): Promise<void> {
 	app.post("/v1/permissions/evaluate", async (request, reply) => {
 		try {
 			idempotency(request);
@@ -79,11 +115,28 @@ export async function registerPermissionRoutes(app: FastifyInstance): Promise<vo
 			const session = await actor(request, orgId);
 			const input = PermissionEvaluateInputSchema.parse(request.body);
 			if (input.resource.orgId !== orgId) throw new Error("permission_denied");
-			const snapshot = await permissions.getSnapshot(orgId, session.userId, input.resource.type, input.resource.id, input.resource.classification);
-			return reply.send(envelope(request, PermissionEvaluationSchema.parse(evaluatePermissions({ orgId, ...snapshot }, input))));
+			const snapshot = await permissions.getSnapshot(
+				orgId,
+				session.userId,
+				input.resource.type,
+				input.resource.id,
+				input.resource.classification,
+			);
+			return reply.send(
+				envelope(
+					request,
+					PermissionEvaluationSchema.parse(
+						evaluatePermissions({ orgId, ...snapshot }, input),
+					),
+				),
+			);
 		} catch (error) {
 			const current = statusFor(error);
-			return reply.code(current.status).send(errorEnvelope(request, current.code, current.status, current.message));
+			return reply
+				.code(current.status)
+				.send(
+					errorEnvelope(request, current.code, current.status, current.message),
+				);
 		}
 	});
 
@@ -95,12 +148,32 @@ export async function registerPermissionRoutes(app: FastifyInstance): Promise<vo
 			await denyUnless(orgId, session, "view_as");
 			const input = PermissionViewAsInputSchema.parse(request.body);
 			if (input.resource.orgId !== orgId) throw new Error("permission_denied");
-			const snapshot = await permissions.getSnapshot(orgId, input.targetUserId, input.resource.type, input.resource.id, input.resource.classification);
-			const result = PermissionEvaluationSchema.parse(evaluatePermissions({ orgId, ...snapshot }, { resource: input.resource, external: input.external, ai: input.ai, fields: input.fields }));
+			const snapshot = await permissions.getSnapshot(
+				orgId,
+				input.targetUserId,
+				input.resource.type,
+				input.resource.id,
+				input.resource.classification,
+			);
+			const result = PermissionEvaluationSchema.parse(
+				evaluatePermissions(
+					{ orgId, ...snapshot },
+					{
+						resource: input.resource,
+						external: input.external,
+						ai: input.ai,
+						fields: input.fields,
+					},
+				),
+			);
 			return reply.send(envelope(request, result));
 		} catch (error) {
 			const current = statusFor(error);
-			return reply.code(current.status).send(errorEnvelope(request, current.code, current.status, current.message));
+			return reply
+				.code(current.status)
+				.send(
+					errorEnvelope(request, current.code, current.status, current.message),
+				);
 		}
 	});
 
@@ -110,10 +183,32 @@ export async function registerPermissionRoutes(app: FastifyInstance): Promise<vo
 			const session = await actor(request, orgId);
 			await denyUnless(orgId, session, "manage");
 			const rows = await permissions.listExternalExposure(orgId);
-			return reply.send(envelope(request, PermissionExposureReportSchema.parse({ generatedAt: new Date().toISOString(), organizationId: orgId, resources: rows.map((row) => ({ resourceType: row.resourceType, resourceId: row.resourceId, externalPrincipals: row.externalPrincipals, aiAllowed: false, externalAllowed: row.expiresAt === null || row.expiresAt.getTime() > Date.now(), fieldMasked: row.fieldMasked, watermark: false })) })));
+			return reply.send(
+				envelope(
+					request,
+					PermissionExposureReportSchema.parse({
+						generatedAt: new Date().toISOString(),
+						organizationId: orgId,
+						resources: rows.map((row) => ({
+							resourceType: row.resourceType,
+							resourceId: row.resourceId,
+							externalPrincipals: row.externalPrincipals,
+							aiAllowed: false,
+							externalAllowed:
+								row.expiresAt === null || row.expiresAt.getTime() > Date.now(),
+							fieldMasked: row.fieldMasked,
+							watermark: false,
+						})),
+					}),
+				),
+			);
 		} catch (error) {
 			const current = statusFor(error);
-			return reply.code(current.status).send(errorEnvelope(request, current.code, current.status, current.message));
+			return reply
+				.code(current.status)
+				.send(
+					errorEnvelope(request, current.code, current.status, current.message),
+				);
 		}
 	});
 
@@ -123,10 +218,22 @@ export async function registerPermissionRoutes(app: FastifyInstance): Promise<vo
 			const orgId = orgIdOf(request);
 			const session = await actor(request, orgId);
 			await denyUnless(orgId, session, "manage");
-			return reply.send(envelope(request, await permissions.createRole(orgId, PermissionRoleCreateInputSchema.parse(request.body))));
+			return reply.send(
+				envelope(
+					request,
+					await permissions.createRole(
+						orgId,
+						PermissionRoleCreateInputSchema.parse(request.body),
+					),
+				),
+			);
 		} catch (error) {
 			const current = statusFor(error);
-			return reply.code(current.status).send(errorEnvelope(request, current.code, current.status, current.message));
+			return reply
+				.code(current.status)
+				.send(
+					errorEnvelope(request, current.code, current.status, current.message),
+				);
 		}
 	});
 
@@ -136,27 +243,61 @@ export async function registerPermissionRoutes(app: FastifyInstance): Promise<vo
 			const orgId = orgIdOf(request);
 			const session = await actor(request, orgId);
 			await denyUnless(orgId, session, "manage");
-			return reply.send(envelope(request, await permissions.bindRole(orgId, session.userId, PermissionRoleBindingCreateInputSchema.parse(request.body))));
+			return reply.send(
+				envelope(
+					request,
+					await permissions.bindRole(
+						orgId,
+						session.userId,
+						PermissionRoleBindingCreateInputSchema.parse(request.body),
+					),
+				),
+			);
 		} catch (error) {
 			const current = statusFor(error);
-			return reply.code(current.status).send(errorEnvelope(request, current.code, current.status, current.message));
+			return reply
+				.code(current.status)
+				.send(
+					errorEnvelope(request, current.code, current.status, current.message),
+				);
 		}
 	});
 
-	app.post("/v1/permissions/role-bindings/:id/revoke", async (request, reply) => {
-		try {
-			idempotency(request);
-			const orgId = orgIdOf(request);
-			const session = await actor(request, orgId);
-			await denyUnless(orgId, session, "manage");
-			const params = request.params as { id?: string };
-			if (!params.id) throw new Error("VALIDATION_FAILED");
-			return reply.send(envelope(request, await permissions.revokeRoleBinding(orgId, session.userId, params.id)));
-		} catch (error) {
-			const current = statusFor(error);
-			return reply.code(current.status).send(errorEnvelope(request, current.code, current.status, current.message));
-		}
-	});
+	app.post(
+		"/v1/permissions/role-bindings/:id/revoke",
+		async (request, reply) => {
+			try {
+				idempotency(request);
+				const orgId = orgIdOf(request);
+				const session = await actor(request, orgId);
+				await denyUnless(orgId, session, "manage");
+				const params = request.params as { id?: string };
+				if (!params.id) throw new Error("VALIDATION_FAILED");
+				return reply.send(
+					envelope(
+						request,
+						await permissions.revokeRoleBinding(
+							orgId,
+							session.userId,
+							params.id,
+						),
+					),
+				);
+			} catch (error) {
+				const current = statusFor(error);
+				return reply
+					.code(current.status)
+					.send(
+						errorEnvelope(
+							request,
+							current.code,
+							current.status,
+							current.message,
+						),
+					);
+			}
+		},
+	);
 
 	app.post("/v1/permissions/grants", async (request, reply) => {
 		try {
@@ -164,10 +305,23 @@ export async function registerPermissionRoutes(app: FastifyInstance): Promise<vo
 			const orgId = orgIdOf(request);
 			const session = await actor(request, orgId);
 			await denyUnless(orgId, session, "manage");
-			return reply.send(envelope(request, await permissions.createGrant(orgId, session.userId, PermissionGrantCreateInputSchema.parse(request.body))));
+			return reply.send(
+				envelope(
+					request,
+					await permissions.createGrant(
+						orgId,
+						session.userId,
+						PermissionGrantCreateInputSchema.parse(request.body),
+					),
+				),
+			);
 		} catch (error) {
 			const current = statusFor(error);
-			return reply.code(current.status).send(errorEnvelope(request, current.code, current.status, current.message));
+			return reply
+				.code(current.status)
+				.send(
+					errorEnvelope(request, current.code, current.status, current.message),
+				);
 		}
 	});
 
@@ -179,10 +333,19 @@ export async function registerPermissionRoutes(app: FastifyInstance): Promise<vo
 			await denyUnless(orgId, session, "manage");
 			const params = request.params as { id?: string };
 			if (!params.id) throw new Error("VALIDATION_FAILED");
-			return reply.send(envelope(request, await permissions.revokeGrant(orgId, session.userId, params.id)));
+			return reply.send(
+				envelope(
+					request,
+					await permissions.revokeGrant(orgId, session.userId, params.id),
+				),
+			);
 		} catch (error) {
 			const current = statusFor(error);
-			return reply.code(current.status).send(errorEnvelope(request, current.code, current.status, current.message));
+			return reply
+				.code(current.status)
+				.send(
+					errorEnvelope(request, current.code, current.status, current.message),
+				);
 		}
 	});
 }

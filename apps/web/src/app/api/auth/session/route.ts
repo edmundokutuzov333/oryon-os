@@ -8,7 +8,17 @@ export async function GET() {
 	const store = await cookies();
 	const session = store.get(cookieName)?.value;
 	const organization = store.get("oryon_org")?.value;
-	if (!session || !organization) return NextResponse.json({ error: { message: "UNAUTHENTICATED" } }, { status: 401 });
-	const response = await fetch(`${apiUrl}/v1/auth/session`, { headers: { "X-Oryon-Org": organization, Cookie: `${cookieName}=${encodeURIComponent(session)}` }, cache: "no-store" });
+	if (!session || !organization)
+		return NextResponse.json(
+			{ error: { message: "UNAUTHENTICATED" } },
+			{ status: 401 },
+		);
+	const response = await fetch(`${apiUrl}/v1/auth/session`, {
+		headers: {
+			"X-Oryon-Org": organization,
+			Cookie: `${cookieName}=${encodeURIComponent(session)}`,
+		},
+		cache: "no-store",
+	});
 	return NextResponse.json(await response.json(), { status: response.status });
 }

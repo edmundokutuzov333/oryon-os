@@ -13,9 +13,9 @@ export async function POST() {
 		await fetch(`${apiUrl}/v1/auth/logout`, {
 			method: "POST",
 			headers: {
-			"X-Oryon-Org": org,
-			"Idempotency-Key": randomUUID(),
-			Cookie: `${cookieName}=${encodeURIComponent(session)}`,
+				"X-Oryon-Org": org,
+				"Idempotency-Key": randomUUID(),
+				Cookie: `${cookieName}=${encodeURIComponent(session)}`,
 			},
 			cache: "no-store",
 		});

@@ -1,7 +1,8 @@
 export const graphCopy = {
 	eyebrow: "WORK GRAPH",
 	title: "Work Graph",
-	subtitle: "Veja como o trabalho se liga, muda e chega ao cliente sem sair do mesmo grafo.",
+	subtitle:
+		"Veja como o trabalho se liga, muda e chega ao cliente sem sair do mesmo grafo.",
 	network: "Rede",
 	customer360: "Customer 360",
 	relations: "Relações",
