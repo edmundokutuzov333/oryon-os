@@ -1,0 +1,102 @@
+name: Fix main web typecheck
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor == 'edmundokutuzov333'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Patch Web TypeScript errors
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          def edit(path, fn):
+              p = Path(path)
+              text = p.read_text()
+              new = fn(text)
+              if new == text:
+                  raise SystemExit(f"No change made to {path}")
+              p.write_text(new)
+
+          edit('apps/web/src/app/os/agents/AgentsStudio.tsx', lambda s: s.replace('"neutral" | "info" | "positive" | "negative"', '"neutral" | "info" | "positive" | "danger"').replace('return "negative";', 'return "danger";'))
+
+          def automations(s):
+              s = s.replace('"neutral" | "info" | "positive" | "negative"', '"neutral" | "info" | "positive" | "danger"')
+              s = s.replace('return "negative";', 'return "danger";')
+              old = 'if (!response.ok) return; setRuns((current) => ({ ...current, [run.workflowId]: WorkflowRunResponseSchema.parse(payloadData(await response.json())) }));'
+              new = 'if (!response.ok) return; const next = WorkflowRunResponseSchema.parse(payloadData(await response.json())); setRuns((current) => ({ ...current, [run.workflowId]: next }));'
+              if old not in s:
+                  raise SystemExit('Automation approval await pattern not found')
+              return s.replace(old, new)
+          edit('apps/web/src/app/os/automations/AutomationsStudio.tsx', automations)
+
+          def communication(s):
+              s = s.replace('useRef<Socket>();', 'useRef<Socket | undefined>(undefined);')
+              s = s.replace('useRef<string>();', 'useRef<string | undefined>(undefined);')
+              s = s.replace('<Avatar initials={initials(message.author.displayName ?? message.author.name)} aria-label={message.author.displayName ?? message.author.name} />', '<Avatar name={message.author.displayName ?? message.author.name} aria-label={message.author.displayName ?? message.author.name} />')
+              s = s.replace('body: reacted ? undefined : JSON.stringify({ emoji })', '...(reacted ? {} : { body: JSON.stringify({ emoji }) })')
+              return s
+          edit('apps/web/src/app/os/communication/CommunicationStudio.tsx', communication)
+
+          edit('apps/web/src/app/os/docs/DocsStudio.tsx', lambda s: s.replace('useRef<string>();', 'useRef<string | undefined>(undefined);'))
+
+          def graph(s):
+              old = '''{graphObjects.map((node, index) => {\n\t\t\t\t\t\t\tconst point = positions.get(node.id);\n\t\t\t\t\t\t\tif (!point) return null;\n\t\t\t\t\t\t\tconst active = node.id === rootId;\n\t\t\t\t\t\t\treturn <g key={node.id} className={active ? "graph-node active" : "graph-node"} onClick={() => setRootId(node.id)} role="button" tabIndex={0} aria-label={`${node.humanId} ${node.title}`} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") setRootId(node.id); }}>'''
+              new = '''{graphObjects.map((node, index) => {\n\t\t\t\t\t\t\tconst point = positions.get(node.id);\n\t\t\t\t\t\t\tif (!point || node.type !== "work_object") return null;\n\t\t\t\t\t\t\tconst active = node.id === rootId;\n\t\t\t\t\t\t\treturn <g key={node.id} className={active ? "graph-node active" : "graph-node"} onClick={() => setRootId(node.id)} role="button" tabIndex={0} aria-label={`${node.humanId} ${node.title}`} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") setRootId(node.id); }}>'''
+              if old not in s:
+                  raise SystemExit('Graph node pattern not found')
+              return s.replace(old, new)
+          edit('apps/web/src/app/os/graph/GraphStudio.tsx', graph)
+
+          def meetings(s):
+              s = s.replace('const enabled = await room.localParticipant.setMicrophoneEnabled(!mic); setMic(enabled);', 'const publication = await room.localParticipant.setMicrophoneEnabled(!mic); setMic(Boolean(publication));')
+              s = s.replace('const enabled = await room.localParticipant.setCameraEnabled(!camera); setCamera(enabled);', 'const publication = await room.localParticipant.setCameraEnabled(!camera); setCamera(Boolean(publication));')
+              s = s.replace('const enabled = await room.localParticipant.setScreenShareEnabled(!screen); setScreen(enabled);', 'const publication = await room.localParticipant.setScreenShareEnabled(!screen); setScreen(Boolean(publication));')
+              s = s.replace('''<StatusChip label={`${participants.length} ${COPY.participants.toLocaleLowerCase("pt-PT")}`} tone="neutral" />''', '''<StatusChip state="neutral">{`${participants.length} ${COPY.participants.toLocaleLowerCase("pt-PT")}`}</StatusChip>''')
+              s = s.replace('''<StatusChip label={statusLabel(meeting.state)} tone={meeting.state === "LIVE" ? "success" : meeting.state === "CANCELLED" ? "danger" : "neutral"} />''', '''<StatusChip state={meeting.state === "LIVE" ? "positive" : meeting.state === "CANCELLED" ? "danger" : "neutral"}>{statusLabel(meeting.state)}</StatusChip>''')
+              old = 'meetingsByDay.map((dayMeetings, index) => <section className="oryon-calendar-day" key={days[index].toISOString()}><header><span>{humanDate(days[index].toISOString(), timezone)}</span><strong>{dayMeetings.length}</strong></header>'
+              new = 'meetingsByDay.map((dayMeetings, index) => { const day = days[index]; if (!day) return null; return <section className="oryon-calendar-day" key={day.toISOString()}><header><span>{humanDate(day.toISOString(), timezone)}</span><strong>{dayMeetings.length}</strong></header>'
+              if old not in s:
+                  raise SystemExit('Meetings day map pattern not found')
+              s = s.replace(old, new)
+              s = s.replace('</button>)}</section>)}</div>}', '</button>)}</section>; })}</div>}')
+              return s
+          edit('apps/web/src/app/os/meetings/MeetingsStudio.tsx', meetings)
+
+          edit('apps/web/src/app/os/templates/DomainTemplatesStudio.tsx', lambda s: s.replace('<PageHeader eyebrow={COPY.eyebrow} title={COPY.title} description={COPY.description} />', '<PageHeader title={COPY.title} description={COPY.description} />'))
+
+          def work(s):
+              old = '''const states = statusLines.split("\\n").map((line, order) => line.trim()).filter(Boolean).map((line) => {\n\t\t\t\tconst [key, label] = line.split("|").map((value) => value.trim());\n\t\t\t\treturn { key, label: label || key, category: statusCategory(key), order };\n\t\t\t});'''
+              new = '''const states = statusLines.split("\\n").map((line, order) => ({ line: line.trim(), order })).filter((item) => Boolean(item.line)).map(({ line, order }) => {\n\t\t\t\tconst [keyPart, labelPart] = line.split("|").map((value) => value.trim());\n\t\t\t\tconst key = keyPart ?? "";\n\t\t\t\tconst label = labelPart ?? "";\n\t\t\t\treturn { key, label: label || key, category: statusCategory(key), order };\n\t\t\t});'''
+              if old not in s:
+                  raise SystemExit('Work states pattern not found')
+              return s.replace(old, new)
+          edit('apps/web/src/app/os/work/WorkObjectStudio.tsx', work)
+          PY
+
+      - name: Commit fixes directly to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web/src/app/os/agents/AgentsStudio.tsx apps/web/src/app/os/automations/AutomationsStudio.tsx apps/web/src/app/os/communication/CommunicationStudio.tsx apps/web/src/app/os/docs/DocsStudio.tsx apps/web/src/app/os/graph/GraphStudio.tsx apps/web/src/app/os/meetings/MeetingsStudio.tsx apps/web/src/app/os/templates/DomainTemplatesStudio.tsx apps/web/src/app/os/work/WorkObjectStudio.tsx
+          git commit -m "fix: repair consolidated web type errors on main"
+          git push origin HEAD:main
+
+      - name: Remove patch workflow from main
+        run: |
+          git pull --rebase origin main
+          git rm .github/workflows/fix-main-web-typecheck.yml
+          git commit -m "chore: remove temporary main typecheck patch workflow"
+          git push origin HEAD:main
