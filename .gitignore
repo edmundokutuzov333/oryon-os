@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Turborepo and build caches
+.turbo/
+**/.turbo/
+.next/
+**/.next/
+dist/
+**/dist/
+out/
+
+# Generated artifacts
+apps/api/generated/
+packages/db/src/generated/
+sdk/dist/
+
+# Local environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Test and coverage artifacts
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
