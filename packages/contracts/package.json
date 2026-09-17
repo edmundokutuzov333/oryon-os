@@ -1,78 +1,82 @@
 {
-	"name": "@oryon/contracts",
-	"private": true,
-	"version": "0.1.0",
-	"type": "module",
-	"exports": {
-		"./health": {
-			"types": "./src/health.schema.ts",
-			"default": "./src/health.schema.ts"
-		},
-		"./identity": {
-			"types": "./src/identity.schema.ts",
-			"default": "./src/identity.schema.ts"
-		},
-		"./permissions": {
-			"types": "./src/permissions.schema.ts",
-			"default": "./src/permissions.schema.ts"
-		},
-		"./work-object": {
-			"types": "./src/work-object.schema.ts",
-			"default": "./src/work-object.schema.ts"
-		},
-		"./graph": {
-			"types": "./src/graph.schema.ts",
-			"default": "./src/graph.schema.ts"
-		},
-		"./work-experience": {
-			"types": "./src/work-experience.schema.ts",
-			"default": "./src/work-experience.schema.ts"
-		},
-		"./docs-files": {
-			"types": "./src/docs-files.schema.ts",
-			"default": "./src/docs-files.schema.ts"
-		},
-		"./communication": {
-			"types": "./src/communication.schema.ts",
-			"default": "./src/communication.schema.ts"
-		},
-		"./meeting": {
-			"types": "./src/meeting.schema.ts",
-			"default": "./src/meeting.schema.ts"
-		},
-		"./domain-templates": {
-			"types": "./src/domain-templates.schema.ts",
-			"default": "./src/domain-templates.schema.ts"
-		},
-		"./domain-template-data": {
-			"types": "./src/domain-templates.ts",
-			"default": "./src/domain-templates.ts"
-		},
-		"./search-ai": {
-			"types": "./src/search-ai.schema.ts",
-			"default": "./src/search-ai.schema.ts"
-		},
-		"./agents-automation": {
-			"types": "./src/agents-automation.schema.ts",
-			"default": "./src/agents-automation.schema.ts"
-		},
-		"./platform-release": {
-			"types": "./src/platform-release.schema.ts",
-			"default": "./src/platform-release.schema.ts"
-		}
-	},
-	"scripts": {
-		"typecheck": "tsc --noEmit",
-		"lint": "biome check .",
-		"build": "tsc --noEmit",
-		"test": "vitest run"
-	},
-	"dependencies": {
-		"zod": "^4.0.0"
-	},
-	"devDependencies": {
-		"typescript": "^5.9.2",
-		"vitest": "^3.2.0",
-		"@biomejs/biome": "^2.2.0"
-	}
+  "name": "@oryon/contracts",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./health": {
+      "types": "./src/health.schema.ts",
+      "default": "./src/health.schema.ts"
+    },
+    "./identity": {
+      "types": "./src/identity.schema.ts",
+      "default": "./src/identity.schema.ts"
+    },
+    "./permissions": {
+      "types": "./src/permissions.schema.ts",
+      "default": "./src/permissions.schema.ts"
+    },
+    "./work-object": {
+      "types": "./src/work-object.schema.ts",
+      "default": "./src/work-object.schema.ts"
+    },
+    "./graph": {
+      "types": "./src/graph.schema.ts",
+      "default": "./src/graph.schema.ts"
+    },
+    "./work-experience": {
+      "types": "./src/work-experience.schema.ts",
+      "default": "./src/work-experience.schema.ts"
+    },
+    "./docs-files": {
+      "types": "./src/docs-files.schema.ts",
+      "default": "./src/docs-files.schema.ts"
+    },
+    "./communication": {
+      "types": "./src/communication.schema.ts",
+      "default": "./src/communication.schema.ts"
+    },
+    "./meeting": {
+      "types": "./src/meeting.schema.ts",
+      "default": "./src/meeting.schema.ts"
+    },
+    "./domain-templates": {
+      "types": "./src/domain-templates.schema.ts",
+      "default": "./src/domain-templates.schema.ts"
+    },
+    "./domain-template-data": {
+      "types": "./src/domain-templates.ts",
+      "default": "./src/domain-templates.ts"
+    },
+    "./search-ai": {
+      "types": "./src/search-ai.schema.ts",
+      "default": "./src/search-ai.schema.ts"
+    },
+    "./agents-automation": {
+      "types": "./src/agents-automation.schema.ts",
+      "default": "./src/agents-automation.schema.ts"
+    },
+    "./platform-release": {
+      "types": "./src/platform-release.schema.ts",
+      "default": "./src/platform-release.schema.ts"
+    },
+    "./public-api": {
+      "types": "./src/public-api.ts",
+      "default": "./src/public-api.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "build": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.0",
+    "@biomejs/biome": "^2.2.0"
+  }
 }
