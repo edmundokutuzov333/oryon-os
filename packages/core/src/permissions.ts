@@ -17,9 +17,7 @@ export type PermissionPolicyContext = {
 	classification: PermissionClassification | null;
 };
 
-const ACTIONS: PermissionEvaluateInput["action"] extends undefined
-	? never[]
-	: PermissionEvaluation["decisions"][number]["action"][] = [
+const ACTIONS: PermissionEvaluation["decisions"][number]["action"][] = [
 	"read",
 	"create",
 	"update",
@@ -39,8 +37,24 @@ const LEVEL_ACTIONS: Record<
 	VIEW: ["read"],
 	COMMENT: ["read", "comment"],
 	EDIT: ["read", "comment", "update"],
-	MANAGE: ["read", "comment", "update", "delete", "manage", "share", "export"],
-	OWNER: ["read", "comment", "update", "delete", "manage", "share", "export"],
+	MANAGE: [
+		"read",
+		"comment",
+		"update",
+		"delete",
+		"manage",
+		"share",
+		"export",
+	],
+	OWNER: [
+		"read",
+		"comment",
+		"update",
+		"delete",
+		"manage",
+		"share",
+		"export",
+	],
 };
 
 function notExpired(expiresAt: string | null, now: Date): boolean {
@@ -56,14 +70,20 @@ function scopeMatches(
 		case "ORG":
 			return binding.scopeId === resource.orgId || binding.scopeId === null;
 		case "WORKSPACE":
-			return binding.scopeId === resource.workspaceId;
+			return (
+				binding.scopeId !== null &&
+				binding.scopeId === resource.workspaceId &&
+				subject.workspaceIds.includes(binding.scopeId)
+			);
 		case "PROJECT":
 			return binding.scopeId === resource.projectId;
 		case "OBJECT":
 			return binding.scopeId === resource.id;
 		case "TEAM":
 			return (
-				binding.scopeId !== null && subject.teamIds.includes(binding.scopeId)
+				binding.scopeId !== null &&
+				subject.teamIds.includes(binding.scopeId) &&
+				(resource.teamId === null || resource.teamId === binding.scopeId)
 			);
 		default:
 			return false;
@@ -92,11 +112,8 @@ function roleAllows(
 	now: Date,
 ) {
 	for (const role of roles) {
-		if (
-			!notExpired(role.expiresAt, now) ||
-			!scopeMatches(role, resource, subject)
-		)
-			continue;
+		if (!notExpired(role.expiresAt, now)) continue;
+		if (!scopeMatches(role, resource, subject)) continue;
 		if (
 			role.permissions.some((permission) =>
 				permissionStringMatches(permission, resource.type, action),
@@ -152,6 +169,34 @@ function grantAllows(
 	return { allowed: false, matchedBy: null as string | null };
 }
 
+function workspaceMembershipDecision(
+	resource: PermissionResource,
+	subject: PermissionSubject,
+	action: PermissionEvaluation["decisions"][number]["action"],
+): PermissionDecision | null {
+	if (resource.type === "workspace" && ["read", "comment"].includes(action)) {
+		const member = subject.workspaceIds.includes(resource.id);
+		return {
+			allowed: member,
+			effect: member ? "allow" : "deny",
+			action,
+			reason: member ? "workspace_membership" : "workspace_membership_required",
+			matchedBy: member ? "workspace_membership" : null,
+		};
+	}
+	if (resource.workspaceId !== null && action === "read") {
+		const member = subject.workspaceIds.includes(resource.workspaceId);
+		return {
+			allowed: member,
+			effect: member ? "allow" : "deny",
+			action,
+			reason: member ? "workspace_membership" : "workspace_membership_required",
+			matchedBy: member ? "workspace_membership" : null,
+		};
+	}
+	return null;
+}
+
 function baseDecision(
 	context: PermissionPolicyContext,
 	resource: PermissionResource,
@@ -190,6 +235,10 @@ function baseDecision(
 			reason: "classification_blocks_download",
 			matchedBy: `classification:${context.classification.key}`,
 		};
+
+	const membershipDecision = workspaceMembershipDecision(resource, context.subject, action);
+	if (membershipDecision) return membershipDecision;
+
 	if (
 		resource.type === "channel" &&
 		context.subject.channelIds.includes(resource.id) &&
@@ -227,13 +276,7 @@ function baseDecision(
 			matchedBy: "notification_owner",
 		};
 	if (action === "use_external" || action === "use_ai") {
-		const grant = grantAllows(
-			context.grants,
-			resource,
-			context.subject,
-			action,
-			now,
-		);
+		const grant = grantAllows(context.grants, resource, context.subject, action, now);
 		if (grant.allowed)
 			return {
 				allowed: true,
@@ -242,13 +285,7 @@ function baseDecision(
 				reason: "explicit_grant",
 				matchedBy: grant.matchedBy,
 			};
-		const role = roleAllows(
-			context.roles,
-			resource,
-			context.subject,
-			action,
-			now,
-		);
+		const role = roleAllows(context.roles, resource, context.subject, action, now);
 		if (role.allowed)
 			return {
 				allowed: true,
@@ -284,13 +321,7 @@ function baseDecision(
 			reason: "resource_owner",
 			matchedBy: "owner",
 		};
-	const grant = grantAllows(
-		context.grants,
-		resource,
-		context.subject,
-		action,
-		now,
-	);
+	const grant = grantAllows(context.grants, resource, context.subject, action, now);
 	if (grant.allowed)
 		return {
 			allowed: true,
@@ -299,13 +330,7 @@ function baseDecision(
 			reason: "explicit_grant",
 			matchedBy: grant.matchedBy,
 		};
-	const role = roleAllows(
-		context.roles,
-		resource,
-		context.subject,
-		action,
-		now,
-	);
+	const role = roleAllows(context.roles, resource, context.subject, action, now);
 	if (role.allowed)
 		return {
 			allowed: true,
@@ -313,18 +338,6 @@ function baseDecision(
 			action,
 			reason: "role_policy",
 			matchedBy: role.matchedBy,
-		};
-	if (
-		action === "read" &&
-		context.subject.type === "MEMBER" &&
-		resource.workspaceId !== null
-	)
-		return {
-			allowed: true,
-			effect: "allow",
-			action,
-			reason: "member_workspace_baseline",
-			matchedBy: "membership",
 		};
 	return {
 		allowed: false,
@@ -367,9 +380,7 @@ export function evaluatePermissions(
 	now = new Date(),
 ): PermissionEvaluation {
 	const resource = input.resource;
-	const decisions = ACTIONS.map((action) =>
-		baseDecision(context, resource, action, now),
-	);
+	const decisions = ACTIONS.map((action) => baseDecision(context, resource, action, now));
 	const permissions = Object.fromEntries(
 		decisions.map((decision) => [decision.action, decision.allowed]),
 	) as Record<PermissionEvaluation["decisions"][number]["action"], boolean>;
@@ -406,13 +417,7 @@ export function evaluatePermissions(
 				reason: exportDecision.reason,
 			},
 			watermark: context.classification?.watermark ?? false,
-			fieldAccess: fieldAccess(
-				input.fields,
-				context.grants,
-				context.subject,
-				resource,
-				now,
-			),
+			fieldAccess: fieldAccess(input.fields, context.grants, context.subject, resource, now),
 		},
 		principal: context.subject,
 	};
