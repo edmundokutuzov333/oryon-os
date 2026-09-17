@@ -19,6 +19,9 @@ export const ApiKeyCreatedSchema = ApiKeySummarySchema.extend({
 export const ApiKeyRevokeInputSchema = z.object({
 	reason: z.string().trim().max(240).nullable().default(null),
 });
+export const ApiKeyRevokeResponseSchema = z.object({
+	revoked: z.literal(true),
+});
 export const WebhookCreateInputSchema = z.object({
 	url: z.string().url(),
 	events: z.array(z.string().min(1).max(120)).min(1).max(100),
@@ -142,6 +145,7 @@ export const ReleaseManifestSchema = z.object({
 export type ApiKeyCreateInput = z.infer<typeof ApiKeyCreateInputSchema>;
 export type ApiKeySummary = z.infer<typeof ApiKeySummarySchema>;
 export type ApiKeyCreated = z.infer<typeof ApiKeyCreatedSchema>;
+export type ApiKeyRevokeResponse = z.infer<typeof ApiKeyRevokeResponseSchema>;
 export type WebhookCreateInput = z.infer<typeof WebhookCreateInputSchema>;
 export type WebhookUpdateInput = z.infer<typeof WebhookUpdateInputSchema>;
 export type WebhookSummary = z.infer<typeof WebhookSummarySchema>;
