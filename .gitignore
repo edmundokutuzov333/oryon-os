@@ -16,6 +16,9 @@ apps/api/generated/
 apps/api/src/generated/
 sdk/dist/
 
+# TypeScript incremental metadata
+*.tsbuildinfo
+
 # Local environment
 .env
 .env.*
