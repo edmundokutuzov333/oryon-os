@@ -21,19 +21,27 @@ export const GraphRelationSchema = z.enum([
 ]);
 
 export const GraphDirectionSchema = z.enum(["out", "in", "both"]);
-export const GraphNodeTypeSchema = z.string().min(1).max(80);
+export const GraphNodeTypeSchema = z.string().trim().min(1).max(80).regex(/^[a-z][a-z0-9_.-]*$/);
 
 export const GraphNodeRefSchema = z.object({
 	type: GraphNodeTypeSchema,
-	id: z.string().min(1),
+	id: z.string().trim().min(1).max(200),
 });
 
 export const GraphEdgeCreateInputSchema = z.object({
 	from: GraphNodeRefSchema,
 	to: GraphNodeRefSchema,
 	relation: GraphRelationSchema,
-	lagDays: z.number().int().nullable().optional(),
+	lagDays: z.number().int().min(-36500).max(36500).nullable().optional(),
 	metadata: z.record(z.string(), z.unknown()).default({}),
+});
+
+export const GraphEdgeDeleteInputSchema = z.object({
+	reason: z.string().trim().max(500).nullable().optional(),
+});
+
+export const GraphEdgeRestoreInputSchema = z.object({
+	reason: z.string().trim().max(500).nullable().optional(),
 });
 
 export const GraphWorkObjectNodeSchema = z.object({
@@ -55,12 +63,21 @@ export const GraphWorkObjectNodeSchema = z.object({
 	typeKey: z.string().min(1),
 	ownerId: z.string().nullable(),
 	workspaceId: z.string().nullable(),
+	classification: z.string().nullable().optional(),
+	permissions: z.object({ read: z.boolean() }),
+});
+
+export const GraphGenericNodeSchema = z.object({
+	type: GraphNodeTypeSchema,
+	id: z.string().min(1),
+	label: z.string().min(1).optional(),
+	classification: z.string().nullable().optional(),
 	permissions: z.object({ read: z.boolean() }),
 });
 
 export const GraphNodeSchema = z.union([
 	GraphWorkObjectNodeSchema,
-	GraphNodeRefSchema,
+	GraphGenericNodeSchema,
 ]);
 
 export const GraphEdgeSchema = z.object({
@@ -72,6 +89,11 @@ export const GraphEdgeSchema = z.object({
 	lagDays: z.number().int().nullable(),
 	metadata: z.record(z.string(), z.unknown()),
 	createdAt: z.string().datetime({ offset: true }),
+});
+
+export const GraphEdgeMutationResponseSchema = z.object({
+	id: z.string().min(1),
+	state: z.enum(["ACTIVE", "DELETED"]),
 });
 
 export const GraphTimelineEventSchema = z.object({
@@ -116,7 +138,10 @@ export type GraphRelation = z.infer<typeof GraphRelationSchema>;
 export type GraphDirection = z.infer<typeof GraphDirectionSchema>;
 export type GraphNodeRef = z.infer<typeof GraphNodeRefSchema>;
 export type GraphEdgeCreateInput = z.infer<typeof GraphEdgeCreateInputSchema>;
+export type GraphEdgeDeleteInput = z.infer<typeof GraphEdgeDeleteInputSchema>;
+export type GraphEdgeRestoreInput = z.infer<typeof GraphEdgeRestoreInputSchema>;
 export type GraphTraverseQuery = z.infer<typeof GraphTraverseQuerySchema>;
 export type GraphTraverseResponse = z.infer<typeof GraphTraverseResponseSchema>;
 export type GraphEdge = z.infer<typeof GraphEdgeSchema>;
 export type GraphTimelineEvent = z.infer<typeof GraphTimelineEventSchema>;
+export type GraphEdgeMutationResponse = z.infer<typeof GraphEdgeMutationResponseSchema>;
