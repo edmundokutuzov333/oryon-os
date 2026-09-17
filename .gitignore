@@ -10,8 +10,9 @@ coverage/
 playwright-report/
 test-results/
 
-# Generated Prisma client and generated API artifacts
+# Generated artifacts
 packages/db/src/generated/
+apps/api/generated/
 apps/api/src/generated/
 sdk/dist/
 
