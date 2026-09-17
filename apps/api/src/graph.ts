@@ -1,11 +1,12 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { GraphEdgeCreateInputSchema, GraphEdgeResponseSchema, GraphTraverseQuerySchema, GraphTraverseResponseSchema, type GraphEdgeCreateInput } from "@oryon/contracts/graph";
 import { can } from "@oryon/core";
-import { GraphRepository, PermissionRepository } from "@oryon/db/repositories";
+import { GraphRepository, PermissionRepository, WorkObjectRepository } from "@oryon/db/repositories";
 import { getPrisma } from "@oryon/db";
 import { AUTH_COOKIE_NAME, authenticate } from "./auth.js";
 
 const graph = new GraphRepository(getPrisma());
+const workObjects = new WorkObjectRepository(getPrisma());
 const permissions = new PermissionRepository();
 
 function headerString(request: FastifyRequest, name: string): string | undefined {
@@ -65,22 +66,22 @@ function errorResult(error: unknown): { code: string; status: number; message: s
 	return { code: "VALIDATION_FAILED", status: 400, message };
 }
 
-function objectResource(object: { orgId: string; id: string; workspaceId: string | null; ownerId: string | null; classification: string | null }) {
-	return { orgId: object.orgId, type: "work_object", id: object.id, workspaceId: object.workspaceId, projectId: null, ownerId: object.ownerId, teamId: null, classification: object.classification };
+function objectResource(orgId: string, object: { id: string; workspaceId: string | null; ownerId: string | null; classification?: string | null }) {
+	return { orgId, type: "work_object", id: object.id, workspaceId: object.workspaceId, projectId: null, ownerId: object.ownerId, teamId: null, classification: object.classification ?? null };
 }
 
 async function canRead(orgId: string, userId: string, objectId: string): Promise<boolean> {
-	const object = await graph.getWorkObject(orgId, objectId);
+	const object = await workObjects.findById(orgId, objectId);
 	if (!object) return false;
 	const snapshot = await permissions.getSnapshot(orgId, userId, "work_object", objectId, object.classification);
-	return can({ orgId, ...snapshot }, objectResource(object), "read").allowed;
+	return can({ orgId, ...snapshot }, objectResource(orgId, object), "read").allowed;
 }
 
 async function filterTraversal(orgId: string, userId: string, result: Awaited<ReturnType<GraphRepository["traverse"]>>) {
 	const readableIds = new Set<string>();
 	for (const object of result.workObjects) {
 		const snapshot = await permissions.getSnapshot(orgId, userId, "work_object", object.id);
-		if (can({ orgId, ...snapshot }, objectResource(object), "read").allowed) readableIds.add(object.id);
+		if (can({ orgId, ...snapshot }, objectResource(orgId, object), "read").allowed) readableIds.add(object.id);
 	}
 	if (!readableIds.has(result.root.id)) throw new Error("NOT_FOUND");
 	const visibleRefs = result.nodeRefs.filter((node) => node.type !== "work_object" || readableIds.has(node.id));

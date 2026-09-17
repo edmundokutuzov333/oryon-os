@@ -116,7 +116,7 @@ async function readAndAuthorize(orgId: string, userId: string, type: SearchDocum
 	if (!source) return null;
 	const snapshot = await permissions.getSnapshot(orgId, userId, type, id, source.classification);
 	const resource = { orgId, type, id, workspaceId: source.workspaceId, projectId: null, ownerId: source.ownerId, teamId: null, classification: source.classification };
-	const readDecision = can(snapshot, resource, "read");
+	const readDecision = can({ orgId, ...snapshot }, resource, "read");
 	if (!readDecision.allowed) return null;
 	const aiDecision = can(snapshot, resource, "use_ai");
 	if (requireAi && !aiDecision.allowed) return null;
@@ -183,7 +183,7 @@ export async function registerSearchAiRoutes(app: FastifyInstance): Promise<void
 			const input = AiSearchRequestSchema.parse(request.body);
 			const memory = await readMemory(orgId, current.userId, input.conversationKey);
 			const result = await hybridSearch(orgId, current.userId, input.query, input.limit);
-			const sources = [];
+			const sources: Array<{ id: string; title: string; text: string }> = [];
 			for (const item of result.results) {
 				const authorized = await readAndAuthorize(orgId, current.userId, item.type, item.id, true);
 				if (authorized) sources.push({ id: `${item.type}:${item.id}`, title: authorized.source.title, text: authorized.source.text });
