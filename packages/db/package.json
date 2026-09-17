@@ -12,6 +12,10 @@
 			"types": "./src/repositories/index.ts",
 			"default": "./src/repositories/index.ts"
 		},
+		"./outbox": {
+			"types": "./src/outbox.ts",
+			"default": "./src/outbox.ts"
+		},
 		"./repositories/meeting-api.repository.js": {
 			"types": "./src/repositories/meeting-api.repository.ts",
 			"default": "./src/repositories/meeting-api.repository.ts"
